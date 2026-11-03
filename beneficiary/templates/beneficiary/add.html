@@ -1,0 +1,26 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} Add Beneficiary {% endblock %}
+
+{% block extra_css %} 
+<link rel="stylesheet" href="{% static 'beneficiary/css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="main col">
+<header class="row gap center">
+<a href="javascrip:history.back()" arial-label="Go back" class="back"><i class="fa-solid fa-chevron-left text-lg"></i></a>
+<h1 class="text-lg">Add Beneficiary</h1>
+</header>
+<div class="panel ">
+<form method="post" class="col gap text-lg">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn text-md center">Add beneficiary</button>
+</form>
+<a href="{% url 'beneficiary:list' %}"> manage existing beneficiaries </a>
+</div>
+</main>
+{% endblock %}

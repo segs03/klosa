@@ -1,0 +1,117 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% include "includes/favicon.html" %}
+<link rel="stylesheet" href="{% static 'transfers/css/style.css' %}">
+{% include 'includes/fontawesome.html'  %}
+</head>
+
+<body>
+<main class="main  col">
+<header class="top row center gap-lg">
+                <a href="javascript:history.back()"
+                   class="back"
+                   aria-label="Go back">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                    <h2>Request Money</h2>
+        </header>
+        
+        <div class="panel radius-tr-tl col mt ">
+
+            <form method="post" id="transferForm">
+                {% csrf_token %}
+
+                <label class="section-label">From</label>
+                
+                <div class="select-card recipient-card row gap-sm space-btw center radius-md">
+                    <div class="recipient-icon center radius-round">
+                        <i class="fa-md fa-solid fa-user"></i>
+                    </div>
+                    
+                    {{ form.account_number }}
+                    
+                </div>
+
+                {% for error in form.account_number.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+
+                <label class="section-label amount-label"
+                       for="{{ form.amount.id_for_label }}">
+                    Amount
+                </label>
+
+                <div class="amount row gap-sm center">
+                    {{ form.amount }}
+                    
+                    {{ form.currency }}
+                    
+                </div>
+
+                {% for error in form.amount.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+
+                {% for error in form.currency.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+                
+                <div class="mt">
+                {{ form.note }}
+                </div>
+
+                {% if form.non_field_errors %}
+                    <div class="field-error">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <button type="submit" class="send-request-btn radius-md gap-md">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Send Request
+                </button>
+
+            </form>
+            
+            <div class="col gap mt">
+            <div class="row space-btw center">
+            <h2 class="title">My Requests</h2>
+            <a href="" class="text">See all</a>
+            </div>
+            
+            <ul type="none" class="col mt-sm gap-lg">
+            <li class="row space-btw">
+            <div class="row gap">
+            <span class="img-fluid-sm"><img src="https://i.pravatar.cc/100?img=45" alt=""></span>
+            <div class="col">
+            <h2 class="title">{{ request.user}}</h2>
+            <span class="row gap-sm center"><i class="status"></i> <small class="text">Pending</small></span>
+            </div>
+            </div>
+            <div class="col">
+            <p class="text">₦500</p>
+            <small class="text-sm">Today, 26</small>
+            </li>
+            <li class="row space-btw">
+            <div class="row gap">
+            <span class="img-fluid-sm"><img src="https://i.pravatar.cc/100?img=45" alt=""></span>
+            <div class="col">
+            <h2 class="title">{{ request.user}}</h2>
+            <span class="row gap-sm center"><i class="status"></i> <small class="text">Pending</small></span>
+            </div>
+            </div>
+            <div class="col">
+            <p class="text">₦500</p>
+            <small class="text-sm">Today, 26</small>
+            </li>
+            </ul>
+
+        </div>
+</main>
+</body>
+</html>

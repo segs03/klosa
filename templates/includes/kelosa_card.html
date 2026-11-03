@@ -1,0 +1,32 @@
+
+
+<div class="kelosa-card">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540" width="100%" role="img" aria-label="Kelosa Bank card" font-family="Montserrat, Poppins, Arial, sans-serif">
+  <defs>
+    <linearGradient id="kbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B2A5B"/><stop offset="1" stop-color="#071B3D"/></linearGradient>
+    <linearGradient id="kr1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#007BFF"/><stop offset="1" stop-color="#00E0FF"/></linearGradient>
+    <linearGradient id="km1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E6BFF"/><stop offset="1" stop-color="#007BFF"/></linearGradient>
+    <linearGradient id="km2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#007BFF"/><stop offset="1" stop-color="#00E0FF"/></linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3D98B"/><stop offset="1" stop-color="#D4A94A"/></linearGradient>
+  </defs>
+  <rect width="856" height="540" rx="36" fill="url(#kbg)"/>
+  <path d="M600 540 C660 470 770 420 856 410 V504 A36 36 0 0 1 820 540 Z" fill="url(#kr1)" opacity=".9"/>
+  <path d="M690 540 C740 500 800 470 856 462 V504 A36 36 0 0 1 820 540 Z" fill="#0B2A5B" opacity=".55"/>
+  <g transform="translate(56 44) scale(0.68)">
+    <path d="M6 4H28V62C28 74 20 84 10 94C6 84 6 76 6 62Z" fill="url(#km1)"/>
+    <path d="M28 44L66 4H98L50 52Z" fill="url(#km2)"/>
+    <path d="M12 92C22 72 40 56 60 48L100 98H68L48 76C38 70 26 74 12 92Z" fill="url(#km2)"/>
+  </g>
+  <text x="134" y="84" font-size="34" font-weight="700" fill="#FFFFFF" letter-spacing="1">KELOSA</text>
+  <text x="136" y="108" font-size="14" font-weight="600" fill="#00E0FF" letter-spacing="9">BANK</text>
+  <rect x="56" y="168" width="84" height="64" rx="10" fill="url(#chip)"/>
+  <path d="M56 200H140M98 168V232M56 184H80V216H56M140 184H116V216H140" fill="none" stroke="#9A7424" stroke-width="2" opacity=".6"/>
+  <text x="550" y="84" font-size="37" font-weight="700" fill="#00E0FF" letter-spacing="5"> {{ card.get_card_type_display }}</text>
+  <g fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity=".85"><path d="M742 176c14 16 14 40 0 56"/><path d="M762 164c22 26 22 62 0 88"/><path d="M782 152c30 36 30 86 0 124"/></g>
+  <text id="card-number" x="56" y="334" font-size="46" font-weight="500" fill="#FFFFFF" letter-spacing="4" style="font-variant-numeric:tabular-nums">{{ card.masked_number }}</text>
+  <text x="56" y="404" font-size="13" font-weight="500" fill="#9FB6E0" letter-spacing="2.5">CARDHOLDER</text>
+  <text id="card-holder" x="56" y="440" font-size="28" font-weight="500" fill="#FFFFFF" letter-spacing="1">{{ card.cardholder_name|upper|truncatechars:24 }}</text>
+  <text x="470" y="404" font-size="13" font-weight="500" fill="#9FB6E0" letter-spacing="2.5">VALID THRU</text>
+  <text id="card-expiry" x="470" y="440" font-size="28" font-weight="500" fill="#FFFFFF" letter-spacing="1">{{ card.expiry_display|date:"m/y" }}</text>
+</svg>
+</div>

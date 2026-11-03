@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Repayment | Klosa{% endblock %}
+
+{% block content %}
+<div class="credit-page">
+
+    <h2>Make a repayment</h2>
+
+    <div class="credit-overview">
+        <p class="label">Outstanding balance</p>
+        <h2>₦{{ credit.outstanding_balance|floatformat:2 }}</h2>
+
+        <p class="label">Available account balance</p>
+        <h3>₦{{ account.balance|floatformat:2 }}</h3>
+    </div>
+
+    <form method="POST" class="credit-stat">
+        {% csrf_token %}
+
+        <label for="amount">Repayment amount (₦)</label>
+
+        <input
+            type="number"
+            name="amount"
+            id="amount"
+            min="0.01"
+            max="{{ credit.outstanding_balance }}"
+            step="0.01"
+            required
+        >
+
+        <button type="submit" class="credit-button">
+            Confirm repayment
+        </button>
+    </form>
+
+    <p class="credit-note">
+        Repayment is deducted from your Klosa account balance.
+    </p>
+
+</div>
+{% endblock %}

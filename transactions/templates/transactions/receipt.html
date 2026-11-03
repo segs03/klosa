@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="receipt">
+  <h1>Transfer successful</h1>
+  <p class="amount">₦{{ tx.amount|floatformat:2 }}</p>
+  <dl>
+    <dt>To</dt><dd>{{ tx.beneficiary.name|default:"-" }}</dd>
+    <dt>Account</dt><dd>****{{ tx.beneficiary.account_number|slice:"-4:" }}</dd>
+    <dt>Reference</dt><dd>{{ tx.reference }}</dd>
+    <dt>Date</dt><dd>{{ tx.created_at|date:"d M Y, H:i" }}</dd>
+    <dt>Note</dt><dd>{{ tx.description }}</dd>
+  </dl>
+  <a class="pill-button" href="{% url 'transactions:send' %}">Send again</a>
+</section>
+{% endblock %}

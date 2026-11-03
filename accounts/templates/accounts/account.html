@@ -1,0 +1,217 @@
+
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %} Dashboard | Klosa {% endblock%}
+
+{% block content %}
+<main class='main'>
+<section class="tab-page active" id="home-page">
+<header class="row brand">
+<a class="row user-profile" href="{% url 'accounts:profile' %}">
+<span class="img-fluid">
+<img src="https://i.pravatar.cc/100?img=47" alt="">
+</span>
+<span class="col">
+<p class="greet">Good morning,</p>
+<p class="uname">{{request.user.username | default:request.user.first_name|upper}}</p>
+</span>
+</a>
+<button class="icon-btn"><i class="fa-solid fa-bell"></i></button>
+</header>
+
+<div class="row u-bal">
+<div class="">
+<span class="row"><h1 class="bal-h">Total balance</h1><i class="visible fa-solid fa-eye-slash" id="visible"></i>
+</span>
+
+<div class='bal-wrapper'>
+{% if account %}
+<h1 class="bal" id="bal" data-value="₦{{ account.balance | floatformat:2 }}">₦ {{account.balance | floatformat:2|intcomma}}</h1>
+<h3 class="act_num">Account Number: {{ account.account_number}}</h3>
+<a href="{% url 'accounts:credit' %}">Credit Facility </a>
+{% else %}
+<p>No account Found.</p>
+{% endif %}
+</div>
+
+<div class="row action">
+<a href="{% url 'transfers:send' %}" class="btn"><i class="fa-solid fa-paper-plane"></i> Send</a>
+<a href="{% url 'transfers:request' %}" class="btn btn-sec">Request</a>
+</div>
+</div>
+
+<div class="row bank-card" id="bank_card">
+{% for card in cards %}
+<span class="cards stack"></span>
+{% endfor %}
+</div>
+</div>
+
+<p>services</p>
+<div class="service-grid">
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-coins"></i>
+             <span>Savings</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-wallet"></i>
+             <span>Withdraw</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Pay bills</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-phone"></i>
+            <span>Airtime</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-arrow-down"></i>
+            <span>Deposit</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-wifi"></i>
+            <span>Data</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-gamepad"></i>
+            <span>Betting</span>
+        </div>
+    </a>
+
+    <a href="#" class="service-item">
+        <div class="service-icon">
+            <i class="fa-solid fa-book"></i>
+            <span>Education</span>
+        </div>
+    </a>
+
+</div>
+
+{% include 'transactions/index.html' %}
+
+</section>
+
+<section class="cards-list tab-page" id="card-page">
+
+  <header class="row topbar">
+    <h1>Cards</h1>
+    <button class="pill-button">Order a card</button>
+  </header>
+
+  <div class="deck" id="cardDeck" role="button" tabindex="0"
+       aria-label="Tap to shuffle cards">
+    {% for card in cards %}
+      <div class="bank-card-view">
+        {% include 'includes/klosa_card.html' with card=card %}
+      </div>
+    {% empty %}
+      <p>No card added.</p>
+    {% endfor %}
+  </div>
+
+  <p class="deck-hint" id="deckHint"></p>
+
+</section>
+        
+        
+<section class="recipient tab-page"  id="recipient-page">
+         <header class="row topbar">
+            <h1>Recipients</h1>
+            <a class="pill-button" href="{% url 'beneficiary:add' %}">Add</a>
+        </header>
+
+        <div class="contacts">
+        {% for item in beneficiaries %}
+            <article class="contact">
+                <img src="https://i.pravatar.cc/100?img=47" alt="">
+                <h3>{{ item.name }}</h3>
+                <p>{{ item.bank_name }}</p>
+            </article>
+            {% empty %}
+            <p>Recent Beneficiary will appear here </p>
+            
+           {% endfor %}
+          
+        </div>
+
+        <div class="trns">
+            <div class="drag-handle"><span class="bar"></span></div>
+
+            <div class="row center">
+            <div class="account-tabs">
+            <span class="acct_slider"></span>
+                <button class="acct selected">All</button>
+                <button class="acct">My accounts</button>
+                </div>
+                <span class="search"><i class="fa-solid fa-search"></i></span>
+            </div>
+            
+            <div class="accounts">
+            <div class="account-info">
+            <div>
+            <span class="img-fluid-icon">
+                <img src="https://i.pravatar.cc/100?img=49" alt=""></span>
+                <span>Gigi Hadid</span>
+                </div>
+                <small>Chase 2983</small>
+            </div>
+
+            <div class="account-info">
+            <div>
+            <span class="img-fluid-icon">
+                <img src="https://i.pravatar.cc/100?img=45" alt=""></span>
+                <span>Bella Hadid</span>
+                </div>
+                <small>Mastercard 9283</small>
+            </div>
+
+            <div class="account-info">
+            <div>
+            <span class="img-fluid-icon">
+                <img src="https://i.pravatar.cc/100?img=52" alt=""></span>
+                <span>My account</span>
+                </div>
+                <small>Account 1234</small>
+            </div>
+            </div>
+        </div>
+</section>
+
+{% include 'accounts/settings.html' %}
+
+<nav class="row menu" >
+<span class="slider"></span>
+<button class="btn tab" data-tab="recipient" aria-label="Recipients"><i class="fa-solid fa-user"></i></button>
+<button class="active btn tab" data-tab="home" aria-label="Home"><i class="fa-solid fa-home"></i></button>
+<button class="btn tab" data-tab="card" aria-label="Cards"><i class="fa-solid fa-wallet"></i></button>
+<button class="btn tab" data-tab="settings"  aria-label="Settings" ><i class="fa-solid fa-gear"></i></button>
+</nav>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+
+{% endblock %}

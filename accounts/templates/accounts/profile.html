@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/style.css'  %}">
+{% endblock %}
+
+
+{% block content %}
+
+<section class="profile-page">
+<header>
+    <h2>My Profile</h2>
+    <p>Manage your personal information.</p>
+    </header>
+
+    <div class="profile-account">
+        <div class="profile-avatar">
+            {{ request.user.first_name|first|upper }}
+        </div>
+
+        <div>
+            <h3>{{ request.user.get_full_name|default:request.user.username }}</h3>
+            <small>{{ account.account_number }}</small>
+        </div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                </label>
+
+                {{ field }}
+
+                {% for error in field.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="save-profile">
+            Save changes
+        </button>
+    </form>
+    
+    <!-- BANK ACCOUNT DETAILS -->
+<div class="bank-details">
+
+    <div class="bank-details-header">
+        <div>
+            <h3>Bank Account Details</h3>
+            <p>Your Klosa account information</p>
+        </div>
+
+        <i class="fa-solid fa-building-columns"></i>
+    </div>
+
+    <div class="bank-detail-item">
+        <span>Account name</span>
+        <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+    </div>
+
+    <div class="bank-detail-item">
+        <span>Account number</span>
+        <strong>{{ account.account_number }}</strong>
+    </div>
+
+    <div class="bank-detail-item">
+        <span>Bank</span>
+        <strong>Klosa</strong>
+    </div>
+
+    <div class="bank-detail-item">
+        <span>Currency</span>
+        <strong>{{ account.currency }}</strong>
+    </div>
+
+    <div class="bank-detail-footer">
+        <i class="fa-solid fa-shield-halved"></i>
+        Your account information is protected.
+    </div>
+
+</div>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Credit History | Klosa{% endblock %}
+
+{% block content %}
+<div class="credit-page">
+
+    <h2>Credit transactions</h2>
+
+    {% if transactions %}
+        {% for item in transactions %}
+            <div class="credit-action">
+
+                <i class="fa-solid
+                    {% if item.transaction_type == 'repayment' %}
+                        fa-arrow-down
+                    {% else %}
+                        fa-arrow-up
+                    {% endif %}
+                "></i>
+
+                <span>
+                    <strong>
+                        {{ item.get_transaction_type_display }}
+                    </strong>
+
+                    <small>
+                        {{ item.description|default:"Credit transaction" }}
+                        <br>
+                        {{ item.created_at|date:"d M Y, h:i A" }}
+                    </small>
+                </span>
+
+                <strong>
+                    ₦{{ item.amount|floatformat:2 }}
+                </strong>
+
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="credit-empty">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <h3>No transactions yet</h3>
+            <p>Your credit activity will appear here.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

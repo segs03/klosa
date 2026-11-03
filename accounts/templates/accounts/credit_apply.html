@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Apply for Credit | Klosa{% endblock %}
+
+{% block content %}
+<div class="credit-page">
+    <h2>Credit application</h2>
+
+    <div class="credit-overview">
+        <h3>Klosa Credit Facility</h3>
+        <p>Apply for access to a revolving credit facility.</p>
+
+        <p>
+            Your application will be evaluated using the eligibility mode rules.
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+            <button type="submit" class="credit-button">
+                Apply now
+            </button>
+        </form>
+    </div>
+
+    <p class="credit-note">
+        This is a credit facility, real offer.
+    </p>
+</div>
+{% endblock %}

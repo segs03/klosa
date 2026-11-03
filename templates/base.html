@@ -1,0 +1,76 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="manifest" href="{% static 'manifest.json' %}">
+
+<meta name="theme-color" content="#061B3D">
+
+<meta name="mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent">
+
+<link rel="apple-touch-icon"
+      href="{% static 'images/klosa-192.png' %}">
+    {% include 'includes/favicon.html' %}
+    <title>{% block title %}Klosa Bank{% endblock %}</title>
+    {% include 'includes/fontawesome.html' %}
+    <link rel="stylesheet" href="{% static 'css/style.css'' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div id="installBanner" class="install-banner" hidden>
+    <div class="install-icon">
+        <i class="fa-solid fa-mobile-screen-button"></i>
+    </div>
+
+    <div class="install-info">
+        <strong>Install Klosa</strong>
+        <small>Get quicker access from your home screen.</small>
+    </div>
+
+    <button type="button" id="installBtn btn">
+        Install
+    </button>
+
+    <button type="button" id="dismissInstall"
+            class="dismiss-install" aria-label="Dismiss">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+</div>
+
+    {% block content %}
+    {% if messages %}
+    {% for message in messages %}
+        <div class="message {{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+    {% endblock %}
+    
+{% block extra_js %}
+{% endblock %}
+
+<script src="{% static 'js/install.js' %}" defer></script>
+<script src="{% static 'js/script.js' %}"></script>
+<script>
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register(
+            "/static/js/service-worker.js"
+        ).catch(error => {
+            console.error("Service Worker Error:", error);
+        });
+    });
+}
+</script>
+</body>
+</html>

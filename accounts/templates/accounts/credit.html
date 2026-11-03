@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Credit Facility | Klosa{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="credit-page">
+
+    <div class="credit-header">
+        <h2>Credit facility</h2>
+        <a href="{% url 'accounts:home' %}">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </div>
+
+    {% if credit and credit.status == "active" %}
+
+        <div class="credit-overview">
+
+            <div class="credit-status">
+                <i class="fa-solid fa-circle-check"></i>
+                Active facility
+            </div>
+
+            <div class="label">Available credit</div>
+
+            <div class="available-credit">
+                ₦{{ credit.available_credit|floatformat:2 }}
+            </div>
+
+            <div class="credit-usage">
+                <span>Credit used</span>
+                <span>
+                    ₦{{ credit.outstanding_balance|floatformat:2 }}
+                    / ₦{{ credit.credit_limit|floatformat:2 }}
+                </span>
+            </div>
+
+            <div class="credit-progress">
+                <span style="width: {% widthratio credit.outstanding_balance credit.credit_limit 100 %}%"></span>
+            </div>
+
+            <div class="credit-usage">
+                <span>Outstanding</span>
+                <span>Credit limit</span>
+            </div>
+
+        </div>
+
+        <div class="credit-grid">
+
+            <div class="credit-stat">
+                <small>Credit limit</small>
+                <strong>₦{{ credit.credit_limit|floatformat:2 }}</strong>
+            </div>
+
+            <div class="credit-stat">
+                <small>Outstanding balance</small>
+                <strong>₦{{ credit.outstanding_balance|floatformat:2 }}</strong>
+            </div>
+
+            <div class="credit-stat">
+                <small>Credit score</small>
+                <strong>{{ credit.credit_score }}</strong>
+            </div>
+
+            <div class="credit-stat">
+                <small>Payment due</small>
+                <strong>
+                    {% if credit.repayment_due_date %}
+                        {{ credit.repayment_due_date|date:"d M Y" }}
+                    {% else %}
+                        Not set
+                    {% endif %}
+                </strong>
+            </div>
+
+        </div>
+
+        <h3 class="credit-section-title">Manage credit</h3>
+
+        <a href="{% url 'accounts:credit_repay' %}" class="credit-action">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Make a repayment</span>
+            <i class="fa-solid fa-chevron-right arrow"></i>
+        </a>
+
+        <a href="{% url 'accounts:credit_transactions' %}" class="credit-action">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Credit transaction history</span>
+            <i class="fa-solid fa-chevron-right arrow"></i>
+        </a>
+
+    {% elif credit and credit.status == "pending" %}
+
+        <div class="credit-empty">
+            <i class="fa-solid fa-hourglass-half"></i>
+            <h3>Application pending</h3>
+            <p>Your credit facility application is being processed.</p>
+        </div>
+
+    {% else %}
+
+        <div class="credit-empty">
+            <i class="fa-solid fa-credit-card"></i>
+            <h3>Access credit with Klosa</h3>
+            <p>
+                Apply for a demo credit facility and manage your
+                available credit, repayments and transaction history
+                in one place.
+            </p>
+
+            <a href="{% url 'accounts:credit_apply' %}" class="credit-button">
+                Apply for credit
+            </a>
+        </div>
+
+    {% endif %}
+
+    <p class="credit-note">
+        Klosa demo credit facility. Credit limits and scores shown
+        here are simulated and are not real lending offers.
+    </p>
+
+</div>
+{% endblock %}

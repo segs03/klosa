@@ -1,0 +1,35 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} Beneficiary | Klosa {% endblock %}
+{% block extra_css %} 
+<link rel="stylesheet" href="{% static 'beneficiary/css/style.css'%} ">
+{% endblock %}
+
+{% block content %} 
+{% for beneficiary in beneficiaries %}
+    <div class="beneficiary-item">
+        <div class="beneficiary-info">
+            <h4>{{ beneficiary.name }}</h4>
+            <p>{{ beneficiary.bank_name }}</p>
+            <p>{{ beneficiary.account_number }}</p>
+        </div>
+
+        <form
+            method="post"
+            action="{% url 'beneficiary:delete' beneficiary.id %}"
+            onsubmit="return confirm('Delete this beneficiary?');"
+        >
+            {% csrf_token %}
+            <button type="submit" class="delete-beneficiary">
+                <i class="fa-solid fa-trash"></i>
+                Delete
+            </button>
+        </form>
+    </div>
+{% empty %}
+    <p>No saved beneficiaries yet.</p>
+{% endfor %}
+
+{% endblock %}

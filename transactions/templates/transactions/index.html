@@ -1,0 +1,206 @@
+
+{% load humanize %}
+{% load static %}
+
+<head>
+<link rel="stylesheet" href="{% static 'transactions/css/style.css'  %}">
+</head>
+
+
+<div class="trns" id="transaction-panel">
+
+    <!-- Drag handle -->
+    <div class="drag-handle" id="transaction-handle">
+        <span></span>
+    </div>
+
+    <!-- Panel header -->
+    <div class="trns-header">
+        <div>
+            <h3>Transactions</h3>
+            <p>Your account activities</p>
+        </div>
+
+        <a href=""
+           class="see-all">
+            receipts
+        </a>
+    </div>
+
+    <!-- Collapsed recent transactions -->
+    <div class="recent-section">
+        <ul class="trns-list">
+            {% for transaction in recent_transactions %}
+                <li class="transaction-item">
+                    <div class="transaction-icon">
+                        {% if transaction.transaction_type == "deposit" %}
+                            ↓
+                        {% elif transaction.transaction_type == "withdrawal" %}
+                            ↑
+                        {% elif transaction.transaction_type == "transfer" %}
+                            ⇄
+                        {% else %}
+                            ₦
+                        {% endif %}
+                    </div>
+
+                    <div class="transaction-details">
+                        <h4>
+                            {{ transaction.get_transaction_type_display }}
+                        </h4>
+
+                        <p>
+                            {{ transaction.description|default:"Transaction" }}
+                        </p>
+
+                        <small>
+                            {{ transaction.created_at|date:"M d, h:i A" }}
+                        </small>
+                    </div>
+
+                    <strong style="color: {% if transaction.transaction_type == 'deposit' %} green {% else %} orangered {% endif %}">
+                       {% if transaction.transaction_type == 'deposit' %} + {% else %} - {% endif %} ₦{{ transaction.amount|floatformat:2|intcomma }}
+                    </strong>
+                </li>
+            {% empty %}
+                <li class="empty-state">
+                    No transactions yet.
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Expanded content -->
+    <div class="expanded-content">
+
+        <!-- Financial overview -->
+        <section class="financial-overview">
+
+            <div class="overview-card income-card">
+                <span>Total income</span>
+                <h3>
+                    ₦{{ total_income|floatformat:2|intcomma }}
+                </h3>
+            </div>
+
+            <div class="overview-card expense-card">
+                <span>Total expenses</span>
+                <h3>
+                    ₦{{ total_expenses|floatformat:2|intcomma }}
+                </h3>
+            </div>
+
+        </section>
+
+        <!-- Quick actions -->
+        <section class="quick-actions">
+
+            <a href="{% url 'transfers:send' %} " class="action-item">
+                <span class="action-icon">↗</span>
+                <small>Send</small>
+            </a>
+
+            <a href="/pay/" class="action-item">
+                <span class="action-icon">₦</span>
+                <small>Pay</small>
+            </a>
+
+            <a href="/withdraw/" class="action-item">
+                <span class="action-icon">↙</span>
+                <small>Withdraw</small>
+            </a>
+
+            <a href="{% url 'transfers:request' %}" class="action-item">
+                <span class="action-icon">↗</span>
+                <small>Request</small>
+            </a>
+
+            <a href="/deposit/" class="action-item">
+                <span class="action-icon">＋</span>
+                <small>Deposit</small>
+            </a>
+
+        </section>
+
+        <!-- Transaction filters -->
+        <section class="history-section">
+
+            <div class="history-heading">
+                <h3>Transaction history</h3>
+                <span>{{ transactions|length }} records</span>
+            </div>
+
+            <div class="transaction-filters">
+                <button class="filter-btn active"
+                        data-filter="all">
+                    All
+                </button>
+
+                <button class="filter-btn"
+                        data-filter="deposit">
+                    Income
+                </button>
+
+                <button class="filter-btn"
+                        data-filter="expense">
+                    Expenses
+                </button>
+            </div>
+
+            <!-- Full transaction list -->
+            <ul class="trns-list full-history">
+
+                {% for transaction in transactions %}
+
+                    <li class="transaction-item"
+                        data-type="{% if transaction.transaction_type == 'deposit' %}deposit{% elif transaction.transaction_type == 'withdrawal' or transaction.transaction_type == 'payment' %}expense{% else %}other{% endif %}">
+
+                        <div class="transaction-icon">
+                            {% if transaction.transaction_type == "deposit" %}
+                                ↓
+                            {% elif transaction.transaction_type == "withdrawal" %}
+                                ↑
+                            {% elif transaction.transaction_type == "transfer" %}
+                                ⇄
+                            {% else %}
+                                ₦
+                            {% endif %}
+                        </div>
+
+                        <div class="transaction-details">
+                            <h4>
+                                {{ transaction.get_transaction_type_display }}
+                            </h4>
+
+                            <p>
+                                {{ transaction.description|default:"Transaction" }}
+                            </p>
+
+                            <small>
+                                {{ transaction.created_at|date:"M d, Y · h:i A" }}
+                            </small>
+                        </div>
+
+                        <strong style="color: {% if transaction.transaction_type == 'deposit' %} green {% else %} orangered {% endif %}">
+                       {% if transaction.transaction_type == 'deposit' %} + {% else %} - {% endif %} ₦{{ transaction.amount|floatformat:2|intcomma }}
+                    </strong>
+
+                    </li>
+
+                {% empty %}
+
+                    <li class="empty-state">
+                        No transactions found.
+                    </li>
+
+                {% endfor %}
+
+            </ul>
+
+        </section>
+
+    </div>
+
+</div>
+
+<script src="{% static 'transactions/js/script.js' %}"></script>

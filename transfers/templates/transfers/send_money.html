@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title%} Send money {% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'transfers/css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="main">
+  <header class="top flex-start center">
+                <a href="{% url 'accounts:home' %}"
+                   class="back"
+                   aria-label="Go home">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+
+                <div class="">
+                    <h2>Send Money</h2>
+                    <small>Quick, safe and secure transfers</small>
+                </div>
+        </header>
+
+<div class="panel radius-tr-tl">
+
+  {% for message in messages %}<p class="msg {{ message.tags }}">{{ message }}</p>{% endfor %}
+  
+  {% if form.non_field_errors %}<p class="field-error">{{ form.non_field_errors.0 }}</p>{% endif %}
+
+  <form method="post" id="sendForm" data-balance="{{ account.balance|unlocalize }}"
+        data-reopen="{% if form.pin.errors %}1{% endif %}" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    
+    <label class="section-label">From</label>
+
+                <div class="select-card wallet-card radius-md row space-btw center">
+                <div class="row gap-sm">
+                    <div class="wallet-icon radius-round center">
+                        <i class="fa-md fa-solid fa-wallet"></i>
+                    </div>
+
+                    <div class="wallet-info col gap-sm">
+                        <b>Main Wallet</b>
+                       <strong>₦{{ account.balance|floatformat:2|intcomma }}</strong><br>
+    <small>Daily limit left: ₦{{ daily_left|floatformat:2|intcomma }}</small>
+                    </div>
+                    </div>
+
+                    <i class=" fa-md fa-solid fa-chevron-down arrow"></i>
+                </div>
+                
+                <label class="section-label to-label"
+                       for="{{ form.beneficiary.id_for_label }}">
+                    To
+                </label>
+
+                <div class="select-card radius-md recipient-card col space-btw gap-md">
+                <div class="row center">
+                    <div class="recipient-icon center radius-round">
+                        <i class="fa-md fa-solid fa-user"></i>
+                    </div>
+                    
+                    {{ form.account_number }}
+                    
+                    {% for error in form.account_number.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+                </div>
+                    
+                      <small>OR</small>
+                      
+                      <div class="col center">
+                      <div class="row center">
+                    <div class="recipient-icon center radius-round">
+                        <i class="fa-md fa-solid fa-user"></i>
+                    </div>
+      {{ form.beneficiary }}
+      </div>
+      <span class="field-error" id="errBen">{{ form.beneficiary.errors.0 }}</span>
+      {% if not form.beneficiary.field.queryset.exists %}
+        <a href="{% url 'beneficiary:add' %}">Add a beneficiary first</a>
+      {% endif %}
+      </div>
+                </div>
+                
+
+    <div class="form-group">
+      <label for="{{ form.amount.id_for_label }}" class="select-label">Amount (₦)</label>
+      {{ form.amount }}
+      <span class="field-error" id="errAmt">{{ form.amount.errors.0 }}</span>
+      <div class="quick-amounts center ">
+                    <button type="button" data-amount="100">₦100</button>
+                    <button type="button" data-amount="500">₦500</button>
+                    <button type="button" data-amount="1000">₦1000</button>
+                    <button type="button" data-amount="2000">₦2000</button>
+                    <button type="button" data-amount="5000">₦5000</button>
+                    <button type="button" data-amount="10000">₦10000</button>
+                    <button type="button" data-amount="20000">₦20000</button>
+                    <button type="button" data-amount="50000">₦50000</button>
+                </div>
+    </div>
+{% comment %}
+    <div class="form-group">
+      <label for="{{ form.description.id_for_label }}">Description (optional)</label>
+      {{ form.description }}
+    </div>
+    {% endcomment %}
+
+<button type="button" class="continue-btn radius row gap" id="openConfirm" >
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Continue
+                </button>
+
+    <dialog id="confirmSheet" class="">
+      <h2>Confirm transfer</h2>
+      <p>To: <strong id="sumTo"></strong></p>
+      <p>Amount: <strong id="sumAmt"></strong></p>
+      <label for="{{ form.pin.id_for_label }}">Enter your 4-digit PIN</label>
+      {{ form.pin }}
+      <span class="field-error" id="errPin">{{ form.pin.errors.0 }}</span>
+      <div class="sheet-actions">
+        <button type="button" id="cancelConfirm">Cancel</button>
+        <button type="submit" class="continue-btn" id="sendBtn" disabled>Confirm and send</button>
+      </div>
+    </dialog>
+  </form>
+  </div>
+</main>
+{% block extra_js%}
+<script src="{% static 'transfers/js/script.js' %} "></script>
+{% endblock %}
+{% endblock %}

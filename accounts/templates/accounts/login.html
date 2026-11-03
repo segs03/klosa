@@ -1,0 +1,34 @@
+
+{% extends 'base.html' %}
+{% load static %}
+{% block title %} Klosa Bank - Login {% endblock %}
+
+{% block content %}
+<div class='col container'>
+    <img src="{% static 'images/klosa_mark_white.png' %}" width="100px" height="100px">
+    <p>Login to your account</p>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        
+        <fieldset class='col login'>
+        <div class='form-group'>
+        <label for='username'>Username</label>
+        <input type="text" name="username" id='username' placeholder='Username' required>
+        </div>
+
+        <div class='form-group'>
+        <label for='password'>Password</label>
+        <input type="password" placeholder='Password' id='password' name="password" required>
+        </div>
+
+        <button type="submit" class='btn'>Login</button>
+        </fieldset>
+    </form>
+    </div>
+    
+{% endblock %}

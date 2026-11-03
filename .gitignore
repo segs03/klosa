@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Django
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.*
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Editors
+.vscode/
+.idea/
+
+# Android / temporary files
+.DS_Store
+
