@@ -86,6 +86,24 @@
 
 </div>
 
+<button type="button" id="addPasskey" class="pill-button">Add fingerprint or face login</button>
+<p id="passkeyMsg"></p>
+<script src="{% static 'accounts/passkeys.js' %}"></script>
+<script>
+  document.getElementById("addPasskey").addEventListener("click", async () => {
+    const msg = document.getElementById("passkeyMsg");
+    try {
+      await passkeyRegister(
+        { options: "{% url 'accounts:passkey_register_options' %}",
+          verify: "{% url 'accounts:passkey_register_verify' %}" },
+        navigator.userAgent.includes("Android") ? "Android phone" : "This device");
+      msg.textContent = "Passkey added.";
+    } catch (e) {
+      msg.textContent = e.name === "NotAllowedError" ? "Cancelled." : e.message;
+    }
+  });
+</script>
+
 </section>
 
 {% endblock %}

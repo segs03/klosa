@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Funding Periods | Klosa{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'funding/css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="funding-container">
+
+    <div class="funding-header">
+        <div>
+            <h2>Funding periods</h2>
+            <p>Manage monthly accounting periods.</p>
+        </div>
+    </div>
+
+    {% if periods %}
+        <div class="period-list">
+
+            {% for period in periods %}
+                <div class="period-card">
+
+                    <div class="period-info">
+                        <h3>
+                            {{ period.start_date|date:"M d, Y" }}
+                            –
+                            {{ period.end_date|date:"M d, Y" }}
+                        </h3>
+
+                        <span class="period-status status-{{ period.status }}">
+                            {{ period.get_status_display }}
+                        </span>
+
+                        {% if period.closed_at %}
+                            <p>
+                                Closed:
+                                {{ period.closed_at|date:"M d, Y H:i" }}
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <div class="period-actions">
+                        {% if period.status == "closed" and perms.funding.reopen_fundingperiod %}
+                            <a
+                                href="{% url 'funding:reopen_period' period.pk %}"
+                                class="reopen-button"
+                            >
+                                Reopen period
+                            </a>
+                        {% endif %}
+                    </div>
+
+                </div>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <div class="empty-periods">
+            <h3>No funding periods yet</h3>
+            <p>Your accounting periods will appear here.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+

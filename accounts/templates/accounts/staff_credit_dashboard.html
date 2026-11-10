@@ -1,0 +1,162 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{% static 'accounts/css/staff_credit.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="staff-credit-page">
+
+    <header class="staff-credit-header">
+        <div>
+            <h2>Credit applications</h2>
+            <p>Review and manage customer credit requests.</p>
+        </div>
+        <span class="staff-label">Staff portal</span>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="staff-message {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if can_assess %}
+    <section class="staff-credit-section">
+        <h3>Pending assessment</h3>
+
+        {% for application in pending_applications %}
+        <article class="staff-application-card">
+
+            <div class="staff-application-top">
+                <div>
+                    <h4>{{ application.user.get_full_name|default:application.user.username }}</h4>
+                    <small>
+                        Submitted {{ application.submitted_at|date:"d M Y, H:i" }}
+                    </small>
+                </div>
+                <span class="status pending">Pending</span>
+            </div>
+
+            <div class="staff-amount">
+                <small>Requested amount</small>
+                <strong>₦{{ application.requested_amount|floatformat:2 }}</strong>
+            </div>
+
+            <form method="POST"
+                  action="{% url 'accounts:assess_credit_application' application.id %}">
+                {% csrf_token %}
+
+                <label for="amount-{{ application.id }}">
+                    Recommended amount (₦)
+                </label>
+                <input
+                    type="number"
+                    id="amount-{{ application.id }}"
+                    name="assessed_amount"
+                    min="0.01"
+                    max="{{ application.requested_amount }}"
+                    step="0.01"
+                    required
+                >
+
+                <label for="assessment-{{ application.id }}">
+                    Assessment reason
+                </label>
+                <textarea
+                    id="assessment-{{ application.id }}"
+                    name="assessment_reason"
+                    maxlength="500"
+                    required
+                ></textarea>
+
+                <button type="submit" class="staff-primary-btn">
+                    Submit assessment
+                </button>
+            </form>
+
+        </article>
+        {% empty %}
+            <p class="staff-empty">No applications are awaiting assessment.</p>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+
+    {% if can_approve %}
+    <section class="staff-credit-section">
+        <h3>Awaiting final decision</h3>
+
+        {% for application in assessed_applications %}
+        <article class="staff-application-card">
+
+            <div class="staff-application-top">
+                <div>
+                    <h4>{{ application.user.get_full_name|default:application.user.username }}</h4>
+                    <small>
+                        Assessed by {{ application.assessed_by.username }}
+                    </small>
+                </div>
+                <span class="status assessed">Assessed</span>
+            </div>
+
+            <div class="staff-amount">
+                <small>Requested amount</small>
+                <strong>₦{{ application.requested_amount|floatformat:2 }}</strong>
+            </div>
+
+            <div class="staff-amount">
+                <small>Recommended amount</small>
+                <strong>₦{{ application.assessed_amount|floatformat:2 }}</strong>
+            </div>
+
+            <p class="staff-reason">
+                {{ application.assessment_reason }}
+            </p>
+
+            <form method="POST"
+                  action="{% url 'accounts:decide_credit_application' application.id %}">
+                {% csrf_token %}
+
+                <label for="decision-{{ application.id }}">
+                    Final decision
+                </label>
+                <select
+                    name="decision"
+                    id="decision-{{ application.id }}"
+                    required
+                >
+                    <option value="">Choose decision</option>
+                    <option value="approved">Approve</option>
+                    <option value="rejected">Reject</option>
+                </select>
+
+                <label for="reason-{{ application.id }}">
+                    Decision reason
+                </label>
+                <textarea
+                    id="reason-{{ application.id }}"
+                    name="decision_reason"
+                    maxlength="500"
+                    required
+                ></textarea>
+
+                <button type="submit" class="staff-primary-btn">
+                    Submit final decision
+                </button>
+            </form>
+
+        </article>
+        {% empty %}
+            <p class="staff-empty">No applications are awaiting a final decision.</p>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}

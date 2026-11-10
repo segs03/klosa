@@ -17,7 +17,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from django.urls import path, include
 from django.views.generic import RedirectView
 
 
@@ -27,5 +26,7 @@ path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
     path('transfers/', include('transfers.urls')),
     path('beneficiary/', include('beneficiary.urls')),
     path("transactions/", include("transactions.urls")),
+    path("funding/", include("funding.urls")),
     path('admin/', admin.site.urls),
 ]
+

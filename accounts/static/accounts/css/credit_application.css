@@ -1,0 +1,178 @@
+
+/* My Credit Applications */
+
+.credit-applications-page {
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto;
+    padding: 22px 16px 40px;
+    box-sizing: border-box;
+    color: #061B3D;
+}
+
+.applications-header {
+    margin-bottom: 25px;
+}
+
+.applications-header h2 {
+    margin: 0 0 7px;
+    font-size: 23px;
+    font-weight: 750;
+    letter-spacing: -.5px;
+}
+
+.applications-header p {
+    margin: 0;
+    color: #8492A6;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Application card */
+.application-card {
+    padding: 19px;
+    margin-bottom: 15px;
+    background: #fff;
+    border: 1px solid #E9EFF5;
+    border-radius: 19px;
+    box-shadow: 0 6px 20px rgba(6, 27, 61, .045);
+}
+
+.application-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.application-card-top h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 750;
+}
+
+.application-date {
+    display: block;
+    margin-top: 6px;
+    color: #94A0B0;
+    font-size: 11px;
+}
+
+/* Status */
+.application-status {
+    padding: 7px 11px;
+    border-radius: 30px;
+    background: #FFF4DF;
+    color: #B7791F;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.application-status.assessed {
+    background: #EAF4FF;
+    color: #1670C5;
+}
+
+.application-status.approved {
+    background: #E7F8EF;
+    color: #16834A;
+}
+
+.application-status.rejected {
+    background: #FFF0F0;
+    color: #C03939;
+}
+
+/* Amount */
+.application-amount {
+    padding: 16px;
+    border-radius: 14px;
+    background: #F5F9FE;
+}
+
+.application-amount small {
+    display: block;
+    margin-bottom: 7px;
+    color: #8291A5;
+    font-size: 12px;
+}
+
+.application-amount strong {
+    color: #061B3D;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -.5px;
+}
+
+.application-details {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 16px;
+    margin-top: 15px;
+    border-top: 1px solid #EEF2F6;
+    font-size: 12px;
+}
+
+.application-details span:first-child {
+    color: #8492A6;
+}
+
+.application-details span:last-child {
+    color: #263B56;
+    font-weight: 650;
+    text-align: right;
+}
+
+.application-reason {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 11px;
+    background: #F5F9FE;
+    color: #52657C;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* Empty state */
+.application-empty {
+    padding: 35px 20px;
+    border: 1px dashed #DCE5EF;
+    border-radius: 18px;
+    text-align: center;
+    background: #FAFCFF;
+}
+
+.application-empty i {
+    font-size: 30px;
+    color: #91A8C1;
+    margin-bottom: 13px;
+}
+
+.application-empty h3 {
+    margin: 0 0 7px;
+    font-size: 16px;
+}
+
+.application-empty p {
+    margin: 0;
+    color: #8996A8;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+@media (max-width: 380px) {
+    .credit-applications-page {
+        padding: 18px 12px 30px;
+    }
+
+    .application-card {
+        padding: 15px;
+    }
+
+    .application-amount strong {
+        font-size: 22px;
+    }
+}

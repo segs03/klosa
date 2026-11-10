@@ -1,0 +1,20 @@
+<h2>Reopen funding period</h2>
+
+<p>
+    Period:
+    {{ period.start_date }} – {{ period.end_date }}
+</p>
+
+<p>
+    Current status: {{ period.status }}
+</p>
+
+<form method="POST">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit">
+        Reopen period
+    </button>
+</form>

@@ -9,11 +9,15 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -21,6 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-n=3o*^0!1x%sn_tsokogyt#9#on+^gj*%iu76kl%#uo6#l$ko8'
+
+
+KYC_IDENTITY_HMAC_KEY = os.environ.get(
+    "KYC_IDENTITY_HMAC_KEY",
+    ""
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -43,7 +53,10 @@ INSTALLED_APPS = [
     'cards',
     'transfers',
     'beneficiary',
+    'funding',
+    'credit',
     'fontawesomefree',
+    
 ]
 
 MIDDLEWARE = [
@@ -57,6 +70,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'bank.urls'
+
+AUTH_USER_MODEL = "accounts.User"
 
 TEMPLATES = [
     {
@@ -80,9 +95,13 @@ WSGI_APPLICATION = 'bank.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
@@ -139,3 +158,9 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# settings.py
+WEBAUTHN_RP_ID = "localhost"                  # production: your domain, e.g. "klosa.bank"
+WEBAUTHN_RP_NAME = "Klosa Bank"
+WEBAUTHN_ORIGIN = "http://localhost:8000"     # production: "https://klosa.bank"

@@ -28,6 +28,27 @@
 
         <button type="submit" class='btn'>Login</button>
         </fieldset>
+        
+<button type="button" id="passkeyBtn" class="pill-button" hidden>Sign in with fingerprint or face</button>
+<p id="passkeyErr" class="field-error"></p>
+
+<script src="{% static 'accounts/js/passkeys.js' %}"></script>
+<script>
+  const btn = document.getElementById("passkeyBtn");
+  if (window.PublicKeyCredential) btn.hidden = false;
+  btn.addEventListener("click", async () => {
+    try {
+      await passkeyLogin(
+        { options: "{% url 'accounts:passkey_login_options' %}",
+          verify: "{% url 'accounts:passkey_login_verify' %}" },
+        "{{ next|escapejs }}");
+    } catch (e) {
+      document.getElementById("passkeyErr").textContent =
+        e.name === "NotAllowedError" ? "Cancelled." : e.message;
+    }
+  });
+</script>
+        
     </form>
     </div>
     

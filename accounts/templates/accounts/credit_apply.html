@@ -1,29 +1,61 @@
-{% extends "base.html" %}
 
-{% block title %}Apply for Credit | Klosa{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/credit.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="credit-page">
-    <h2>Credit application</h2>
 
-    <div class="credit-overview">
-        <h3>Klosa Credit Facility</h3>
-        <p>Apply for access to a revolving credit facility.</p>
+    <div class="credit-header">
+        <h2>Credit application</h2>
+        <p>Apply for a Klosa credit facility.</p>
+    </div>
 
-        <p>
-            Your application will be evaluated using the eligibility mode rules.
-        </p>
+    <div class="credit-info">
+        <small>Credit facility</small>
+        <h3>Flexible credit</h3>
+        <p>Subject to eligibility and staff assessment.</p>
+    </div>
+
+    <div class="credit-form-card">
+        <h3>Request credit</h3>
+        <p class="form-subtitle">Enter the amount you want to apply for.</p>
 
         <form method="POST">
             {% csrf_token %}
-            <button type="submit" class="credit-button">
-                Apply now
+
+            <div class="credit-field">
+                <label for="amount">Requested amount (₦)</label>
+                <input
+                    type="number"
+                    name="amount"
+                    id="amount"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="e.g. 50000"
+                    required
+                >
+                <small class="help-text">
+                    Your request will be assessed before any approval.
+                </small>
+            </div>
+
+            <button type="submit" class="credit-submit">
+                Submit application
             </button>
         </form>
+
+        <div class="credit-notice">
+            <i class="fas fa-info-circle"></i>
+            <span>
+                Submitting an application does not guarantee approval.
+                Your application must pass assessment and independent review.
+            </span>
+        </div>
     </div>
 
-    <p class="credit-note">
-        This is a credit facility, real offer.
-    </p>
 </div>
 {% endblock %}

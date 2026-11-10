@@ -1,0 +1,92 @@
+.funding-container {
+    padding: 20px;
+}
+
+.funding-header {
+    margin-bottom: 24px;
+    color: #FFFFFF
+}
+
+.funding-header h2 {
+    margin-bottom: 5px;
+}
+
+.funding-header p,
+.period-info p {
+    color: #7b8798;
+    font-size: 13px;
+}
+
+.period-list {
+    display: grid;
+    gap: 14px;
+}
+
+.period-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 18px;
+    border: 1px solid #e8edf3;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.period-info h3 {
+    font-size: 15px;
+    margin: 0 0 10px;
+}
+
+.period-status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.status-open {
+    background: #e4f8ed;
+    color: #16834b;
+}
+
+.status-review {
+    background: #fff3d9;
+    color: #a56b00;
+}
+
+.status-closed {
+    background: #eef1f5;
+    color: #596579;
+}
+
+.reopen-button {
+    display: inline-block;
+    padding: 9px 13px;
+    border-radius: 9px;
+    background: #fff1e8;
+    color: #c45b1a;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.reopen-button:hover {
+    background: #ffe3d2;
+}
+
+.empty-periods {
+    padding: 35px 15px;
+    text-align: center;
+    border: 1px dashed #d6deea;
+    border-radius: 14px;
+    color: #7b8798;
+}
+
+@media (max-width: 480px) {
+    .period-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

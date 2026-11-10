@@ -136,7 +136,9 @@ requestAnimationFrame(() => initCardDeck());
 }
 
 // bank click script
+if(bankCard){
 bankCard.addEventListener("click", openCardPage );
+}
 
 // tab slider script
 function moveSlider(index) {
@@ -289,4 +291,5 @@ panel.forEach((p, index) => {
     handle.addEventListener("pointercancel", endDrag);
 
 });
+
 

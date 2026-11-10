@@ -20,7 +20,7 @@
 </a>
 <button class="icon-btn"><i class="fa-solid fa-bell"></i></button>
 </header>
-
+<div>
 <div class="row u-bal">
 <div class="">
 <span class="row"><h1 class="bal-h">Total balance</h1><i class="visible fa-solid fa-eye-slash" id="visible"></i>
@@ -30,11 +30,11 @@
 {% if account %}
 <h1 class="bal" id="bal" data-value="₦{{ account.balance | floatformat:2 }}">₦ {{account.balance | floatformat:2|intcomma}}</h1>
 <h3 class="act_num">Account Number: {{ account.account_number}}</h3>
-<a href="{% url 'accounts:credit' %}">Credit Facility </a>
 {% else %}
 <p>No account Found.</p>
 {% endif %}
 </div>
+
 
 <div class="row action">
 <a href="{% url 'transfers:send' %}" class="btn"><i class="fa-solid fa-paper-plane"></i> Send</a>
@@ -49,6 +49,12 @@
 </div>
 </div>
 
+<div class="row credit-wrapper">
+<a href="{% url 'accounts:credit' %}">Credit facility <i class="fas fa-arrow-right"></i></a>
+<p>Available balance</p>
+</div>
+
+</div>
 <p>services</p>
 <div class="service-grid">
 

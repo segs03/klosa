@@ -1,0 +1,185 @@
+
+/* Credit application page */
+.credit-page {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    color: #FFFFFF;
+}
+
+.credit-header {
+    margin-bottom: 25px;
+}
+
+.credit-header h2 {
+    font-size: 24px;
+    font-weight: 750;
+    margin: 0 0 8px;
+    color: #061B3D;
+}
+
+.credit-header p {
+    color: #718096;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Credit information card */
+.credit-info {
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+    border-radius: 22px;
+    margin-bottom: 25px;
+    color: #fff;
+    background: linear-gradient(135deg, #061B3D, #0756A8);
+    box-shadow: 0 12px 28px rgba(6, 27, 61, .16);
+}
+
+.credit-info::after {
+    content: "";
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    right: -55px;
+    top: -65px;
+    border: 25px solid rgba(0, 229, 255, .10);
+    border-radius: 50%;
+}
+
+.credit-info small {
+    color: #B8D8F5;
+    font-size: 13px;
+}
+
+.credit-info h3 {
+    margin: 10px 0;
+    font-size: 29px;
+    font-weight: 750;
+}
+
+.credit-info p {
+    margin: 0;
+    color: #C7D9EC;
+    font-size: 13px;
+}
+
+/* Application form */
+.credit-form-card {
+    padding: 22px 18px;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid #E8EEF5;
+    box-shadow: 0 6px 22px rgba(6, 27, 61, .05);
+}
+
+.credit-form-card h3 {
+    font-size: 18px;
+    margin: 0 0 6px;
+    color: #061B3D;
+}
+
+.credit-form-card .form-subtitle {
+    color: #8492A6;
+    font-size: 13px;
+    margin-bottom: 22px;
+}
+
+.credit-field {
+    margin-bottom: 19px;
+}
+
+.credit-field label {
+    display: block;
+    margin-bottom: 9px;
+    color: #263B56;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.credit-field input,
+.credit-field select,
+.credit-field textarea {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 15px;
+    border: 1px solid #DCE5EF;
+    border-radius: 12px;
+    outline: none;
+    background: #F8FAFD;
+    color: #061B3D;
+    font: inherit;
+    font-size: 15px;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.credit-field input:focus,
+.credit-field select:focus,
+.credit-field textarea:focus {
+    border-color: #007BFF;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, .10);
+    background: #fff;
+}
+
+.credit-field .help-text {
+    display: block;
+    margin-top: 7px;
+    color: #8492A6;
+    font-size: 12px;
+}
+
+/* Submit button */
+.credit-submit {
+    width: 100%;
+    min-height: 54px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #007BFF, #005DCC);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+}
+
+.credit-submit:active {
+    transform: scale(.98);
+}
+
+.credit-submit:hover {
+    box-shadow: 0 8px 18px rgba(0, 123, 255, .22);
+}
+
+/* Notice */
+.credit-notice {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    margin-top: 18px;
+    border-radius: 12px;
+    background: #EAF7FF;
+    color: #24577D;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.credit-notice i {
+    color: #007BFF;
+    margin-top: 2px;
+}
+
+@media (max-width: 400px) {
+    .credit-page {
+        padding: 16px 12px 30px;
+    }
+
+    .credit-info {
+        padding: 20px;
+    }
+
+    .credit-info h3 {
+        font-size: 25px;
+    }
+}

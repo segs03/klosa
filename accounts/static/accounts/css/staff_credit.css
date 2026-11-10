@@ -1,0 +1,282 @@
+
+/* =========================================
+   KLOSA — STAFF CREDIT DASHBOARD
+========================================= */
+
+.staff-credit-page {
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 24px 16px 45px;
+    box-sizing: border-box;
+    color: #061B3D;
+}
+
+/* Header */
+.staff-credit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 27px;
+}
+
+.staff-credit-header h2 {
+    margin: 0 0 7px;
+    font-size: 23px;
+    font-weight: 750;
+    letter-spacing: -.5px;
+}
+
+.staff-credit-header p {
+    margin: 0;
+    color: #8492A6;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.staff-label {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 30px;
+    background: #EAF4FF;
+    color: #0872CF;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Django messages */
+.staff-message {
+    padding: 13px 15px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.staff-message.success {
+    background: #E9F8EF;
+    color: #187344;
+}
+
+.staff-message.error {
+    background: #FFF0F0;
+    color: #B42318;
+}
+
+/* Sections */
+.staff-credit-section {
+    margin-bottom: 30px;
+}
+
+.staff-credit-section > h3 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 15px;
+    font-size: 17px;
+    font-weight: 750;
+}
+
+.staff-credit-section > h3::before {
+    content: "";
+    width: 4px;
+    height: 19px;
+    border-radius: 5px;
+    background: #007BFF;
+}
+
+/* Application card */
+.staff-application-card {
+    padding: 19px;
+    margin-bottom: 15px;
+    border: 1px solid #E8EEF5;
+    border-radius: 19px;
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(6, 27, 61, .045);
+}
+
+/* Card header */
+.staff-application-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #EEF2F6;
+}
+
+.staff-application-top h4 {
+    margin: 0 0 6px;
+    color: #061B3D;
+    font-size: 15px;
+    font-weight: 750;
+}
+
+.staff-application-top small {
+    color: #8996A8;
+    font-size: 11px;
+}
+
+/* Status badges */
+.status {
+    flex-shrink: 0;
+    padding: 7px 11px;
+    border-radius: 30px;
+    font-size: 10px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.status.pending {
+    background: #FFF4DF;
+    color: #AD7418;
+}
+
+.status.assessed {
+    background: #EAF4FF;
+    color: #1670C5;
+}
+
+/* Amount display */
+.staff-amount {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 0;
+    border-bottom: 1px solid #EEF2F6;
+}
+
+.staff-amount small {
+    color: #8492A6;
+    font-size: 12px;
+}
+
+.staff-amount strong {
+    color: #061B3D;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+/* Assessment reason */
+.staff-reason {
+    padding: 13px;
+    margin: 14px 0;
+    border-radius: 12px;
+    background: #F5F9FE;
+    color: #53677E;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+/* Form */
+.staff-application-card form {
+    margin-top: 18px;
+}
+
+.staff-application-card label {
+    display: block;
+    margin: 16px 0 8px;
+    color: #263B56;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.staff-application-card input,
+.staff-application-card select,
+.staff-application-card textarea {
+    display: block;
+    width: 100%;
+    min-height: 49px;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    border: 1px solid #DFE7F0;
+    border-radius: 12px;
+    outline: none;
+    background: #F8FAFD;
+    color: #061B3D;
+    font-family: inherit;
+    font-size: 13px;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.staff-application-card textarea {
+    min-height: 90px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.staff-application-card input:focus,
+.staff-application-card select:focus,
+.staff-application-card textarea:focus {
+    border-color: #007BFF;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, .09);
+}
+
+/* Action button */
+.staff-primary-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 51px;
+    margin-top: 18px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 13px;
+    background: #007BFF;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+}
+
+.staff-primary-btn:hover {
+    background: #0068DC;
+}
+
+.staff-primary-btn:active {
+    transform: scale(.985);
+}
+
+/* Empty state */
+.staff-empty {
+    padding: 25px 18px;
+    border: 1px dashed #DCE5EF;
+    border-radius: 15px;
+    background: #FAFCFF;
+    color: #8996A8;
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .staff-credit-page {
+        padding: 19px 12px 35px;
+    }
+
+    .staff-credit-header h2 {
+        font-size: 20px;
+    }
+
+    .staff-application-card {
+        padding: 15px;
+    }
+
+    .staff-amount strong {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 340px) {
+    .staff-credit-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
