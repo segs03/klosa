@@ -204,6 +204,7 @@ def send_money_view(request):
                         )
 
             except SendFailed as error:
+                print(error)
                 form.add_error("amount", str(error))
 
             else:

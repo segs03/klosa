@@ -24,18 +24,21 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-n=3o*^0!1x%sn_tsokogyt#9#on+^gj*%iu76kl%#uo6#l$ko8'
+
+
+DEBUG = os.getenv("DEBUG", "True") == "True"
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS", "127.0.0.1,localhost"
+).split(",")
 
 
 KYC_IDENTITY_HMAC_KEY = os.environ.get(
     "KYC_IDENTITY_HMAC_KEY",
     ""
 )
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -72,6 +75,15 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'bank.urls'
 
 AUTH_USER_MODEL = "accounts.User"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.IdentifierBackend",
+    "django.contrib.auth.backends.ModelBackend",   # keep: passkey login uses it
+]
+SMS_BACKEND = "console"      # prints codes in Termux; connect a real SMS provider before going live
+
+DEFAULT_FROM_EMAIL = "Klosa Bank <no-reply@yourdomain.com>"
+IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")       # long random value, separate from SECRET_KEY
 
 TEMPLATES = [
     {
@@ -153,9 +165,17 @@ LOGIN_REDIRECT_URL = '/accounts/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+import os
+
 MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "HOST": os.getenv("EMAIL_HOST"),
+        "PORT": int(os.getenv("EMAIL_PORT", "587")),
+        "USE_TLS": True,
+        "USERNAME": os.getenv("EMAIL_HOST_USER"),
+        "PASSWORD": os.getenv("EMAIL_HOST_PASSWORD"),
+        "DEFAULT_FROM_EMAIL": os.getenv("DEFAULT_FROM_EMAIL"),
     },
 }
 

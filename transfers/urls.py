@@ -9,5 +9,5 @@ urlpatterns = [
         send_money_view,
         name="send"
     ),
-    path("request/", request_money, name="request"),
+    path("request/", request_money, name="request_money"),
 ]

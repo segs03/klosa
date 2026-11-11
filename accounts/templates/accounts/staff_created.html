@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staff created · Klosa Bank</title>
+  <style>
+    body { margin:0; background:#061B3D; color:#fff; font-family:system-ui,sans-serif; }
+    main { width:min(92vw,420px); margin:0 auto; padding:24px 0; }
+    .box { background:#0B2E6E; padding:14px 16px; border-radius:12px; font-size:18px; margin:12px 0; }
+    .btn { display:inline-block; padding:12px 20px; border-radius:999px; background:#00E5FF; color:#061B3D; font-weight:600; text-decoration:none; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Staff user created</h1>
+  <div class="box">Login: <strong>{{ staff.email }}</strong></div>
+  <div class="box">Temporary password: <strong>{{ temp_password }}</strong></div>
+  <p>Copy this now. It will not be shown again, and they must change it at first login.</p>
+  <a class="btn" href="{% url 'accounts:staff_create' %}">Create another</a>
+</main>
+</body>
+</html>

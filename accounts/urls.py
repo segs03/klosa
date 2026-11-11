@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, passkey
+from . import views, passkey, onboarding, recovery
 
 app_name = "accounts"
 
@@ -38,4 +38,16 @@ path("passkey/register/options/", passkey.passkey_register_options, name="passke
 path("passkey/register/verify/",  passkey.passkey_register_verify,  name="passkey_register_verify"),
 path("passkey/login/options/",    passkey.passkey_login_options,    name="passkey_login_options"),
 path("passkey/login/verify/",     passkey.passkey_login_verify,     name="passkey_login_verify"),
+path("verify-phone/", onboarding.verify_phone_view, name="verify_phone"),
+
+path("signup/", onboarding.signup_view, name="signup"),
+path("pin/", views.set_pin_view, name="set_pin"),
+path("staff/new/", views.staff_create_view, name="staff_create"),
+path("password/change/", views.ForcedPasswordChangeView.as_view(), name="password_change"),
+
+path("welcome/", onboarding.onboarding_view, name="onboarding"),
+path("backup-codes/", onboarding.backup_codes_view, name="backup_codes"),
+path("recover/", recovery.recover_request_view, name="recover"),
+path("recover/verify/", recovery.recover_verify_view, name="recover_verify"),
+path("close/", views.close_account_view, name="close_account"),
 ]

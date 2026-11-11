@@ -1,97 +1,283 @@
-
 {% load static %}
 
-<head>
-<link rel="stylesheet" href="{% static 'accounts/style.css' %}">
-</head>
+<style>
+  #settings-page { --navy:#061B3D; --card:#0B2E6E; --cyan:#00E5FF; --blue:#007BFF; --muted:#9FB6E0; --ok:#35E0A1; --warn:#FFD166; --err:#FF8A8A;
+    color:#fff; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:14px 0 130px; box-sizing:border-box; }
+  #settings-page *, #settings-page *::before, #settings-page *::after { box-sizing:border-box; }
+  #settings-page [data-r] { animation:stRise .55s calc(var(--d, 0) * 75ms) cubic-bezier(.2,.8,.2,1) both; }
 
+  /* header */
+  #settings-page .st-head { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  #settings-page .st-back { flex:none; width:42px; height:42px; border-radius:50%; display:grid; place-items:center; color:#fff;
+    background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.1); transition:transform .12s, background .2s; }
+  #settings-page .st-back:active { transform:scale(.92); background:rgba(255,255,255,.16); }
+  #settings-page .st-back svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+  #settings-page .st-head h2 { margin:0; font-size:24px; }
+  #settings-page .st-head p { margin:2px 0 0; font-size:14px; color:var(--muted); }
 
+  /* profile card */
+  #settings-page .st-me { position:relative; overflow:hidden; padding:18px; border-radius:24px;
+    background:linear-gradient(150deg,#0F3A82,#061B3D); border:1px solid rgba(0,229,255,.25); }
+  #settings-page .st-me::before { content:""; position:absolute; width:200px; height:200px; border-radius:50%; background:#00E5FF; opacity:.22;
+    filter:blur(60px); top:-90px; right:-60px; animation:stDrift 10s ease-in-out infinite; }
+  #settings-page .st-me::after { content:""; position:absolute; top:0; bottom:0; left:-60%; width:30%; transform:skewX(-20deg);
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent); animation:stShine 5.5s ease-in-out 2s infinite; }
+  #settings-page .st-me > * { position:relative; z-index:1; }
+  #settings-page .st-who { display:flex; align-items:center; gap:14px; }
+  #settings-page .st-ring { flex:none; width:64px; height:64px; padding:3px; border-radius:50%;
+    background:conic-gradient(#00E5FF,#007BFF,#5FF1FF,#00E5FF); animation:stSpin 6s linear infinite; }
+  #settings-page .st-av { width:100%; height:100%; border-radius:50%; display:grid; place-items:center; font-size:26px; font-weight:700;
+    color:#061B3D; background:linear-gradient(135deg,#5FF1FF,#00E5FF); animation:stSpinBack 6s linear infinite; }
+  #settings-page .st-who h3 { margin:0 0 2px; font-size:19px; overflow-wrap:anywhere; }
+  #settings-page .st-who p { margin:0; font-size:14px; color:var(--muted); overflow-wrap:anywhere; }
+  #settings-page .st-acct { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; padding-top:14px;
+    border-top:1px solid rgba(255,255,255,.12); }
+  #settings-page .st-acct small { display:block; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); }
+  #settings-page .st-acct strong { font-size:20px; letter-spacing:2px; font-variant-numeric:tabular-nums; }
+  #settings-page .st-copy { flex:none; min-height:38px; padding:0 14px; border:0; border-radius:99px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    font-size:13px; font-weight:700; color:#061B3D; background:var(--cyan); transition:transform .12s, background .3s; }
+  #settings-page .st-copy:active { transform:scale(.94); }
+  #settings-page .st-copy.done { background:var(--ok); }
+  #settings-page .st-copy svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #settings-page .st-tier { display:inline-block; margin-top:12px; padding:4px 12px; border-radius:99px; font-size:12px; font-weight:600;
+    background:rgba(255,255,255,.12); color:#DCE7FF; }
+
+  /* sections and rows */
+  #settings-page .st-sec { margin-top:18px; }
+  #settings-page .st-sec h4 { margin:0 0 8px 6px; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  #settings-page .st-list { border-radius:20px; overflow:hidden; background:rgba(11,46,110,.5); border:1px solid rgba(255,255,255,.09);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+  #settings-page .st-item { position:relative; display:flex; align-items:center; gap:14px; width:100%; min-height:62px; padding:12px 16px; margin:0;
+    color:#fff; text-decoration:none; text-align:left; font:inherit; background:none; border:0; border-bottom:1px solid rgba(255,255,255,.07);
+    cursor:pointer; transition:background .2s; -webkit-tap-highlight-color:transparent; }
+  #settings-page .st-item:last-child { border-bottom:0; }
+  #settings-page .st-item:active { background:rgba(255,255,255,.07); }
+  #settings-page .st-item[aria-disabled="true"] { cursor:default; opacity:.78; }
+  #settings-page .st-item[aria-disabled="true"]:active { background:none; }
+  #settings-page .st-ico { flex:none; width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:rgba(0,229,255,.12); transition:transform .2s; }
+  #settings-page .st-item:active .st-ico { transform:scale(.92) rotate(-6deg); }
+  #settings-page .st-ico svg { width:21px; height:21px; fill:none; stroke:var(--cyan); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  #settings-page .st-txt { flex:1; min-width:0; }
+  #settings-page .st-txt b { display:block; font-size:16px; font-weight:600; }
+  #settings-page .st-txt small { display:block; margin-top:2px; font-size:13px; color:var(--muted); }
+  #settings-page .st-go { flex:none; width:18px; height:18px; fill:none; stroke:var(--muted); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s; }
+  #settings-page .st-item:active .st-go { transform:translateX(3px); }
+  #settings-page .st-chip { flex:none; padding:3px 10px; border-radius:99px; font-size:11px; font-weight:700; letter-spacing:.4px; }
+  #settings-page .st-chip.ok { background:rgba(53,224,161,.16); color:var(--ok); }
+  #settings-page .st-chip.warn { background:rgba(255,209,102,.16); color:var(--warn); }
+  #settings-page .st-chip.soon { background:rgba(255,255,255,.1); color:var(--muted); }
+
+  /* logout */
+  #settings-page .st-logout { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:52px; margin-top:22px;
+    border-radius:99px; cursor:pointer; font-size:16px; font-weight:700; color:#FFB3B3; background:rgba(255,138,138,.08);
+    border:1px solid rgba(255,138,138,.4); transition:transform .12s, background .2s; }
+  #settings-page .st-logout:active { transform:scale(.97); background:rgba(255,138,138,.16); }
+  #settings-page .st-logout svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #settings-page .st-ver { margin:16px 0 0; text-align:center; font-size:12px; color:#6F89BC; }
+
+  /* confirm and about sheets */
+  #settings-page dialog { width:min(92vw,380px); padding:22px 20px 18px; border:1px solid rgba(255,255,255,.14); border-radius:24px; color:#fff;
+    background:linear-gradient(160deg,#0F3A82,#061B3D); box-shadow:0 30px 70px rgba(0,0,0,.55); }
+  #settings-page dialog[open] { animation:stSheet .35s cubic-bezier(.2,.9,.3,1.1) both; }
+  #settings-page dialog::backdrop { background:rgba(2,10,28,.65); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  #settings-page dialog h3 { margin:0 0 6px; font-size:20px; }
+  #settings-page dialog p { margin:0 0 16px; color:var(--muted); font-size:15px; line-height:1.45; }
+  #settings-page .st-acts { display:flex; gap:10px; }
+  #settings-page .st-acts button { flex:1; min-height:48px; border-radius:99px; font-size:15px; font-weight:700; cursor:pointer; border:0; transition:transform .12s; }
+  #settings-page .st-acts button:active { transform:scale(.96); }
+  #settings-page .st-acts .no { color:#fff; background:rgba(255,255,255,.12); }
+  #settings-page .st-acts .go { color:#061B3D; background:var(--cyan); }
+  #settings-page .st-acts .out { color:#fff; background:#E0555D; }
+
+  #settings-page a:focus-visible, #settings-page button:focus-visible { outline:2px solid var(--cyan); outline-offset:-2px; }
+
+  @keyframes stRise { from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none} }
+  @keyframes stDrift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-24px,18px)} }
+  @keyframes stSpin { to{transform:rotate(360deg)} }
+  @keyframes stSpinBack { to{transform:rotate(-360deg)} }
+  @keyframes stShine { 0%,60%{left:-60%} 100%{left:130%} }
+  @keyframes stSheet { from{opacity:0; transform:translateY(24px) scale(.96)} to{opacity:1; transform:none} }
+  @media (prefers-reduced-motion: reduce) {
+    #settings-page *, #settings-page *::before, #settings-page *::after { animation:none !important; transition:none !important; }
+  }
+  
+  /* stop the parent's flex layout from squashing the cards */
+#settings-page > * { flex:0 0 auto; }
+#settings-page .st-me { flex:0 0 auto; min-height:max-content; }
+#settings-page .st-sec,
+#settings-page .st-list { flex:0 0 auto; min-height:max-content; }
+
+#settings-page .st-item.danger .st-ico { background:rgba(255,138,138,.14); }
+#settings-page .st-item.danger .st-ico svg { stroke:var(--err); }
+#settings-page .st-item.danger .st-txt b { color:#FFB3B3; }
+</style>
 
 <section class="settings-page tab-page" id="settings-page">
 
-    <header class="settings-header row">
-    <a href="{% url 'accounts:home' %}">
-    <i class="fa-solid fa-chevron-left"></i>
+  <header class="st-head" data-r style="--d:0">
+    <a class="st-back" href="{% url 'accounts:home' %}" aria-label="Back">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </a>
     <div>
-        <h2>Settings</h2>
-        <p>Manage your account and preferences.</p>
-        </div>
-    </header>
-
-    <div class="settings-profile">
-        <div class="profile-avatar">
-            {{ user.first_name|first|upper }}
-        </div>
-
-        <div>
-            <h3>{{ user.get_full_name|default:user.username }}</h3>
-            <p>{{ user.email }}</p>
-            <small>{{ account.account_number }}</small>
-        </div>
+      <h2>Settings</h2>
+      <p>Manage your account and preferences.</p>
     </div>
+  </header>
 
-    <div class="settings-section">
-        <h4>Account</h4>
-
-        <a href="{% url 'accounts:profile' %}" class="settings-item">
-            <i class="fa-solid fa-user"></i>
-            <span>Edit profile</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
-
-        <a href="#" class="settings-item">
-            <i class="fa-solid fa-lock"></i>
-            <span>Change password</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
-
-        <a href="#" class="settings-item">
-            <i class="fa-solid fa-shield-halved"></i>
-            <span>Security and PIN</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
+  <div class="st-me" data-r style="--d:1">
+    <div class="st-who">
+      <div class="st-ring" aria-hidden="true">
+        <div class="st-av">{{ user.get_full_name|default:user.username|first|upper }}</div>
+      </div>
+      <div>
+        <h3>{{ user.get_full_name|default:user.username }}</h3>
+        <p>{{ user.phone_number|default:user.email|default:"No contact details yet" }}</p>
+      </div>
     </div>
-
-    <div class="settings-section">
-        <h4>Preferences</h4>
-
-        <a href="#" class="settings-item">
-            <i class="fa-solid fa-bell"></i>
-            <span>Notifications</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
-
-        <a href="#" class="settings-item">
-            <i class="fa-solid fa-palette"></i>
-            <span>Appearance</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
+    <div class="st-acct">
+      <div>
+        <small>Account number</small>
+        <strong id="stAcct">{{ account.account_number }}</strong>
+      </div>
+      <button type="button" class="st-copy" id="stCopy" aria-label="Copy account number">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+        <span>Copy</span>
+      </button>
     </div>
+    <span class="st-tier">Tier {{ account.kyc_tier }}</span>
+  </div>
 
-    <div class="settings-section">
-        <h4>Support</h4>
-
-        <a href="#" class="settings-item">
-            <i class="fa-solid fa-circle-question"></i>
-            <span>Help and support</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
-
-        <a href="#" class="settings-item">
-            <i class="fa-solid fa-circle-info"></i>
-            <span>About Klosa</span>
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
+  <div class="st-sec" data-r style="--d:2">
+    <h4>Account</h4>
+    <div class="st-list">
+      <a href="{% url 'accounts:profile' %}" class="st-item settings-item">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>
+        <span class="st-txt"><b>Edit profile</b><small>Name, email and account details</small></span>
+        <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a href="{% url 'accounts:password_change' %}" class="st-item settings-item">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-8M16 6l3 3"/></svg></span>
+        <span class="st-txt"><b>Change password</b><small>Use a strong, unique password</small></span>
+        <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a href="{% url 'accounts:set_pin' %}" class="st-item settings-item">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <span class="st-txt"><b>Security and PIN</b><small>Approves every transfer</small></span>
+        {% if account.pin_hash %}<span class="st-chip ok">PIN set</span>{% else %}<span class="st-chip warn">Not set</span>{% endif %}
+        <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a href="{% url 'accounts:onboarding' %}" class="st-item settings-item">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v3a4 4 0 0 0 1 2.6"/><path d="M8 11a4 4 0 0 1 8 0v1"/><path d="M5 11a7 7 0 0 1 14 0v1.5"/><path d="M9 20c.7-1 1-2.2 1-3.5V11"/></svg></span>
+        <span class="st-txt"><b>Fingerprint and backup codes</b><small>Sign in faster, recover your account</small></span>
+        <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
     </div>
+  </div>
 
-    <form method="POST" action="{% url 'accounts:logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="settings-logout">
-            <i class="fa-solid fa-right-from-bracket"></i>
-            Logout
-        </button>
+  <div class="st-sec" data-r style="--d:3">
+    <h4>Preferences</h4>
+    <div class="st-list">
+      <div class="st-item settings-item" aria-disabled="true">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
+        <span class="st-txt"><b>Notifications</b><small>Alerts for money in and out</small></span>
+        <span class="st-chip soon">Soon</span>
+      </div>
+      <div class="st-item settings-item" aria-disabled="true">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2.2-.5-1.3.3-2.3 1.7-2.3H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></svg></span>
+        <span class="st-txt"><b>Appearance</b><small>Theme and display</small></span>
+        <span class="st-chip soon">Soon</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="st-sec" data-r style="--d:4">
+    <h4>Support</h4>
+    <div class="st-list">
+      <div class="st-item settings-item" aria-disabled="true">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.6 2.4c-.7.4-1.1.9-1.1 1.8"/><path d="M12 17h.01"/></svg></span>
+        <span class="st-txt"><b>Help and support</b><small>We are here to help</small></span>
+        <span class="st-chip soon">Soon</span>
+      </div>
+      <button type="button" class="st-item settings-item" id="stAboutBtn">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5h.01"/></svg></span>
+        <span class="st-txt"><b>About Klosa</b><small>Get closer to your assets</small></span>
+        <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+  
+  <div class="st-sec" data-r style="--d:6">
+  <h4>Danger zone</h4>
+  <div class="st-list">
+    <a href="{% url 'accounts:close_account' %}" class="st-item settings-item danger">
+      <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg></span>
+      <span class="st-txt"><b>Close account</b><small>Permanently close your Klosa account</small></span>
+      <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+</div>
+
+  <div data-r style="--d:5">
+    <button type="button" class="st-logout settings-logout" id="stLogoutBtn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h10"/></svg>
+      Log out
+    </button>
+    <p class="st-ver">Klosa Bank · Your money, closer to you</p>
+  </div>
+
+  <dialog id="stLogoutDlg" aria-labelledby="stLoT">
+    <h3 id="stLoT">Log out?</h3>
+    <p>You will need your phone number and password, or your fingerprint, to sign in again.</p>
+    <form method="POST" action="{% url 'accounts:logout' %}" class="st-acts">
+      {% csrf_token %}
+      <button type="button" class="no" id="stLoNo">Stay</button>
+      <button type="submit" class="out">Log out</button>
     </form>
-    </div>
+  </dialog>
+
+  <dialog id="stAboutDlg" aria-labelledby="stAbT">
+    <h3 id="stAbT">About Klosa</h3>
+    <p>Klosa Bank helps you save, send and spend with a PIN and fingerprint protecting every move. Get closer to your assets.</p>
+    <div class="st-acts"><button type="button" class="go" id="stAbOk">Close</button></div>
+  </dialog>
 
 </section>
+
+<script>
+(() => {
+  const root = document.getElementById("settings-page");
+  if (!root) return;
+
+  // copy the account number
+  const copy = root.querySelector("#stCopy");
+  copy.addEventListener("click", async () => {
+    const n = root.querySelector("#stAcct").textContent.trim();
+    const label = copy.querySelector("span");
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(n);
+      else {
+        const t = document.createElement("textarea"); t.value = n; t.style.cssText = "position:fixed;opacity:0";
+        document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove();
+      }
+      copy.classList.add("done"); label.textContent = "Copied";
+      setTimeout(() => { copy.classList.remove("done"); label.textContent = "Copy"; }, 1800);
+    } catch (e) { label.textContent = "Press and hold"; }
+  });
+
+  // sheets: open, close on Stay or a tap outside the box
+  function sheet(dlg, openBtn, closeBtn) {
+    if (!dlg || typeof dlg.showModal !== "function") return;
+    root.querySelector(openBtn).addEventListener("click", () => dlg.showModal());
+    root.querySelector(closeBtn).addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  }
+  sheet(root.querySelector("#stLogoutDlg"), "#stLogoutBtn", "#stLoNo");
+  sheet(root.querySelector("#stAboutDlg"), "#stAboutBtn", "#stAbOk");
+
+  // stop a double tap on Log out
+  root.querySelector("#stLogoutDlg form").addEventListener("submit", (e) => {
+    const b = e.target.querySelector(".out");
+    b.disabled = true; b.textContent = "Logging out…";
+  });
+})();
+</script>

@@ -1,5 +1,30 @@
-from django.contrib import admin
-from .models import CreditPolicy,CreditApplication
+
+from .models import CreditPolicy,CreditApplication, User
+
+from django.contrib import admin, messages
+from django.contrib.auth.admin import UserAdmin
+from django.utils.crypto import get_random_string
+
+
+@admin.register(User)
+class BankUserAdmin(UserAdmin):
+    list_display = ("username", "phone_number", "email", "is_staff", "is_active")
+    search_fields = ("username", "phone_number", "email")
+    fieldsets = UserAdmin.fieldsets + (
+        ("Bank", {"fields": ("phone_number", "phone_verified", "email_verified", "must_change_password")}),)
+    actions = ["reset_staff_password"]
+
+    @admin.action(description="Reset staff password (shows a temporary one)")
+    def reset_staff_password(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, "Superusers only.", level=messages.ERROR)
+            return
+        for u in queryset.filter(is_staff=True, is_superuser=False):
+            temp = get_random_string(12)
+            u.set_password(temp)
+            u.must_change_password = True
+            u.save()
+            self.message_user(request, f"{u.email}: {temp}")
 
 
 

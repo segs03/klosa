@@ -1,5 +1,6 @@
 import base64
 import json
+import traceback
 
 from django.conf import settings
 from django.contrib.auth import login
@@ -58,11 +59,13 @@ def passkey_register_options(request):
     return _json(options)
 
 
+
 @login_required
 @require_POST
 def passkey_register_verify(request):
-    challenge = request.session.pop(REG_KEY, None)     # single use
+    challenge = request.session.pop(REG_KEY, None)
     if not challenge:
+        print("PASSKEY REGISTER FAILED: no challenge in session")
         return JsonResponse({"error": "Session expired. Try again."}, status=400)
     try:
         body = json.loads(request.body)
@@ -73,7 +76,9 @@ def passkey_register_verify(request):
             expected_origin=settings.WEBAUTHN_ORIGIN,
             require_user_verification=True,
         )
-    except Exception:
+    except Exception as e:
+        traceback.print_exc()
+        print("PASSKEY REGISTER FAILED:", repr(e))
         return JsonResponse({"error": "Could not verify this passkey."}, status=400)
 
     Passkey.objects.create(
@@ -83,8 +88,8 @@ def passkey_register_verify(request):
         sign_count=v.sign_count,
         name=(body.get("name") or "My device")[:60],
     )
+    print("PASSKEY REGISTER OK for", request.user)
     return JsonResponse({"ok": True})
-
 
 # ---------- sign in with a passkey (anonymous) ----------
 @require_POST

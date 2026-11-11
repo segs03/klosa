@@ -17,8 +17,6 @@ from django.db.models.functions import Coalesce
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 
-from .forms import ProfileForm
-
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -29,6 +27,103 @@ from .credit_services import (
     approve_credit, repay_credit, submit_credit_application
 )
 
+from .utils import normalize_phone, throttled
+
+from django.contrib.auth.models import Group
+from django.contrib.auth.views import PasswordChangeView
+
+from django.db import transaction
+from django.urls import reverse_lazy
+from django.utils.crypto import get_random_string
+from django.views.decorators.cache import never_cache
+
+from .forms import SetPinForm, StaffCreateForm, CloseAccountForm, ProfileForm
+
+from .services import CloseBlocked, close_customer_account, closure_blockers
+
+
+@never_cache
+@login_required
+def close_account_view(request):
+    account = get_object_or_404(Account, user=request.user)
+    if account.is_closed:
+        return redirect("accounts:login")
+
+    blockers = closure_blockers(account)
+    form = CloseAccountForm(request.POST or None, user=request.user)
+
+    if request.method == "POST":
+        if throttled(request, "close", 5):
+            return render(request, "accounts/form_page.html", {
+                "title": "Close your account", "form": form, "button": "Close my account",
+                "error": "Too many attempts. Try again later."}, status=429)
+        if not blockers and form.is_valid():
+            pin = form.cleaned_data["pin"]
+            if account.is_locked():
+                form.add_error("pin", "Too many wrong attempts. Try again later.")
+            elif not account.check_pin(pin):
+                form.add_error("pin", "Incorrect PIN.")
+            else:
+                try:
+                    close_customer_account(request.user, account)
+                except CloseBlocked as e:
+                    blockers = [str(e)]
+                else:
+                    logout(request)
+                    messages.success(request, "Your account is closed. Thank you for banking with Klosa.")
+                    return redirect("accounts:login")
+
+    return render(request, "accounts/form_page.html", {
+        "title": "Close your account", "form": form, "button": "Close my account",
+        "error": blockers[0] if blockers else ""})
+
+
+@login_required
+def set_pin_view(request):
+    account = get_object_or_404(Account, user=request.user)
+    form = SetPinForm(request.POST or None, user=request.user, has_pin=bool(account.pin_hash))
+    if request.method == "POST" and form.is_valid():
+        account.set_pin(form.cleaned_data["pin"])
+        messages.success(request, "Transaction PIN saved.")
+        return redirect("accounts:onboarding")
+    return render(request, "accounts/form_page.html", {
+        "title": "Set transaction PIN", "form": form, "button": "Save PIN"})
+
+
+@never_cache
+@login_required
+def staff_create_view(request):
+    if not request.user.is_superuser:                  # only superusers create staff
+        raise PermissionDenied
+    form = StaffCreateForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        temp = get_random_string(12)
+        with transaction.atomic():
+            staff = form.save(commit=False)
+            staff.username = staff.email               # staff log in with their email
+            staff.is_staff = True
+            staff.is_superuser = False                 # never granted from this form
+            staff.must_change_password = True
+            staff.set_password(temp)
+            staff.save()
+            staff.groups.add(Group.objects.get(name=form.cleaned_data["role"]))
+        return render(request, "accounts/staff_created.html",
+                      {"staff": staff, "temp_password": temp})
+    return render(request, "accounts/form_page.html", {
+        "title": "Create staff user", "form": form, "button": "Create staff"})
+
+
+class ForcedPasswordChangeView(PasswordChangeView):
+    template_name = "accounts/form_page.html"
+    success_url = reverse_lazy("accounts:home")
+    extra_context = {"title": "Choose a new password", "button": "Save password"}
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        user.must_change_password = False
+        user.save(update_fields=["must_change_password"])
+        return response
 
 
 
@@ -45,6 +140,11 @@ def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
+        
+        ident = normalize_phone(username) or username.lower()
+        
+        key = f"login_fail:{ident}:{request.META.get('REMOTE_ADDR', '')}"
+
 
         user = authenticate(
             request,

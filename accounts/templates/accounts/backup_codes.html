@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backup codes · Klosa Bank</title>
+  <style>
+    body { margin:0; background:#061B3D; color:#fff; font-family:system-ui,sans-serif; }
+    main { width:min(92vw,400px); margin:0 auto; padding:24px 0; }
+    code { display:block; background:#0B2E6E; padding:10px 12px; border-radius:10px; margin-bottom:8px; font-size:18px; letter-spacing:2px; }
+    .btn { display:inline-block; padding:12px 20px; border-radius:999px; background:#00E5FF; color:#061B3D; font-weight:600; text-decoration:none; }
+    .field-error { color:#ff8a8a; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Your backup codes</h1>
+  {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+  {% if codes %}
+    <p>Each code works once. Save them somewhere safe. They will not be shown again.</p>
+    {% for c in codes %}<code>{{ c }}</code>{% endfor %}
+  {% endif %}
+  <p><a class="btn" href="{% url 'accounts:onboarding' %}">Done</a></p>
+</main>
+</body>
+</html>

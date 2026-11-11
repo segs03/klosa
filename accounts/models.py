@@ -12,30 +12,33 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from django.contrib.auth.models import AbstractUser
+from .utils import normalize_email
 
 
 
 
 class User(AbstractUser):
-    email = models.EmailField(
-        unique=True,
-        null=False,
-        blank=False
-    )
+    # Customers sign up with a phone number and may have no email. Staff must have one.
+    email = models.EmailField(max_length=254, null=True, blank=True)
+    email_normalized = models.CharField(unique=True, max_length=254, null=True, blank=True, editable=False)
+    email_verified = models.BooleanField(default=False)
 
-    # Phone number is a contact detail, not an identity key.
-    phone_number = models.CharField(
-        max_length=20,
-        blank=True
-    )
-
+    # Phone is the customer's login, so it must be unique (added in stage 2).
+    phone_number = models.CharField(unique=True, max_length=15, null=True, blank=True)
     phone_verified = models.BooleanField(default=False)
+
+    must_change_password = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        self.email = (self.email or "").strip() or None          # keep the address as typed
+        self.email_normalized = normalize_email(self.email) if self.email else None
+        self.phone_number = self.phone_number or None            # blank must be NULL for "unique"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username
-
-
-
+        
+        
 
 class Account(models.Model):
     
@@ -63,8 +66,18 @@ class Account(models.Model):
     pin_hash = models.CharField(max_length=128, blank=True)
     pin_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
+    
+    # inside class Account
+    kyc_tier = models.PositiveSmallIntegerField(default=0)
+    transfers_locked_until = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_closed(self):
+        return self.closed_at is not None
 
     def set_pin(self, raw):
         self.pin_hash = make_password(raw)
@@ -107,7 +120,44 @@ class Account(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.account_number}"
         
-        
+
+class OneTimeCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    purpose = models.CharField(max_length=20)
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BackupCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name="backup_codes")
+    code_hash = models.CharField(max_length=64, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+
+class IdentityLock(models.Model):
+    """One ID number can belong to one account. Only a keyed hash is stored."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    id_hash = models.CharField(max_length=64, unique=True)
+    id_type = models.CharField(max_length=10)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class RecoveryRequest(models.Model):
+    STATUS = [("pending", "Pending"), ("approved", "Approved"),
+              ("rejected", "Rejected"), ("done", "Done")]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.SET_NULL, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True) 
+               
+                        
       
 class CreditAccount(models.Model):
     STATUS_CHOICES = [

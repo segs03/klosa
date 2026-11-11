@@ -33,6 +33,7 @@ class BeneficiaryForm(forms.Form):
             ("First Bank", "First Bank"),
             ("FCMB", "FCMB"),
             ("GTBank", "GTBank"),
+            ("Klosa Bank", "Klosa Bank"),
             ("Keystone Bank", "Keystone Bank"),
             ("Stanbic IBTC", "Stanbic IBTC"),
             ("Sterling Bank", "Sterling Bank"),

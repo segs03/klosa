@@ -130,6 +130,9 @@ class TransferForm(forms.Form):
             raise ValidationError(
                 "Choose only one recipient method."
             )
+            
+        if acc.closed_at:
+            raise forms.ValidationError("This account is closed.")
 
         if not self.account:
             return cleaned_data

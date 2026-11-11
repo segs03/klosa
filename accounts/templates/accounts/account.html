@@ -38,7 +38,7 @@
 
 <div class="row action">
 <a href="{% url 'transfers:send' %}" class="btn"><i class="fa-solid fa-paper-plane"></i> Send</a>
-<a href="{% url 'transfers:request' %}" class="btn btn-sec">Request</a>
+<a href="{% url 'transfers:request_money' %}" class="btn btn-sec">Request</a>
 </div>
 </div>
 
@@ -124,7 +124,7 @@
 
   <header class="row topbar">
     <h1>Cards</h1>
-    <button class="pill-button">Order a card</button>
+    <a href="#" class="pill-button">Order a card</a>
   </header>
 
   <div class="deck" id="cardDeck" role="button" tabindex="0"

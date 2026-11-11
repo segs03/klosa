@@ -1,0 +1,338 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#061B3D">
+  <title>Welcome · Klosa Bank</title>
+  <style>
+    :root {
+      --navy:#061B3D; --card:#0B2E6E; --card2:#0F3A82;
+      --cyan:#00E5FF; --blue:#007BFF; --text:#fff; --muted:#9FB6E0;
+      --ok:#35E0A1; --err:#FF8A8A;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; min-height:100vh; color:var(--text);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      background:radial-gradient(120% 70% at 50% -10%, #0D3A85 0%, #061B3D 60%) fixed;
+      -webkit-tap-highlight-color:transparent;
+    }
+    main {
+      width:min(92vw,440px); margin:0 auto;
+      padding:calc(env(safe-area-inset-top, 0px) + 20px) 0 calc(env(safe-area-inset-bottom, 0px) + 40px);
+    }
+
+    /* ---------- hero ---------- */
+    .hero { text-align:center; margin-bottom:22px; }
+    .mark { width:76px; height:auto; display:block; margin:0 auto 10px; animation:float 4s ease-in-out 1.8s infinite; }
+    .mark .ribbon { stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.5s .1s cubic-bezier(.4,0,.2,1) forwards; }
+    h1 { font-size:26px; margin:0 0 6px; animation:rise .6s .2s cubic-bezier(.2,.8,.2,1) both; }
+    .sub { margin:0; color:var(--muted); font-size:15px; animation:rise .6s .3s cubic-bezier(.2,.8,.2,1) both; }
+
+    .progress { margin:18px 0 0; animation:rise .6s .4s cubic-bezier(.2,.8,.2,1) both; }
+    .track { height:8px; border-radius:99px; background:rgba(255,255,255,.12); overflow:hidden; }
+    .fill { height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,var(--blue),var(--cyan));
+            transition:width 1s .6s cubic-bezier(.3,.9,.3,1); }
+    .plabel { margin-top:6px; font-size:13px; color:var(--muted); text-align:right; }
+
+    /* ---------- steps ---------- */
+    .steps { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+    .step, .lite {
+      position:relative; display:flex; gap:14px; align-items:flex-start;
+      background:linear-gradient(160deg,var(--card),var(--card2));
+      border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:16px;
+      transition:transform .15s ease, box-shadow .3s ease;
+    }
+    .step { animation:rise .55s calc(var(--i) * 90ms + 450ms) cubic-bezier(.2,.8,.2,1) both; }
+    .step:active { transform:scale(.985); }
+    .step.active { box-shadow:0 10px 30px rgba(0,229,255,.12); border-color:rgba(0,229,255,.45); }
+    .step.active::after {
+      content:""; position:absolute; inset:-1px; border-radius:inherit; border:1px solid var(--cyan);
+      pointer-events:none; opacity:0; animation:ring 2.2s ease-out 1.4s infinite;
+    }
+    .step.shake { animation:shake .4s; }
+
+    .badge {
+      flex:none; width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+      background:rgba(255,255,255,.1); font-weight:700; font-size:16px; position:relative;
+    }
+    .badge .tick { position:absolute; width:22px; height:22px; fill:none; stroke:var(--navy);
+                   stroke-width:3; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
+    .tick path { stroke-dasharray:24; stroke-dashoffset:24; }
+    .step.done .badge { background:var(--ok); animation:pop .5s calc(var(--i) * 90ms + 700ms) cubic-bezier(.3,1.6,.5,1) both; }
+    .step.done .num { opacity:0; }
+    .step.done .tick { opacity:1; }
+    .step.done .tick path { animation:tick .45s calc(var(--i) * 90ms + 900ms) ease forwards; }
+    .step.active .badge { background:linear-gradient(135deg,var(--blue),var(--cyan)); color:var(--navy); }
+
+    .body { flex:1; min-width:0; }
+    .body h2 { margin:0 0 4px; font-size:17px; }
+    .body p { margin:0 0 12px; color:var(--muted); font-size:14px; line-height:1.4; }
+    .hint { margin:8px 0 0 !important; font-size:13px !important; min-height:1em; }
+    .hint.err { color:var(--err); }
+
+    .chip { display:inline-block; padding:4px 12px; border-radius:99px; font-size:12px; font-weight:600;
+            background:rgba(53,224,161,.16); color:var(--ok); }
+    .chip.soft { background:rgba(255,255,255,.1); color:var(--muted); }
+
+    .btn {
+      position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      min-height:44px; padding:0 20px; border:0; border-radius:99px; cursor:pointer; text-decoration:none;
+      background:linear-gradient(135deg,var(--cyan),#5FF1FF); color:var(--navy); font-weight:700; font-size:15px;
+      transition:transform .12s ease, opacity .2s;
+    }
+    .btn:active { transform:scale(.96); }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .step.active .btn::after {
+      content:""; position:absolute; top:0; bottom:0; left:-60%; width:40%;
+      background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);
+      transform:skewX(-20deg); animation:shine 3.2s ease-in-out 1.6s infinite;
+    }
+    .btn.busy::before {
+      content:""; width:14px; height:14px; border:2px solid var(--navy); border-top-color:transparent;
+      border-radius:50%; animation:spin .7s linear infinite;
+    }
+    .btn.big { width:100%; min-height:52px; font-size:17px; }
+    .btn.ghost { background:transparent; color:var(--cyan); border:1px solid rgba(0,229,255,.5); }
+
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input[type=password] {
+      flex:1; min-width:140px; min-height:44px; padding:0 14px; font-size:16px; border-radius:12px;
+      border:1px solid #2A4A82; background:var(--navy); color:var(--text);
+    }
+    input:focus-visible, .btn:focus-visible, a:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
+    .lite { margin-top:12px; opacity:.85; animation:rise .55s 900ms cubic-bezier(.2,.8,.2,1) both; }
+    .lite .badge svg { width:20px; height:20px; fill:none; stroke:var(--muted); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+    .finish { margin-top:20px; text-align:center; animation:rise .55s 1000ms cubic-bezier(.2,.8,.2,1) both; }
+    .finish a.skip { color:var(--muted); font-size:14px; }
+
+    /* ---------- toast + confetti ---------- */
+    .toast {
+      position:fixed; left:50%; top:calc(env(safe-area-inset-top, 0px) + 12px); transform:translateX(-50%);
+      background:var(--ok); color:var(--navy); padding:10px 18px; border-radius:99px; font-weight:600; font-size:14px;
+      z-index:20; animation:drop .4s cubic-bezier(.2,.8,.2,1) both; transition:opacity .4s, transform .4s;
+    }
+    .toast.out { opacity:0; transform:translateX(-50%) translateY(-12px); }
+    .confetti { position:fixed; top:-12px; width:9px; height:14px; border-radius:2px; z-index:30; pointer-events:none;
+                animation:fall var(--d) var(--delay) cubic-bezier(.3,.6,.4,1) forwards; }
+
+    /* ---------- keyframes ---------- */
+    @keyframes rise  { from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none} }
+    @keyframes draw  { to{stroke-dashoffset:0} }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+    @keyframes pop   { 0%{transform:scale(.5)} 100%{transform:scale(1)} }
+    @keyframes tick  { to{stroke-dashoffset:0} }
+    @keyframes ring  { 0%{opacity:.7; transform:scale(1)} 100%{opacity:0; transform:scale(1.05)} }
+    @keyframes shine { 0%,60%{left:-60%} 100%{left:130%} }
+    @keyframes spin  { to{transform:rotate(360deg)} }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+    @keyframes drop  { from{opacity:0; transform:translateX(-50%) translateY(-16px)} to{opacity:1; transform:translateX(-50%)} }
+    @keyframes fall  { to{transform:translate3d(var(--x), 105vh, 0) rotate(var(--r)); opacity:.9} }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation:none !important; transition:none !important; }
+      .mark .ribbon { stroke-dashoffset:0; }
+      .step.done .tick path { stroke-dashoffset:0; }
+    }
+  </style>
+</head>
+
+<body {% if has_pin and has_passkey and has_backup %}data-all="1"{% endif %}>
+{% for message in messages %}<div class="toast" role="status">{{ message }}</div>{% endfor %}
+
+<main>
+  <header class="hero">
+    <svg class="mark" viewBox="8 28 856 575" role="img" aria-label="Klosa Bank">
+      <defs>
+        <linearGradient id="kg" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="860" y2="0">
+          <stop offset="0" stop-color="#17B2FF"/><stop offset=".45" stop-color="#00D9FF"/>
+          <stop offset=".8" stop-color="#14E6FF"/><stop offset="1" stop-color="#7AF3FF"/>
+        </linearGradient>
+      </defs>
+      <path class="ribbon" pathLength="1" fill="none" stroke="url(#kg)" stroke-width="128"
+            stroke-linecap="round" stroke-linejoin="round"
+            d="M650 509H303A193.5 193.5 0 0 1 303 122H685A93.5 93.5 0 0 1 685 309H304"/>
+    </svg>
+    <h1>Welcome to Klosa Bank</h1>
+    <p class="sub">Your account is ready. Three quick steps keep it safe.</p>
+
+    <div class="progress">
+      <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
+        <div class="fill" id="fill"></div>
+      </div>
+      <div class="plabel" id="plabel" aria-live="polite"></div>
+    </div>
+  </header>
+
+  <ol class="steps">
+
+    <li class="step {% if has_pin %}done{% endif %}" style="--i:0">
+      <span class="badge" aria-hidden="true">
+        <span class="num">1</span>
+        <svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+      </span>
+      <div class="body">
+        <h2>Transaction PIN</h2>
+        <p>Four digits that approve every transfer.</p>
+        {% if has_pin %}<span class="chip">Done</span>
+        {% else %}<a class="btn" href="{% url 'accounts:set_pin' %}">Set PIN</a>{% endif %}
+      </div>
+    </li>
+
+    <li class="step {% if has_passkey %}done{% endif %}" style="--i:1">
+      <span class="badge" aria-hidden="true">
+        <span class="num">2</span>
+        <svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+      </span>
+      <div class="body">
+        <h2>Fingerprint or face login</h2>
+        <p>Sign in with one touch. Your fingerprint never leaves your phone.</p>
+        {% if has_passkey %}<span class="chip">Done</span>
+        {% else %}
+        <button type="button" class="btn" id="addPasskey">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v3a4 4 0 0 0 1 2.6"/><path d="M8 11a4 4 0 0 1 8 0v1"/><path d="M5 11a7 7 0 0 1 14 0v1.5"/><path d="M9 20c.7-1 1-2.2 1-3.5V11"/></svg>
+          <span class="lbl">Add</span>
+        </button>
+        <p class="hint" id="passkeyMsg" aria-live="polite"></p>
+        {% endif %}
+      </div>
+    </li>
+
+    <li class="step {% if has_backup %}done{% endif %}" style="--i:2">
+      <span class="badge" aria-hidden="true">
+        <span class="num">3</span>
+        <svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+      </span>
+      <div class="body">
+        <h2>Backup codes</h2>
+        <p>Use them to get back in if you lose your phone. Save them somewhere safe.</p>
+        <form method="post" action="{% url 'accounts:backup_codes' %}" class="row">
+          {% csrf_token %}
+          {% if has_backup %}<input type="password" name="password" placeholder="Your password" autocomplete="current-password" required>{% endif %}
+          <button type="submit" class="btn{% if has_backup %} ghost{% endif %}">{% if has_backup %}Make new codes{% else %}Create codes{% endif %}</button>
+        </form>
+        {% if has_backup %}<p class="hint"><span class="chip">Done</span></p>{% endif %}
+      </div>
+    </li>
+
+  </ol>
+
+  <div class="lite">
+    <span class="badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    </span>
+    <div class="body">
+      <h2>Verify your ID</h2>
+      <p>Add your BVN or NIN to raise your limits. You are on tier {{ tier }}.</p>
+      <span class="chip soft">Coming soon</span>
+    </div>
+  </div>
+
+  <div class="finish">
+    {% if has_pin and has_passkey and has_backup %}
+      <a class="btn big" href="{% url 'accounts:home' %}">Go to my account</a>
+    {% else %}
+      <a class="skip" href="{% url 'accounts:home' %}">Skip for now</a>
+    {% endif %}
+  </div>
+</main>
+
+<script src="{% static 'accounts/js/passkeys.js' %}"></script>
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const steps = [...document.querySelectorAll(".step")];
+  const fill = document.getElementById("fill");
+  const bar = document.getElementById("bar");
+  const label = document.getElementById("plabel");
+
+  function refresh() {
+    const done = steps.filter(s => s.classList.contains("done")).length;
+    const pct = Math.round(done / steps.length * 100);
+    fill.style.width = pct + "%";
+    bar.setAttribute("aria-valuenow", pct);
+    label.textContent = done === steps.length ? "All set" : done + " of " + steps.length + " done";
+    steps.forEach(s => s.classList.remove("active"));
+    const next = steps.find(s => !s.classList.contains("done"));
+    if (next) next.classList.add("active");
+  }
+  refresh();
+
+  // toasts fade out by themselves
+  document.querySelectorAll(".toast").forEach(t => {
+    setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 450); }, 3500);
+  });
+
+  // confetti, once per session, when every step is done
+  function burst() {
+    if (reduce) return;
+    const colors = ["#00E5FF", "#007BFF", "#FFFFFF", "#35E0A1", "#FFD166"];
+    for (let i = 0; i < 36; i++) {
+      const c = document.createElement("i");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = colors[i % colors.length];
+      c.style.setProperty("--x", (Math.random() * 160 - 80) + "px");
+      c.style.setProperty("--r", (Math.random() * 720 - 360) + "deg");
+      c.style.setProperty("--d", (1.6 + Math.random() * 1.4) + "s");
+      c.style.setProperty("--delay", (Math.random() * 0.5) + "s");
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3800);
+    }
+  }
+  try {
+    if (document.body.dataset.all && !sessionStorage.getItem("klosaConfetti")) {
+      sessionStorage.setItem("klosaConfetti", "1");
+      setTimeout(burst, 900);
+    }
+  } catch (e) {}
+
+  // passkey step
+  const btn = document.getElementById("addPasskey");
+  if (btn) {
+    const msg = document.getElementById("passkeyMsg");
+    const lbl = btn.querySelector(".lbl");
+    const li = btn.closest(".step");
+
+    if (!window.PublicKeyCredential) {
+      btn.disabled = true;
+      msg.textContent = "This browser can't use fingerprint or face login.";
+      msg.classList.add("err");
+    }
+
+    btn.addEventListener("click", async () => {
+      if (typeof passkeyRegister !== "function") {
+        msg.textContent = "The passkey script did not load.";
+        msg.classList.add("err");
+        return;
+      }
+      msg.textContent = ""; msg.classList.remove("err");
+      btn.classList.add("busy"); btn.disabled = true; lbl.textContent = "Waiting…";
+      try {
+        await passkeyRegister({
+          options: "{% url 'accounts:passkey_register_options' %}",
+          verify:  "{% url 'accounts:passkey_register_verify' %}"
+        }, /Android/i.test(navigator.userAgent) ? "Android phone" : "This device");
+        li.classList.add("done");
+        btn.remove();
+        refresh();
+        setTimeout(() => location.reload(), reduce ? 0 : 1300);
+      } catch (e) {
+        btn.classList.remove("busy"); btn.disabled = false; lbl.textContent = "Try again";
+        msg.textContent = (e && e.name === "NotAllowedError")
+          ? "Cancelled. Tap to try again."
+          : ((e && e.message) || "Something went wrong.");
+        msg.classList.add("err");
+        li.classList.remove("shake"); void li.offsetWidth; li.classList.add("shake");
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

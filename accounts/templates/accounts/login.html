@@ -1,55 +1,226 @@
-
 {% extends 'base.html' %}
 {% load static %}
-{% block title %} Klosa Bank - Login {% endblock %}
+{% block title %}Klosa Bank - Login{% endblock %}
 
 {% block content %}
-<div class='col container'>
-    <img src="{% static 'images/klosa_mark_white.png' %}" width="100px" height="100px">
-    <p>Login to your account</p>
+<style>
+  .lg-bg { position:fixed; inset:0; z-index:0; overflow:hidden;
+           background:linear-gradient(160deg,#061B3D 0%,#0B2E6E 55%,#061B3D 100%); }
+  .lg-bg::before { content:""; position:absolute; inset:-60px;
+    background-image:linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);
+    background-size:44px 44px; animation:lgGrid 14s linear infinite;
+    -webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 70%);
+            mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 70%); }
+  .lg-orb { position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; animation:lgDrift 12s ease-in-out infinite; }
+  .lg-orb.a { width:300px; height:300px; background:#007BFF; top:-90px; left:-90px; }
+  .lg-orb.b { width:260px; height:260px; background:#00E5FF; bottom:-80px; right:-70px; animation-delay:-5s; opacity:.35; }
+  .lg-orb.c { width:180px; height:180px; background:#3A6BFF; top:45%; right:-60px; animation-delay:-9s; opacity:.35; }
+  .lg-ribbon { position:absolute; width:150vmax; max-width:1100px; right:-25%; bottom:-12%; opacity:.5; }
+  .lg-ribbon path { stroke-dasharray:.18 .82; animation:lgStreak 7s linear infinite; }
+  .lg-fcard { position:absolute; width:210px; height:132px; border-radius:16px; padding:14px; box-sizing:border-box;
+    background:linear-gradient(135deg,rgba(15,58,130,.8),rgba(6,27,61,.8)); border:1px solid rgba(0,229,255,.25);
+    box-shadow:0 20px 40px rgba(0,0,0,.35); opacity:.55; }
+  .lg-fcard i { display:block; width:34px; height:26px; border-radius:6px; background:linear-gradient(135deg,#F3D98B,#D4A94A); }
+  .lg-fcard b { display:block; height:7px; width:70%; border-radius:4px; background:rgba(255,255,255,.35); margin-top:34px; }
+  .lg-fcard u { display:block; height:7px; width:42%; border-radius:4px; background:rgba(255,255,255,.2); margin-top:9px; }
+  .lg-fcard.one { top:7%; left:-70px; --r:-14deg; transform:rotate(-14deg); animation:lgFloat 7s ease-in-out infinite; }
+  .lg-fcard.two { bottom:8%; right:-80px; --r:12deg; transform:rotate(12deg); animation:lgFloat 8s ease-in-out -3s infinite; }
 
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
+  .lg-wrap { position:relative; z-index:1; min-height:100vh; display:grid; place-content:center; justify-items:center;
+    gap:16px; padding:24px 16px; box-sizing:border-box; color:#fff; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .lg-card { width:min(100%,400px); box-sizing:border-box; padding:28px 22px 24px; border-radius:24px;
+    background:rgba(11,46,110,.55); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 24px 60px rgba(0,0,0,.4);
+    animation:lgRise .7s cubic-bezier(.2,.8,.2,1) both; }
+  .lg-card.shake { animation:lgShake .45s; }
+  .lg-head { text-align:center; margin-bottom:18px; }
+  .lg-mark { width:74px; height:auto; display:block; margin:0 auto 8px; animation:lgBob 4s ease-in-out 1.8s infinite; }
+  .lg-mark path { stroke-dasharray:1; stroke-dashoffset:1; animation:lgDraw 1.5s .2s cubic-bezier(.4,0,.2,1) forwards; }
+  .lg-head h1 { margin:0 0 4px; font-size:24px; animation:lgRise .6s .25s both; }
+  .lg-head p { margin:0; color:#9FB6E0; font-size:15px; animation:lgRise .6s .35s both; }
 
-    <form method="POST">
-        {% csrf_token %}
-        
-        <fieldset class='col login'>
-        <div class='form-group'>
-        <label for='username'>Username</label>
-        <input type="text" name="username" id='username' placeholder='Username' required>
+  .lg-msg { margin:0 0 14px; padding:10px 12px; border-radius:12px; font-size:14px; background:rgba(0,229,255,.12); color:#C8F7FF; }
+  .lg-msg.err { background:rgba(255,138,138,.14); color:#FFB3B3; }
+
+  .lg-field { margin-bottom:14px; animation:lgRise .55s both; }
+  .lg-field:nth-of-type(1) { animation-delay:.45s; } .lg-field:nth-of-type(2) { animation-delay:.55s; }
+  .lg-field label { display:block; margin-bottom:6px; font-size:14px; color:#9FB6E0; }
+  .lg-in { position:relative; }
+  .lg-in > svg.ico { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:20px; height:20px;
+    fill:none; stroke:#7E9BD0; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+  .lg-in input { width:100%; box-sizing:border-box; height:50px; padding:0 46px 0 44px; font-size:16px; color:#fff;
+    border-radius:14px; border:1px solid #2A4A82; background:rgba(6,27,61,.7); transition:border-color .2s, box-shadow .2s; }
+  .lg-in input::placeholder { color:#6F89BC; }
+  .lg-in input:focus { outline:none; border-color:#00E5FF; box-shadow:0 0 0 3px rgba(0,229,255,.2); }
+  .lg-eye { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:42px; height:42px; border:0; background:none;
+    color:#9FB6E0; cursor:pointer; display:grid; place-items:center; border-radius:50%; }
+  .lg-eye svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+  .lg-btn { position:relative; overflow:hidden; width:100%; height:52px; border:0; border-radius:99px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px; font-size:17px; font-weight:700; color:#061B3D;
+    background:linear-gradient(135deg,#00E5FF,#5FF1FF); transition:transform .12s, opacity .2s;
+    animation:lgRise .55s .65s both; }
+  .lg-btn:active { transform:scale(.97); }
+  .lg-btn:disabled { opacity:.7; cursor:default; }
+  .lg-btn::after { content:""; position:absolute; top:0; bottom:0; left:-60%; width:40%; transform:skewX(-20deg);
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent); animation:lgShine 3.4s ease-in-out 1.6s infinite; }
+  .lg-btn.busy::before { content:""; width:16px; height:16px; border:2px solid #061B3D; border-top-color:transparent;
+    border-radius:50%; animation:lgSpin .7s linear infinite; }
+  .lg-btn.ghost { background:transparent; color:#00E5FF; border:1px solid rgba(0,229,255,.55); animation-delay:.8s; }
+  .lg-btn.ghost::after { display:none; }
+  .lg-btn.ghost.busy::before { border-color:#00E5FF; border-top-color:transparent; }
+  .lg-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .lg-btn:focus-visible, .lg-eye:focus-visible, .lg-links a:focus-visible { outline:2px solid #00E5FF; outline-offset:2px; }
+
+  .lg-or { display:flex; align-items:center; gap:12px; margin:16px 0; color:#6F89BC; font-size:13px; animation:lgRise .55s .75s both; }
+  .lg-or::before, .lg-or::after { content:""; flex:1; height:1px; background:rgba(255,255,255,.14); }
+  .lg-perr { margin:8px 0 0; min-height:1em; font-size:13px; color:#FFB3B3; text-align:center; }
+
+  .lg-links { margin-top:18px; text-align:center; font-size:15px; color:#9FB6E0; animation:lgRise .55s .9s both; }
+  .lg-links a { color:#00E5FF; font-weight:600; text-decoration:none; }
+  .lg-links .small { display:block; margin-top:10px; font-size:13px; }
+  .lg-signup { display:block; margin-top:6px; padding:12px; border-radius:14px; background:rgba(0,229,255,.08);
+    border:1px dashed rgba(0,229,255,.4); }
+  .lg-foot { margin:0; font-size:12px; color:#7E9BD0; display:flex; align-items:center; gap:6px; animation:lgRise .55s 1s both; }
+  .lg-foot svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+  @keyframes lgRise  { from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none} }
+  @keyframes lgDraw  { to{stroke-dashoffset:0} }
+  @keyframes lgBob   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  @keyframes lgDrift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-24px)} }
+  @keyframes lgGrid  { to{transform:translateY(44px)} }
+  @keyframes lgStreak{ to{stroke-dashoffset:-1} }
+  @keyframes lgFloat { 0%,100%{transform:translateY(0) rotate(var(--r))} 50%{transform:translateY(-16px) rotate(var(--r))} }
+  @keyframes lgShine { 0%,60%{left:-60%} 100%{left:130%} }
+  @keyframes lgSpin  { to{transform:rotate(360deg)} }
+  @keyframes lgShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  @media (prefers-reduced-motion: reduce) {
+    .lg-bg *, .lg-bg::before, .lg-wrap *, .lg-card { animation:none !important; }
+    .lg-mark path { stroke-dashoffset:0; }
+  }
+</style>
+
+<div class="lg-bg" aria-hidden="true">
+  <span class="lg-orb a"></span><span class="lg-orb b"></span><span class="lg-orb c"></span>
+  <svg class="lg-ribbon" viewBox="8 28 856 575" fill="none">
+    <path pathLength="1" stroke="#00E5FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"
+          d="M650 509H303A193.5 193.5 0 0 1 303 122H685A93.5 93.5 0 0 1 685 309H304"/>
+  </svg>
+  <div class="lg-fcard one"><i></i><b></b><u></u></div>
+  <div class="lg-fcard two"><i></i><b></b><u></u></div>
+</div>
+
+<div class="lg-wrap">
+  <div class="lg-card" id="lgCard" {% if error %}data-error="1"{% endif %}>
+
+    <div class="lg-head">
+      <svg class="lg-mark" viewBox="8 28 856 575" role="img" aria-label="Klosa Bank">
+        <defs>
+          <linearGradient id="lgk" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="860" y2="0">
+            <stop offset="0" stop-color="#17B2FF"/><stop offset=".45" stop-color="#00D9FF"/>
+            <stop offset=".8" stop-color="#14E6FF"/><stop offset="1" stop-color="#7AF3FF"/>
+          </linearGradient>
+        </defs>
+        <path pathLength="1" fill="none" stroke="url(#lgk)" stroke-width="128" stroke-linecap="round" stroke-linejoin="round"
+              d="M650 509H303A193.5 193.5 0 0 1 303 122H685A93.5 93.5 0 0 1 685 309H304"/>
+      </svg>
+      <h1>Welcome back</h1>
+      <p>Log in to your Klosa account</p>
+    </div>
+
+    {% for message in messages %}<p class="lg-msg" role="status">{{ message }}</p>{% endfor %}
+    {% if error %}<p class="lg-msg err" role="alert">{{ error }}</p>{% endif %}
+
+    <form method="POST" id="lgForm">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="lg-field">
+        <label for="username">Phone number or email</label>
+        <div class="lg-in">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+          <input type="text" name="username" id="username" placeholder="080 1234 5678" required
+                 autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
+      </div>
 
-        <div class='form-group'>
-        <label for='password'>Password</label>
-        <input type="password" placeholder='Password' id='password' name="password" required>
+      <div class="lg-field">
+        <label for="password">Password</label>
+        <div class="lg-in">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <input type="password" name="password" id="password" placeholder="Your password" required autocomplete="current-password">
+          <button type="button" class="lg-eye" id="lgEye" aria-label="Show password" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
         </div>
+      </div>
 
-        <button type="submit" class='btn'>Login</button>
-        </fieldset>
-        
-<button type="button" id="passkeyBtn" class="pill-button" hidden>Sign in with fingerprint or face</button>
-<p id="passkeyErr" class="field-error"></p>
+      <button type="submit" class="lg-btn" id="lgSubmit"><span>Log in</span></button>
+    </form>
+
+    <div id="lgPasskey" hidden>
+      <div class="lg-or">or</div>
+      <button type="button" class="lg-btn ghost" id="passkeyBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v3a4 4 0 0 0 1 2.6"/><path d="M8 11a4 4 0 0 1 8 0v1"/><path d="M5 11a7 7 0 0 1 14 0v1.5"/><path d="M9 20c.7-1 1-2.2 1-3.5V11"/></svg>
+        <span class="lbl">Sign in with fingerprint or face</span>
+      </button>
+      <p id="passkeyErr" class="lg-perr" aria-live="polite"></p>
+    </div>
+
+    <div class="lg-links">
+      <span>New to Klosa?</span>
+      <a class="lg-signup" href="{% url 'accounts:signup' %}">Create a free account with your phone number</a>
+      <a class="small" href="{% url 'accounts:recover' %}">Forgot password or lost your phone?</a>
+    </div>
+  </div>
+
+  <p class="lg-foot">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+    Protected with a transaction PIN and fingerprint login
+  </p>
+</div>
 
 <script src="{% static 'accounts/js/passkeys.js' %}"></script>
 <script>
-  const btn = document.getElementById("passkeyBtn");
-  if (window.PublicKeyCredential) btn.hidden = false;
+(() => {
+  const card = document.getElementById("lgCard");
+  const shake = () => { card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake"); };
+  if (card.dataset.error) setTimeout(shake, 500);
+
+  // show / hide password
+  const pw = document.getElementById("password"), eye = document.getElementById("lgEye");
+  eye.addEventListener("click", () => {
+    const show = pw.type === "password";
+    pw.type = show ? "text" : "password";
+    eye.setAttribute("aria-pressed", show);
+    eye.setAttribute("aria-label", show ? "Hide password" : "Show password");
+  });
+
+  // log in button: stop double taps
+  document.getElementById("lgForm").addEventListener("submit", () => {
+    const b = document.getElementById("lgSubmit");
+    b.disabled = true; b.classList.add("busy"); b.querySelector("span").textContent = "Logging in…";
+  });
+
+  // fingerprint or face login
+  const box = document.getElementById("lgPasskey"), btn = document.getElementById("passkeyBtn");
+  const err = document.getElementById("passkeyErr"), lbl = btn.querySelector(".lbl");
+  if (window.PublicKeyCredential) box.hidden = false;
   btn.addEventListener("click", async () => {
+    if (typeof passkeyLogin !== "function") { err.textContent = "Fingerprint login did not load."; return; }
+    err.textContent = ""; btn.disabled = true; btn.classList.add("busy"); lbl.textContent = "Waiting…";
     try {
       await passkeyLogin(
         { options: "{% url 'accounts:passkey_login_options' %}",
-          verify: "{% url 'accounts:passkey_login_verify' %}" },
+          verify:  "{% url 'accounts:passkey_login_verify' %}" },
         "{{ next|escapejs }}");
     } catch (e) {
-      document.getElementById("passkeyErr").textContent =
-        e.name === "NotAllowedError" ? "Cancelled." : e.message;
+      err.textContent = e.name === "NotAllowedError" ? "Cancelled." : e.message;
+      btn.disabled = false; btn.classList.remove("busy"); lbl.textContent = "Sign in with fingerprint or face";
+      shake();
     }
   });
+})();
 </script>
-        
-    </form>
-    </div>
-    
 {% endblock %}

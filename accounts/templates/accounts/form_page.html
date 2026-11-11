@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }} - Klosa Bank{% endblock %}
+
+{% block content %}
+<style>
+  .lg-bg { position:fixed; inset:0; z-index:0; overflow:hidden;
+           background:linear-gradient(160deg,#061B3D 0%,#0B2E6E 55%,#061B3D 100%); }
+  .lg-bg::before { content:""; position:absolute; inset:-60px;
+    background-image:linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);
+    background-size:44px 44px; animation:lgGrid 14s linear infinite;
+    -webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 70%);
+            mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 70%); }
+  .lg-orb { position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; animation:lgDrift 12s ease-in-out infinite; }
+  .lg-orb.a { width:300px; height:300px; background:#007BFF; top:-90px; left:-90px; }
+  .lg-orb.b { width:260px; height:260px; background:#00E5FF; bottom:-80px; right:-70px; animation-delay:-5s; opacity:.35; }
+  .lg-orb.c { width:180px; height:180px; background:#3A6BFF; top:45%; right:-60px; animation-delay:-9s; opacity:.35; }
+  .lg-ribbon { position:absolute; width:150vmax; max-width:1100px; right:-25%; bottom:-12%; opacity:.5; }
+  .lg-ribbon path { stroke-dasharray:.18 .82; animation:lgStreak 7s linear infinite; }
+  .lg-fcard { position:absolute; width:210px; height:132px; border-radius:16px; padding:14px; box-sizing:border-box;
+    background:linear-gradient(135deg,rgba(15,58,130,.8),rgba(6,27,61,.8)); border:1px solid rgba(0,229,255,.25);
+    box-shadow:0 20px 40px rgba(0,0,0,.35); opacity:.55; }
+  .lg-fcard i { display:block; width:34px; height:26px; border-radius:6px; background:linear-gradient(135deg,#F3D98B,#D4A94A); }
+  .lg-fcard b { display:block; height:7px; width:70%; border-radius:4px; background:rgba(255,255,255,.35); margin-top:34px; }
+  .lg-fcard u { display:block; height:7px; width:42%; border-radius:4px; background:rgba(255,255,255,.2); margin-top:9px; }
+  .lg-fcard.one { top:7%; left:-70px; --r:-14deg; transform:rotate(-14deg); animation:lgFloat 7s ease-in-out infinite; }
+  .lg-fcard.two { bottom:8%; right:-80px; --r:12deg; transform:rotate(12deg); animation:lgFloat 8s ease-in-out -3s infinite; }
+
+  .lg-wrap { position:relative; z-index:1; min-height:100vh; display:grid; place-content:center; justify-items:center;
+    gap:16px; padding:24px 16px; box-sizing:border-box; color:#fff; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .lg-card { width:min(100%,400px); box-sizing:border-box; padding:26px 22px 22px; border-radius:24px;
+    background:rgba(11,46,110,.55); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 24px 60px rgba(0,0,0,.4);
+    animation:lgRise .7s cubic-bezier(.2,.8,.2,1) both; }
+  .lg-card.shake { animation:lgShake .45s; }
+  .lg-head { text-align:center; margin-bottom:16px; }
+  .lg-mark { width:62px; height:auto; display:block; margin:0 auto 8px; animation:lgBob 4s ease-in-out 1.8s infinite; }
+  .lg-mark path { stroke-dasharray:1; stroke-dashoffset:1; animation:lgDraw 1.5s .2s cubic-bezier(.4,0,.2,1) forwards; }
+  .lg-head h1 { margin:0 0 4px; font-size:24px; animation:lgRise .6s .25s both; }
+  .lg-head p { margin:0; color:#9FB6E0; font-size:15px; line-height:1.4; animation:lgRise .6s .35s both; }
+
+  .lg-steps { list-style:none; display:flex; justify-content:center; gap:6px; margin:0 0 18px; padding:0; font-size:12px;
+    color:#7E9BD0; animation:lgRise .6s .3s both; }
+  .lg-steps li { display:flex; align-items:center; gap:6px; }
+  .lg-steps li + li::before { content:""; width:22px; height:2px; border-radius:2px; background:rgba(255,255,255,.18); }
+  .lg-steps .dot { width:20px; height:20px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:700;
+    background:rgba(255,255,255,.12); }
+  .lg-steps .on { color:#fff; } .lg-steps .on .dot { background:linear-gradient(135deg,#007BFF,#00E5FF); color:#061B3D; }
+  .lg-steps .ok { color:#35E0A1; } .lg-steps .ok .dot { background:#35E0A1; color:#061B3D; }
+
+  .lg-msg { margin:0 0 14px; padding:10px 12px; border-radius:12px; font-size:14px; background:rgba(0,229,255,.12); color:#C8F7FF; }
+  .lg-msg.err { background:rgba(255,138,138,.14); color:#FFB3B3; }
+
+  .lg-field { margin-bottom:14px; animation:lgRise .55s calc(var(--i) * 90ms + 450ms) both; }
+  .lg-field > label { display:block; margin-bottom:6px; font-size:14px; color:#9FB6E0; }
+  .lg-in { position:relative; }
+  .lg-in > svg.ico { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:20px; height:20px;
+    fill:none; stroke:#7E9BD0; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+  .lg-in input { width:100%; box-sizing:border-box; height:50px; padding:0 46px 0 44px; font-size:16px; color:#fff;
+    border-radius:14px; border:1px solid #2A4A82; background:rgba(6,27,61,.7); transition:border-color .2s, box-shadow .2s; }
+  .lg-in input::placeholder { color:#6F89BC; }
+  .lg-in input:focus { outline:none; border-color:#00E5FF; box-shadow:0 0 0 3px rgba(0,229,255,.2); }
+  .lg-field.otp .lg-in input { padding:0 14px; text-align:center; font-size:26px; letter-spacing:10px; font-weight:600; }
+  .lg-field.err .lg-in input { border-color:#FF8A8A; }
+  .lg-eye { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:42px; height:42px; border:0; background:none;
+    color:#9FB6E0; cursor:pointer; display:grid; place-items:center; border-radius:50%; }
+  .lg-eye svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .lg-help { margin:6px 0 0; font-size:12px; color:#7E9BD0; }
+  .lg-ferr { margin:6px 0 0; font-size:13px; color:#FFB3B3; }
+
+  .lg-meter { display:flex; gap:5px; margin-top:8px; }
+  .lg-meter i { flex:1; height:5px; border-radius:99px; background:rgba(255,255,255,.14); transition:background .25s; }
+  .lg-meter.s1 i:nth-child(-n+1) { background:#FF8A8A; }
+  .lg-meter.s2 i:nth-child(-n+2) { background:#FFD166; }
+  .lg-meter.s3 i:nth-child(-n+3) { background:#7BE0C3; }
+  .lg-meter.s4 i:nth-child(-n+4) { background:#35E0A1; }
+  .lg-mtxt { margin:5px 0 0; font-size:12px; color:#9FB6E0; min-height:1em; }
+
+  .lg-check { display:flex; align-items:flex-start; gap:12px; margin:4px 0 16px; font-size:14px; color:#C8D6F2; line-height:1.4; cursor:pointer; }
+  .lg-check input { flex:none; width:22px; height:22px; margin:0; accent-color:#00E5FF; }
+
+  .lg-btn { position:relative; overflow:hidden; width:100%; height:52px; border:0; border-radius:99px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:10px; font-size:17px; font-weight:700; color:#061B3D;
+    background:linear-gradient(135deg,#00E5FF,#5FF1FF); transition:transform .12s, opacity .2s; animation:lgRise .55s .75s both; }
+  .lg-btn:active { transform:scale(.97); }
+  .lg-btn:disabled { opacity:.7; cursor:default; }
+  .lg-btn::after { content:""; position:absolute; top:0; bottom:0; left:-60%; width:40%; transform:skewX(-20deg);
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent); animation:lgShine 3.4s ease-in-out 1.6s infinite; }
+  .lg-btn.busy::before { content:""; width:16px; height:16px; border:2px solid #061B3D; border-top-color:transparent;
+    border-radius:50%; animation:lgSpin .7s linear infinite; }
+  .lg-btn:focus-visible, .lg-eye:focus-visible, .lg-links a:focus-visible, .lg-check input:focus-visible { outline:2px solid #00E5FF; outline-offset:2px; }
+
+  .lg-perks { display:flex; justify-content:space-between; gap:8px; margin:16px 0 0; padding:0; list-style:none;
+    font-size:12px; color:#9FB6E0; animation:lgRise .55s .9s both; }
+  .lg-perks li { flex:1; text-align:center; }
+  .lg-perks svg { display:block; margin:0 auto 4px; width:22px; height:22px; fill:none; stroke:#00E5FF; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .lg-note { margin:14px 0 0; font-size:13px; color:#9FB6E0; line-height:1.45; text-align:center; }
+  .lg-links { margin-top:16px; text-align:center; font-size:15px; color:#9FB6E0; animation:lgRise .55s 1s both; }
+  .lg-links a { color:#00E5FF; font-weight:600; text-decoration:none; }
+  .lg-links .dot { margin:0 6px; opacity:.5; }
+  .lg-foot { margin:0; font-size:12px; color:#7E9BD0; display:flex; align-items:center; gap:6px; animation:lgRise .55s 1.1s both; }
+  .lg-foot svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+  @keyframes lgRise  { from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none} }
+  @keyframes lgDraw  { to{stroke-dashoffset:0} }
+  @keyframes lgBob   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  @keyframes lgDrift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-24px)} }
+  @keyframes lgGrid  { to{transform:translateY(44px)} }
+  @keyframes lgStreak{ to{stroke-dashoffset:-1} }
+  @keyframes lgFloat { 0%,100%{transform:translateY(0) rotate(var(--r))} 50%{transform:translateY(-16px) rotate(var(--r))} }
+  @keyframes lgShine { 0%,60%{left:-60%} 100%{left:130%} }
+  @keyframes lgSpin  { to{transform:rotate(360deg)} }
+  @keyframes lgShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  @media (prefers-reduced-motion: reduce) {
+    .lg-bg *, .lg-bg::before, .lg-wrap *, .lg-card { animation:none !important; }
+    .lg-mark path { stroke-dashoffset:0; }
+  }
+</style>
+
+<div class="lg-bg" aria-hidden="true">
+  <span class="lg-orb a"></span><span class="lg-orb b"></span><span class="lg-orb c"></span>
+  <svg class="lg-ribbon" viewBox="8 28 856 575" fill="none">
+    <path pathLength="1" stroke="#00E5FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"
+          d="M650 509H303A193.5 193.5 0 0 1 303 122H685A93.5 93.5 0 0 1 685 309H304"/>
+  </svg>
+  <div class="lg-fcard one"><i></i><b></b><u></u></div>
+  <div class="lg-fcard two"><i></i><b></b><u></u></div>
+</div>
+
+<div class="lg-wrap">
+  <div class="lg-card" id="lgCard" {% if error or form.errors %}data-error="1"{% endif %}>
+
+    <div class="lg-head">
+      <svg class="lg-mark" viewBox="8 28 856 575" role="img" aria-label="Klosa Bank">
+        <defs>
+          <linearGradient id="lgk" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="860" y2="0">
+            <stop offset="0" stop-color="#17B2FF"/><stop offset=".45" stop-color="#00D9FF"/>
+            <stop offset=".8" stop-color="#14E6FF"/><stop offset="1" stop-color="#7AF3FF"/>
+          </linearGradient>
+        </defs>
+        <path pathLength="1" fill="none" stroke="url(#lgk)" stroke-width="128" stroke-linecap="round" stroke-linejoin="round"
+              d="M650 509H303A193.5 193.5 0 0 1 303 122H685A93.5 93.5 0 0 1 685 309H304"/>
+      </svg>
+      <h1>{{ title }}</h1>
+      {% if form.fields.agree %}
+        <p>Just your phone number and a password. You will add your PIN and fingerprint next.</p>
+      {% elif form.fields.code and form.fields.new_password %}
+        <p>Enter the code we sent you and choose a new password.</p>
+      {% elif form.fields.code %}
+        <p>We sent a 6-digit code to your phone. It works for 15 minutes.</p>
+        {% elif form.fields.confirm %}
+  <p>Closing your account is permanent. You can sign up again later, and your old records are kept as the law requires.</p>
+      {% endif %}
+    </div>
+
+    {% if form.fields.agree or form.fields.code and not form.fields.new_password %}
+    <ol class="lg-steps" aria-label="Sign up progress">
+      <li class="{% if form.fields.agree %}on{% else %}ok{% endif %}"><span class="dot">{% if form.fields.agree %}1{% else %}✓{% endif %}</span>Account</li>
+      <li class="{% if form.fields.agree %}{% else %}on{% endif %}"><span class="dot">2</span>Verify</li>
+      <li><span class="dot">3</span>Secure</li>
+    </ol>
+    {% endif %}
+
+    {% for message in messages %}<p class="lg-msg" role="status">{{ message }}</p>{% endfor %}
+    {% if error %}<p class="lg-msg err" role="alert">{{ error }}</p>{% endif %}
+    {% for e in form.non_field_errors %}<p class="lg-msg err" role="alert">{{ e }}</p>{% endfor %}
+
+    <form method="post" id="lgForm" novalidate>
+      {% csrf_token %}
+
+      {% for field in form %}
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <div class="lg-field" style="--i:{{ forloop.counter0 }}">
+            <label class="lg-check" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
+            {% for e in field.errors %}<p class="lg-ferr" role="alert">{{ e }}</p>{% endfor %}
+          </div>
+        {% else %}
+          <div class="lg-field{% if field.name == 'code' %} otp{% endif %}{% if field.errors %} err{% endif %}" style="--i:{{ forloop.counter0 }}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="lg-in">
+              {% if field.name == 'phone' %}
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+              {% elif field.name == 'code' %}
+              {% elif field.name == 'backup_code' %}
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-8M16 6l3 3"/></svg>
+              {% elif field.name == 'email' %}
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+              {% elif 'password' in field.name or 'pin' in field.name %}
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              {% else %}
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>
+              {% endif %}
+              {{ field }}
+            </div>
+            {% if field.help_text %}<p class="lg-help">{{ field.help_text|safe }}</p>{% endif %}
+            {% for e in field.errors %}<p class="lg-ferr" role="alert">{{ e }}</p>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <button type="submit" class="lg-btn" id="lgSubmit"><span>{{ button }}</span></button>
+    </form>
+
+    {% if form.fields.agree %}
+    <ul class="lg-perks">
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>Free to open</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v3a4 4 0 0 0 1 2.6"/><path d="M8 11a4 4 0 0 1 8 0v1"/><path d="M5 11a7 7 0 0 1 14 0v1.5"/></svg>Fingerprint login</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>PIN protected</li>
+    </ul>
+    {% endif %}
+
+    {% if form.fields.code and not form.fields.new_password and not user.is_authenticated %}
+      <p class="lg-note">No code? You may already have an account. Log in, or sign up again with the same number to get a new code.</p>
+    {% endif %}
+
+    {% if not user.is_authenticated %}
+    <p class="lg-links">
+      {% if form.fields.agree %}
+        Already have an account? <a href="{% url 'accounts:login' %}">Log in</a>
+      {% else %}
+        <a href="{% url 'accounts:login' %}">Log in</a><span class="dot">·</span>
+        <a href="{% url 'accounts:signup' %}">Create account</a><span class="dot">·</span>
+        <a href="{% url 'accounts:recover' %}">Lost your phone?</a>
+      {% endif %}
+    </p>
+    {% endif %}
+  </div>
+
+  <p class="lg-foot">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+    Your password and PIN are stored securely
+  </p>
+</div>
+
+<script>
+(() => {
+  const card = document.getElementById("lgCard");
+  const form = document.getElementById("lgForm");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (card.dataset.error && !reduce) setTimeout(() => { card.classList.add("shake"); }, 500);
+
+  const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+  // show and hide on every password box, plus a strength bar when choosing a new password
+  form.querySelectorAll('.lg-in input[type="password"]').forEach((inp) => {
+    const wrap = inp.parentElement;
+    const eye = document.createElement("button");
+    eye.type = "button"; eye.className = "lg-eye"; eye.innerHTML = EYE;
+    eye.setAttribute("aria-label", "Show"); eye.setAttribute("aria-pressed", "false");
+    eye.addEventListener("click", () => {
+      const show = inp.type === "password";
+      inp.type = show ? "text" : "password";
+      eye.setAttribute("aria-pressed", show); eye.setAttribute("aria-label", show ? "Hide" : "Show");
+    });
+    wrap.appendChild(eye);
+
+    if (inp.getAttribute("autocomplete") === "new-password") {
+      const meter = document.createElement("div");
+      meter.className = "lg-meter"; meter.innerHTML = "<i></i><i></i><i></i><i></i>";
+      const txt = document.createElement("p"); txt.className = "lg-mtxt"; txt.setAttribute("aria-live", "polite");
+      wrap.after(meter); meter.after(txt);
+      const words = ["", "Weak", "Okay", "Good", "Strong"];
+      inp.addEventListener("input", () => {
+        const v = inp.value; let s = 0;
+        if (v.length >= 8) s++;
+        if (v.length >= 12) s++;
+        if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
+        if (/\d/.test(v) && /[^A-Za-z0-9]/.test(v)) s++;
+        if (v && v.length < 8) { s = 1; txt.textContent = "Too short. Use at least 8 characters."; }
+        else txt.textContent = v ? words[s] || "Weak" : "";
+        meter.className = "lg-meter" + (v ? " s" + Math.max(s, 1) : "");
+      });
+    }
+  });
+
+  // digits only for the code and PIN boxes
+  form.querySelectorAll('input[inputmode="numeric"]').forEach((inp) => {
+    inp.addEventListener("input", () => { inp.value = inp.value.replace(/\D/g, ""); });
+  });
+
+  // open the keyboard on the code box
+  const code = form.querySelector('input[name="code"]');
+  if (code) setTimeout(() => code.focus(), 600);
+
+  // stop double taps
+  form.addEventListener("submit", () => {
+    const b = document.getElementById("lgSubmit");
+    b.disabled = true; b.classList.add("busy");
+  });
+})();
+</script>
+{% endblock %}

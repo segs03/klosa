@@ -33,11 +33,11 @@ def post_verified_investor_contribution(
     verified_by,
 ):
     contribution = (
-        CapitalContribution.objects
-        .select_for_update()
-        .select_related("investor")
-        .get(pk=contribution_id)
-    )
+    CapitalContribution.objects
+    .select_for_update(of=("self",))
+    .select_related("investor")
+    .get(pk=contribution_id)
+)
 
     if contribution.source_type != "investor":
         raise ValidationError(
