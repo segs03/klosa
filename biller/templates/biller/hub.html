@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Pay bills - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Pay bills</h1><p>Airtime, data, bills and more</p></div>
+  </header>
+  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+  <div class="bl-top" data-r style="--d:1"><small>Available balance</small><strong>₦{{ account.balance|floatformat:2 }}</strong></div>
+
+  <div class="bl-grid">
+    {% for s in items %}
+    <a class="bl-tile{% if s.locked %} locked{% endif %}" href="{% url 'biller:service' s.key %}" data-r style="--d:{{ forloop.counter|add:1 }}">
+      <span class="bl-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{ s.path }}"/></svg></span>
+      <b>{{ s.title }}</b><small>{{ s.blurb }}</small>
+      {% if s.locked %}<span class="bl-lock">Verify ID</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  <h2>Recent</h2>
+    {% for o in recent %}
+    <a class="bl-row" href="{% url 'biller:order' o.reference %}">
+      <div class="grow"><b>{{ o.get_category_display }}</b><small>••••{{ o.customer_ref|slice:"-4:" }} · {{ o.created_at|date:"d M, H:i" }}</small></div>
+      <div style="text-align:right"><b>₦{{ o.amount|floatformat:2 }}</b><br><span class="bl-chip-s {{ o.status }}">{{ o.get_status_display }}</span></div>
+    </a>
+  {% empty %}<p style="color:#9FB6E0">Nothing yet.</p>{% endfor %}
+  <p><a href="{% url 'biller:history' %}" style="color:#00E5FF">See all payments</a></p>
+</section>
+{% endblock %}

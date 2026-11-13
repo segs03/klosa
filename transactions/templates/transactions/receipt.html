@@ -1,15 +1,33 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block content %}
-<section class="receipt">
-  <h1>Transfer successful</h1>
-  <p class="amount">₦{{ tx.amount|floatformat:2 }}</p>
-  <dl>
-    <dt>To</dt><dd>{{ tx.beneficiary.name|default:"-" }}</dd>
-    <dt>Account</dt><dd>****{{ tx.beneficiary.account_number|slice:"-4:" }}</dd>
-    <dt>Reference</dt><dd>{{ tx.reference }}</dd>
-    <dt>Date</dt><dd>{{ tx.created_at|date:"d M Y, H:i" }}</dd>
-    <dt>Note</dt><dd>{{ tx.description }}</dd>
-  </dl>
-  <a class="pill-button" href="{% url 'transactions:send' %}">Send again</a>
+<section style="width:min(92vw,420px); margin:0 auto; padding:24px 0; color:#fff">
+  <div style="text-align:center">
+    <div style="width:64px; height:64px; margin:0 auto 12px; border-radius:50%; background:#35E0A1; display:grid; place-items:center">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#061B3D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+    </div>
+    <h1 style="margin:0 0 4px">Transfer successful</h1>
+    <p style="font-size:34px; font-weight:700; margin:8px 0">₦{{ tx.amount|floatformat:2 }}</p>
+  </div>
+
+  <div style="background:#0B2E6E; border-radius:20px; padding:6px 18px; margin-top:16px">
+    {% if tx.counterparty_name %}
+      <p style="display:flex; justify-content:space-between"><span style="color:#9FB6E0">To</span><strong>{{ tx.counterparty_name }}</strong></p>
+    {% elif tx.beneficiary %}
+      <p style="display:flex; justify-content:space-between"><span style="color:#9FB6E0">To</span><strong>{{ tx.beneficiary.name }}</strong></p>
+    {% endif %}
+    {% if tx.counterparty_account %}
+      <p style="display:flex; justify-content:space-between"><span style="color:#9FB6E0">Account</span><strong>****{{ tx.counterparty_account|slice:"-4:" }}</strong></p>
+    {% endif %}
+    <p style="display:flex; justify-content:space-between"><span style="color:#9FB6E0">Reference</span><strong>{{ tx.reference }}</strong></p>
+    <p style="display:flex; justify-content:space-between"><span style="color:#9FB6E0">Date</span><strong>{{ tx.created_at|date:"d M Y, H:i" }}</strong></p>
+    {% if tx.description %}
+      <p style="display:flex; justify-content:space-between; gap:12px"><span style="color:#9FB6E0">Note</span><strong style="text-align:right">{{ tx.description }}</strong></p>
+    {% endif %}
+  </div>
+
+  <p style="text-align:center; margin-top:20px">
+    <a href="{% url 'transfers:send' %}" style="display:inline-block; padding:12px 22px; border-radius:99px; background:#00E5FF; color:#061B3D; font-weight:700; text-decoration:none">Send again</a>
+    <a href="{% url 'accounts:home' %}" style="display:inline-block; padding:12px 22px; color:#00E5FF; text-decoration:none">Done</a>
+  </p>
 </section>
 {% endblock %}

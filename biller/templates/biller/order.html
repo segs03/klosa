@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ label }} - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+  <div class="bl-hero" data-r style="--d:0">
+    <div class="bl-badge {{ order.status }}">
+      {% if order.status == 'completed' %}<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+      {% elif order.status == 'reversed' %}<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+      {% else %}<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg>{% endif %}
+    </div>
+    <h1 style="margin:0">{% if order.status == 'completed' %}Payment successful{% elif order.status == 'reversed' %}Payment refunded{% else %}Processing{% endif %}</h1>
+    <p class="bl-amt">₦{{ total|floatformat:2 }}</p>
+    {% if order.status == 'processing' %}<p style="color:#9FB6E0;font-size:14px">Your money is held while we confirm with the provider. This usually takes under a minute.</p>{% endif %}
+    {% if order.status == 'reversed' %}<p style="color:#9FB6E0;font-size:14px">The provider could not complete this payment, so your money is back in your account.</p>{% endif %}
+  </div>
+
+  {% if order.status == 'completed' and order.token %}
+    <div class="bl-token" data-r style="--d:1"><span><small style="color:#9FB6E0">Your token or PIN</small><br><b id="blTok">{{ order.token }}</b></span><button type="button" class="bl-link" id="blCopy" style="margin:0">Copy</button></div>
+  {% endif %}
+
+  <div class="bl-sum" data-r style="--d:2">
+    <p><span>Service</span><b>{{ label }}</b></p>
+    <p><span>Provider</span><b>{{ order.provider_code|upper }}</b></p>
+    <p><span>Number or ID</span><b>••••{{ order.customer_ref|slice:"-4:" }}</b></p>
+    <p><span>Amount</span><b>₦{{ order.amount|floatformat:2 }}</b></p>
+    {% if order.fee %}<p><span>Fee</span><b>₦{{ order.fee|floatformat:2 }}</b></p>{% endif %}
+    <p><span>Reference</span><b>{{ order.reference }}</b></p>
+    <p><span>Date</span><b>{{ order.created_at|date:"d M Y, H:i" }}</b></p>
+  </div>
+
+  {% if order.status == 'processing' %}
+    <form method="post" action="{% url 'biller:check' order.reference %}">{% csrf_token %}<button class="bl-btn ghost" type="submit">Check status</button></form>
+  {% endif %}
+  {% if cfg %}<a class="bl-btn" href="{% url 'biller:service' cfg.key %}">Buy again</a>{% endif %}
+  <a class="bl-btn ghost" href="{% url 'biller:hub' %}">Done</a>
+</section>
+<script>
+(() => {
+  const c = document.getElementById("blCopy");
+  if (c) c.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(document.getElementById("blTok").textContent.trim()); c.textContent = "Copied"; }
+    catch (e) { c.textContent = "Press and hold"; }
+  });
+  {% if order.status == 'processing' %}
+  const k = "blpoll{{ order.reference }}"; let n = +(sessionStorage.getItem(k) || 0);
+  if (n < 12) { sessionStorage.setItem(k, n + 1); setTimeout(() => location.reload(), 6000); }
+  {% endif %}
+})();
+</script>
+{% endblock %}

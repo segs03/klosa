@@ -173,6 +173,30 @@ tab.forEach((e, i) => {
 moveSlider(1);
 
 
+
+
+/*
+const balanceButton = document.getElementById("visible");
+const balanceElement = document.getElementById("bal");
+
+if (balanceButton && balanceElement) {
+    let balanceHidden = false;
+
+    balanceButton.addEventListener("click", () => {
+        balanceHidden = !balanceHidden;
+
+        balanceElement.textContent = balanceHidden
+            ? "₦ ••••••••"
+            : balanceElement.dataset.value;
+
+        balanceButton.innerHTML = balanceHidden
+            ? '<i class="fa-solid fa-eye"></i>'
+            : '<i class="fa-solid fa-eye-slash"></i>';
+    });
+}
+*/
+
+
 // balance hiding script
 if(bal){
 let [whole, decimal] = bal.textContent.trim().split('.');

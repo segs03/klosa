@@ -22,5 +22,20 @@
 </form>
 <a href="{% url 'beneficiary:list' %}"> manage existing beneficiaries </a>
 </div>
+<script>
+(() => {
+  const bank = document.getElementById("id_bank_name");
+  const name = document.getElementById("id_name");
+  if (!bank || !name) return;
+  const box = name.closest(".form-group") || name.parentElement;
+  const sync = () => {
+    const klosa = bank.value === "Klosa Bank";
+    box.style.display = klosa ? "none" : "";
+    name.required = !klosa;
+  };
+  bank.addEventListener("change", sync);
+  sync();
+})();
+</script>
 </main>
 {% endblock %}

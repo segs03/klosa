@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Savings - Klosa Bank{% endblock %}
+{% block content %}
+<style>
+  .sv{max-width:480px;margin:0 auto;padding:18px 14px 120px;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .sv h1{margin:0 0 14px;font-size:26px}
+  .sv-top{border-radius:22px;padding:18px;background:linear-gradient(150deg,#0F3A82,#061B3D);border:1px solid rgba(0,229,255,.25);animation:svUp .5s both}
+  .sv-top small{display:block;color:#9FB6E0;font-size:13px}
+  .sv-top strong{display:block;margin:4px 0 12px;font-size:32px}
+  .sv-btn{display:flex;align-items:center;justify-content:center;min-height:50px;margin:16px 0;border-radius:99px;background:linear-gradient(135deg,#00E5FF,#5FF1FF);color:#061B3D;font-weight:700;text-decoration:none}
+  .sv-card{display:block;margin:12px 0;padding:16px;border-radius:20px;background:rgba(11,46,110,.55);border:1px solid rgba(255,255,255,.1);color:#fff;text-decoration:none;animation:svUp .5s both}
+  .sv-card b{font-size:17px}.sv-card .amt{float:right;font-weight:700;font-size:18px}
+  .sv-card small{display:block;margin-top:6px;color:#9FB6E0}
+  .sv-bar{height:7px;margin-top:10px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .sv-bar i{display:block;height:100%;background:linear-gradient(90deg,#007BFF,#00E5FF);border-radius:99px}
+  .sv-chip{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(0,229,255,.14);color:#00E5FF}
+  .sv-note{margin-top:20px;font-size:12px;color:#7E9BD0;line-height:1.5}
+  .sv h2{font-size:14px;letter-spacing:1.4px;text-transform:uppercase;color:#9FB6E0;margin:22px 0 4px}
+  @keyframes svUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.sv *{animation:none!important}}
+</style>
+<section class="sv">
+  <h1>Savings</h1>
+  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+  <div class="sv-top">
+    <small>Total saved</small><strong>₦{{ saved|floatformat:2 }}</strong>
+    <small>Main balance: ₦{{ account.balance|floatformat:2 }}</small>
+  </div>
+  <a class="sv-btn" href="{% url 'savings:new' %}">Start a savings plan</a>
+  {% for p in plans %}
+    <a class="sv-card" href="{% url 'savings:detail' p.pk %}" style="animation-delay:{{ forloop.counter0|add:1 }}00ms">
+      <span class="amt">₦{{ p.balance|floatformat:2 }}</span>
+      <b>{{ p.name }}</b>
+      <small><span class="sv-chip">{{ p.get_kind_display }}</span> {{ p.rate }}% a year
+        {% if p.kind == 'locked' %} · matures {{ p.maturity_date|date:"d M Y" }}{% endif %}</small>
+      {% if p.target_amount %}<div class="sv-bar"><i style="width:{% widthratio p.balance p.target_amount 100 %}%"></i></div>{% endif %}
+    </a>
+  {% empty %}<p style="color:#9FB6E0">You have no savings plans yet.</p>{% endfor %}
+  {% if closed %}<h2>Closed</h2>
+    {% for p in closed %}<a class="sv-card" href="{% url 'savings:detail' p.pk %}" style="opacity:.7"><b>{{ p.name }}</b><small>Closed {{ p.closed_at|date:"d M Y" }}</small></a>{% endfor %}
+  {% endif %}
+  <p class="sv-note">Interest rates are yearly, paid daily into your plan, and can change for new plans.
+    Locked plans keep the rate they started with. Flexible plans earn {{ flex_rate }}% a year.</p>
+</section>
+{% endblock %}

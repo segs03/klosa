@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -19,6 +20,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
+if "test" in sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -58,6 +61,8 @@ INSTALLED_APPS = [
     'beneficiary',
     'funding',
     'credit',
+    'biller',
+    'savings',
     'fontawesomefree',
     
 ]
@@ -84,6 +89,9 @@ SMS_BACKEND = "console"      # prints codes in Termux; connect a real SMS provid
 
 DEFAULT_FROM_EMAIL = "Klosa Bank <no-reply@yourdomain.com>"
 IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")       # long random value, separate from SECRET_KEY
+
+BILLER_PROVIDER = "biller.providers.mock.MockProvider"   # swap for a real provider later
+
 
 TEMPLATES = [
     {
@@ -165,8 +173,6 @@ LOGIN_REDIRECT_URL = '/accounts/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-import os
-
 MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
@@ -184,3 +190,7 @@ MAILERS = {
 WEBAUTHN_RP_ID = "localhost"                  # production: your domain, e.g. "klosa.bank"
 WEBAUTHN_RP_NAME = "Klosa Bank"
 WEBAUTHN_ORIGIN = "http://localhost:8000"     # production: "https://klosa.bank"
+
+KLOSA_BANK_CODE = "999"             # placeholder: use the code your regulator assigns to Klosa
+ALLOW_EXTERNAL_TRANSFERS = False    # keep False until a payout provider is connected
+

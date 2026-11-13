@@ -1,0 +1,57 @@
+<style>
+  .bl{--card:#0B2E6E;--cyan:#00E5FF;--muted:#9FB6E0;--ok:#35E0A1;--warn:#FFD166;--err:#FF8A8A;max-width:480px;margin:0 auto;padding:16px 14px 130px;color:#fff;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .bl *,.bl *::before,.bl *::after{box-sizing:border-box}
+  .bl a{color:inherit;text-decoration:none}
+  .bl [data-r]{animation:blUp .5s calc(var(--d,0)*70ms) cubic-bezier(.2,.8,.2,1) both}
+  .bl-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .bl-head h1{margin:0;font-size:24px}.bl-head p{margin:2px 0 0;color:var(--muted);font-size:14px}
+  .bl-back{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1)}
+  .bl-back svg,.bl-ico svg{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .bl-back svg{width:20px;height:20px}
+  .bl-msg{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:rgba(0,229,255,.12);color:#C8F7FF;font-size:14px}
+  .bl-err{margin:6px 0 0;color:var(--err);font-size:13px}
+  .bl-top{padding:16px 18px;border-radius:22px;background:linear-gradient(150deg,#0F3A82,#061B3D);border:1px solid rgba(0,229,255,.25)}
+  .bl-top small{display:block;color:var(--muted);font-size:13px}.bl-top strong{font-size:28px}
+  .bl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+  .bl-tile{position:relative;display:block;padding:16px 14px;border-radius:20px;background:rgba(11,46,110,.55);border:1px solid rgba(255,255,255,.1);transition:transform .12s}
+  .bl-tile:active{transform:scale(.96)}.bl-tile b{display:block;font-size:16px;margin-top:10px}.bl-tile small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+  .bl-tile.locked{opacity:.6}
+  .bl-lock{position:absolute;top:12px;right:12px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(255,209,102,.16);color:var(--warn)}
+  .bl-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:rgba(0,229,255,.12);color:var(--cyan)}.bl-ico svg{width:23px;height:23px}
+  .bl h2{margin:20px 0 8px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+  .bl-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .bl-row .grow{flex:1;min-width:0}.bl-row small{display:block;color:var(--muted);font-size:12px}
+  .bl-chip-s{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+  .bl-chip-s.completed{background:rgba(53,224,161,.16);color:var(--ok)}.bl-chip-s.processing{background:rgba(255,209,102,.16);color:var(--warn)}.bl-chip-s.reversed{background:rgba(255,255,255,.12);color:var(--muted)}
+  .bl-sec{margin:0 0 18px}.bl-lbl{display:block;margin-bottom:8px;font-size:14px;color:var(--muted)}
+  .bl-chips,.bl-plans,.bl-quick{display:flex;flex-wrap:wrap;gap:8px}
+  .bl-chip input,.bl-plan input{position:absolute;opacity:0;pointer-events:none}
+  .bl-chip span{display:block;padding:11px 16px;border-radius:99px;border:1px solid #2A4A82;background:rgba(6,27,61,.7);font-weight:600;transition:all .15s}
+  .bl-chip input:checked+span,.bl-plan input:checked+span{border-color:var(--cyan);background:rgba(0,229,255,.14);box-shadow:0 0 0 3px rgba(0,229,255,.18)}
+  .bl-plan{position:relative;flex:1 1 100%}.bl-plan[hidden]{display:none}
+  .bl-plan span{display:flex;justify-content:space-between;gap:10px;padding:14px;border-radius:16px;border:1px solid #2A4A82;background:rgba(6,27,61,.7);transition:all .15s}
+  .bl-plan em{font-style:normal;font-weight:700;color:var(--cyan)}
+  .bl-in{width:100%;height:52px;padding:0 14px;font-size:17px;color:#fff;border-radius:14px;border:1px solid #2A4A82;background:rgba(6,27,61,.7)}
+  .bl-in:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.2)}
+  .bl-quick button,.bl-link{border:1px solid rgba(0,229,255,.4);background:transparent;color:var(--cyan);border-radius:99px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .bl-quick{margin-top:10px}.bl-link{margin-top:10px}
+  .bl-hint{margin:6px 0 0;font-size:12px;color:#7E9BD0}
+  .bl-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;margin-top:10px;border:0;border-radius:99px;cursor:pointer;font-size:17px;font-weight:700;color:#061B3D;background:linear-gradient(135deg,#00E5FF,#5FF1FF);transition:transform .12s,opacity .2s}
+  .bl-btn:active{transform:scale(.97)}.bl-btn:disabled{opacity:.65}
+  .bl-btn.ghost{background:transparent;color:var(--cyan);border:1px solid rgba(0,229,255,.5)}
+  .bl-sum{padding:4px 16px;border-radius:20px;background:rgba(11,46,110,.55);border:1px solid rgba(255,255,255,.1)}
+  .bl-sum p{display:flex;justify-content:space-between;gap:12px;margin:0;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .bl-sum p:last-child{border:0}.bl-sum span{color:var(--muted)}.bl-sum b{text-align:right;word-break:break-word}
+  .bl-hero{text-align:center;padding:10px 0 6px}
+  .bl-badge{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 12px;border-radius:50%;animation:blPop .6s cubic-bezier(.3,1.6,.5,1) both}
+  .bl-badge svg{width:36px;height:36px;fill:none;stroke:#061B3D;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .bl-badge.completed{background:var(--ok)}.bl-badge.reversed{background:#9FB6E0}.bl-badge.processing{background:var(--warn)}
+  .bl-badge.processing svg{animation:blSpin 1.4s linear infinite}
+  .bl-amt{font-size:34px;font-weight:700;margin:6px 0}
+  .bl-token{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:16px;background:rgba(53,224,161,.1);border:1px dashed rgba(53,224,161,.5);margin:14px 0;word-break:break-all}
+  .bl-token b{font-size:18px;letter-spacing:1px}
+  @keyframes blUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes blPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+  @keyframes blSpin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.bl *{animation:none!important;transition:none!important}}
+</style>

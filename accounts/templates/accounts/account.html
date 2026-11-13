@@ -43,76 +43,85 @@
 </div>
 
 <div class="row bank-card" id="bank_card">
-{% for card in cards %}
-<span class="cards stack"></span>
-{% endfor %}
+    {% for card in cards %}
+        <span class="cards stack"
+              data-card-id="{{ card.pk }}"
+              data-card-type="{{ card.card_type }}">
+        </span>
+    {% empty %}
+        <span class="cards stack"></span>
+    {% endfor %}
 </div>
 </div>
 
 <div class="row credit-wrapper">
 <a href="{% url 'accounts:credit' %}">Credit facility <i class="fas fa-arrow-right"></i></a>
-<p>Available balance</p>
+<a href="{% url 'transfers:requests' %}">Money requests</a>
 </div>
 
 </div>
-<p>services</p>
-<div class="service-grid">
-
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-coins"></i>
-             <span>Savings</span>
+<!-- Quick actions -->
+        <div class="row">
+            <p>Quick actions</p>
+            <a href="{% url 'biller:hub' %}">Explore Biller hub</a>
         </div>
-    </a>
+<div class="service-grid kd-services">
+            <a href="{% url 'savings:new' %}" class="kd-service">
+                <span class="kd-service-icon cyan">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </span>
+                <span>Savings</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-wallet"></i>
-             <span>Withdraw</span>
-        </div>
-    </a>
+            <a href="" class="kd-service">
+                <span class="kd-service-icon purple">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </span>
+                <span>Withdraw</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-receipt"></i>
-            <span>Pay bills</span>
-        </div>
-    </a>
+            <a href="#" class="kd-service">
+                <span class="kd-service-icon orange">
+                    <i class="fa-solid fa-receipt"></i>
+                </span>
+                <span>Pay bills</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-phone"></i>
-            <span>Airtime</span>
-        </div>
-    </a>
+            <a href="#" class="kd-service">
+                <span class="kd-service-icon green">
+                    <i class="fa-solid fa-mobile-screen"></i>
+                </span>
+                <span>Airtime</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-arrow-down"></i>
-            <span>Deposit</span>
-        </div>
-    </a>
+            <a href="#" class="kd-service">
+                <span class="kd-service-icon pink">
+                    <i class="fa-solid fa-money-bill-transfer"></i>
+                </span>
+                <span>Deposit</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-wifi"></i>
-            <span>Data</span>
-        </div>
-    </a>
+            <a href="#" class="kd-service">
+                <span class="kd-service-icon blue">
+                    <i class="fa-solid fa-wifi"></i>
+                </span>
+                <span>Data</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-gamepad"></i>
-            <span>Betting</span>
-        </div>
-    </a>
+            <a href="#" class="kd-service">
+                <span class="kd-service-icon yellow">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </span>
+                <span>Education</span>
+            </a>
 
-    <a href="#" class="service-item">
-        <div class="service-icon">
-            <i class="fa-solid fa-book"></i>
-            <span>Education</span>
-        </div>
-    </a>
+            <a href="" class="kd-service">
+                <span class="kd-service-icon violet">
+                    <i class="fa-solid fa-dice"></i>
+                </span>
+                <span>Betting</span>
+            </a>
+        
 
 </div>
 
@@ -120,27 +129,70 @@
 
 </section>
 
+
 <section class="cards-list tab-page" id="card-page">
 
-  <header class="row topbar">
-    <h1>Cards</h1>
-    <a href="#" class="pill-button">Order a card</a>
-  </header>
+    <header class="row topbar">
+        <h1>Cards</h1>
+        <a href="{% url 'cards:add' %}" class="pill-button">
+            Order a card
+        </a>
+    </header>
 
-  <div class="deck" id="cardDeck" role="button" tabindex="0"
-       aria-label="Tap to shuffle cards">
-    {% for card in cards %}
-      <div class="bank-card-view">
-        {% include 'includes/klosa_card.html' with card=card %}
-      </div>
-    {% empty %}
-      <p>No card added.</p>
-    {% endfor %}
-  </div>
+    <div class="deck" id="cardDeck" role="button" tabindex="0"
+         aria-label="Tap to shuffle cards">
 
-  <p class="deck-hint" id="deckHint"></p>
+        {% for card in issued_cards %}
+            <div class="bank-card-view">
+                {% include 'includes/klosa_card.html' with card=card %}
+            </div>
+        {% empty %}
+            <p class="empty-state">You haven't received a card yet.</p>
+        {% endfor %}
+
+    </div>
+
+    <p class="deck-hint" id="deckHint"></p>
+
+    {% if pending_card_orders %}
+        <div class="card-requests">
+            <h2>Card requests</h2>
+
+            {% for order in pending_card_orders %}
+                <article class="card-request">
+                    <div>
+                        <h3>{{ order.get_card_type_display }} card</h3>
+                        <p>{{ order.get_card_format_display }} card</p>
+                        <small>
+                            Requested {{ order.created_at|date:"d M Y" }}
+                        </small>
+                    </div>
+
+                    <span class="request-status status-{{ order.status }}">
+                        {{ order.get_status_display }}
+                    </span>
+                </article>
+
+                {% if order.carddelivery %}
+                    <div class="delivery-info">
+                        <p>
+                            Delivery:
+                            {{ order.carddelivery.get_status_display }}
+                        </p>
+
+                        {% if order.carddelivery.tracking_number %}
+                            <small>
+                                Tracking: {{ order.carddelivery.tracking_number }}
+                            </small>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
 
 </section>
+
         
         
 <section class="recipient tab-page"  id="recipient-page">

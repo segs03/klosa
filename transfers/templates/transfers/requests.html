@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<section style="padding:16px; color:#fff">
+  <h2>Money requests</h2>
+  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+  {% for r in requests %}
+    <div style="background:#0B2E6E; border-radius:16px; padding:14px; margin:12px 0">
+      <b>{{ r.requester.get_full_name|default:"A Klosa customer" }}</b> asks for
+      <b>₦{{ r.amount|floatformat:2 }}</b>
+      {% if r.note %}<p>"{{ r.note }}"</p>{% endif %}
+      <small>Expires {{ r.expires_at|date:"d M" }}</small>
+      <form method="post" action="{% url 'transfers:pay_request' r.pk %}" style="margin-top:10px">
+        {% csrf_token %}
+        <input type="password" name="pin" inputmode="numeric" maxlength="4" placeholder="PIN" required>
+        <button type="submit">Pay</button>
+      </form>
+      <form method="post" action="{% url 'transfers:decline_request' r.pk %}">
+        {% csrf_token %}<button type="submit">Decline</button>
+      </form>
+    </div>
+  {% empty %}<p>No open requests.</p>{% endfor %}
+</section>
+{% endblock %}

@@ -26,6 +26,85 @@ text-decoration: none;
 color: #fff;
 }
 
+/* Quick actions */
+
+.kd-services {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px 10px;
+}
+
+.kd-service {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 650;
+    transition: transform .2s;
+}
+
+.kd-service:active {
+    transform: scale(.92);
+}
+
+.kd-service-icon {
+    display: grid;
+    place-items: center;
+    width: 45px;
+    height: 45px;
+    border-radius: 17px;
+    font-size: 19px;
+    transition: transform .25s, box-shadow .25s;
+}
+
+.kd-service:hover .kd-service-icon {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 17px rgba(0,0,0,.08);
+}
+
+.kd-service-icon.cyan {
+    color: #008ba8;
+    background: #dffaff;
+}
+
+.kd-service-icon.purple {
+    color: #7654d8;
+    background: #eee8ff;
+}
+
+.kd-service-icon.orange {
+    color: #dc8731;
+    background: #fff1df;
+}
+
+.kd-service-icon.green {
+    color: #159c73;
+    background: #e0f8ee;
+}
+
+.kd-service-icon.pink {
+    color: #dc5c91;
+    background: #ffe7f1;
+}
+
+.kd-service-icon.blue {
+    color: #2674dc;
+    background: #e4efff;
+}
+
+.kd-service-icon.yellow {
+    color: #b88a13;
+    background: #fff6d9;
+}
+
+.kd-service-icon.violet {
+    color: #7654d8;
+    background: #eee8ff;
+}
+
 .act_num{
 font-size: 11px;
 opacity: 0.7;

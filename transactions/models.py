@@ -14,6 +14,8 @@ class Transaction(models.Model):
         ("withdrawal", "Withdrawal"),
         ("transfer", "Transfer"),
         ("payment", "Payment"),
+        ("savings_deposit", "Moved to savings"),
+        ("savings_withdrawal", "Moved from savings"),
     ]
 
     account = models.ForeignKey(
@@ -41,6 +43,10 @@ class Transaction(models.Model):
         max_length=255,
         blank=True
     )
+    # biller recipient name
+     
+    counterparty_name = models.CharField(max_length=100, blank=True)
+    counterparty_account = models.CharField(max_length=20, blank=True)
 
     created_at = models.DateTimeField(
         auto_now_add=True

@@ -27,6 +27,9 @@ path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
     path('beneficiary/', include('beneficiary.urls')),
     path("transactions/", include("transactions.urls")),
     path("funding/", include("funding.urls")),
+    path("cards/", include("cards.urls")),
+    path("savings/", include("savings.urls")),
+    path("bills/", include("biller.urls")),
     path('admin/', admin.site.urls),
 ]
 

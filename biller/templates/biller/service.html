@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}{{ cfg.title }} - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'biller:hub' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>{{ cfg.title }}</h1><p>{{ cfg.blurb }}</p></div>
+  </header>
+  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+
+  <form method="post" id="blForm" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="step" value="review">
+
+    <div class="bl-sec" data-r style="--d:1">
+      <span class="bl-lbl">{% if has_products and cfg.key != 'data' %}Provider{% else %}{% if cfg.key == 'airtime' or cfg.key == 'data' %}Network{% else %}Provider{% endif %}{% endif %}</span>
+      <div class="bl-chips">
+        {% for p in providers %}
+          <label class="bl-chip"><input type="radio" name="provider" value="{{ p.code }}" {% if selected_provider == p.code %}checked{% endif %} required><span>{{ p.name }}</span></label>
+        {% endfor %}
+      </div>
+      {% for e in form.provider.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    </div>
+
+    {% if has_products %}
+    <div class="bl-sec" data-r style="--d:2">
+      <span class="bl-lbl">Choose a plan</span>
+      <div class="bl-plans" id="blPlans">
+        {% for p in product_list %}
+          <label class="bl-plan" data-provider="{{ p.provider }}">
+            <input type="radio" name="product" value="{{ p.code }}" {% if selected_product == p.code %}checked{% endif %}>
+            <span><b>{{ p.name }}</b><em>₦{{ p.price|floatformat:2 }}</em></span>
+          </label>
+        {% endfor %}
+      </div>
+      <p class="bl-hint" id="blPlanHint">Choose a provider first.</p>
+      {% for e in form.product.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bl-sec" data-r style="--d:3">
+      <label class="bl-lbl" for="id_customer_ref">{{ cfg.ref_label }}</label>
+      <input class="bl-in" id="id_customer_ref" name="customer_ref" value="{{ form.customer_ref.value|default:'' }}"
+             inputmode="{{ cfg.ref_mode }}" autocomplete="off" autocapitalize="none" placeholder="{{ cfg.ref_hint }}" required>
+      {% if my_number %}<button type="button" class="bl-link" id="blMine" data-v="{{ my_number }}">Use my number</button>{% endif %}
+      {% for e in form.customer_ref.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    </div>
+
+    {% if not has_products %}
+    <div class="bl-sec" data-r style="--d:4">
+      <label class="bl-lbl" for="id_amount">Amount (₦)</label>
+      <input class="bl-in" id="id_amount" name="amount" value="{{ form.amount.value|default:'' }}" inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+      <p class="bl-hint">Between ₦{{ rule.min|floatformat:0 }} and ₦{{ rule.max|floatformat:0 }}</p>
+      {% if cfg.quick %}<div class="bl-quick">{% for a in cfg.quick %}<button type="button" data-v="{{ a }}">₦{{ a }}</button>{% endfor %}</div>{% endif %}
+      {% for e in form.amount.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% for e in form.non_field_errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    <button type="submit" class="bl-btn" id="blGo">Continue</button>
+  </form>
+</section>
+
+<script>
+(() => {
+  const radios = document.querySelectorAll('input[name="provider"]');
+  const plans = document.querySelectorAll(".bl-plan");
+  const hint = document.getElementById("blPlanHint");
+  function sync() {
+    const sel = document.querySelector('input[name="provider"]:checked');
+    let shown = 0;
+    plans.forEach((p) => {
+      const ok = !!sel && p.dataset.provider === sel.value;
+      p.hidden = !ok;
+      if (!ok) p.querySelector("input").checked = false;
+      if (ok) shown++;
+    });
+    if (hint) hint.hidden = shown > 0;
+  }
+  radios.forEach((r) => r.addEventListener("change", sync));
+  sync();
+
+  document.querySelectorAll(".bl-quick button").forEach((b) =>
+    b.addEventListener("click", () => { document.getElementById("id_amount").value = b.dataset.v; }));
+  const mine = document.getElementById("blMine");
+  if (mine) mine.addEventListener("click", () => { document.getElementById("id_customer_ref").value = mine.dataset.v; });
+  document.getElementById("blForm").addEventListener("submit", () => {
+    const b = document.getElementById("blGo"); b.disabled = true; b.textContent = "Checking…";
+  });
+})();
+</script>
+{% endblock %}

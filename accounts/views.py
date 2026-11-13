@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 
 from .models import Account, CreditAccount, CreditApplication
 from transactions.models import Transaction, CreditTransaction
-from cards.models import BankCard
+
 from beneficiary.models import Beneficiary
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -40,6 +40,8 @@ from django.views.decorators.cache import never_cache
 from .forms import SetPinForm, StaffCreateForm, CloseAccountForm, ProfileForm
 
 from .services import CloseBlocked, close_customer_account, closure_blockers
+
+from cards.models import BankCard, CardOrder
 
 
 @never_cache
@@ -164,17 +166,17 @@ def login_view(request):
     
     
  
+
 @login_required
 def home_view(request):
-    account = Account.objects.filter(
-        user=request.user
-    ).first()
+    account = Account.objects.filter(user=request.user).first()
 
     transactions = Transaction.objects.none()
-    cards = []
+    cards = BankCard.objects.none()
+    issued_cards = BankCard.objects.none()
+    pending_card_orders = CardOrder.objects.none()
     beneficiaries = []
 
-    # Default values
     payment_total = Decimal("0.00")
     withdrawal_total = Decimal("0.00")
     monthly_spending = Decimal("0.00")
@@ -184,9 +186,24 @@ def home_view(request):
     total_expenses = Decimal("0.00")
 
     if account:
-        cards = BankCard.objects.filter(
+        # Issued cards displayed on the dashboard
+        issued_cards = BankCard.objects.filter(
             account=account
-        ).order_by("-created_at")[:3]
+        ).order_by("-created_at")
+
+        cards = issued_cards[:3]
+
+        # Requests not yet completed
+        pending_card_orders = (
+            CardOrder.objects
+            .filter(
+                account=account,
+                status__in=["pending", "approved", "issuing"],
+            )
+            .select_related("bank_card")
+            .prefetch_related("carddelivery")
+            .order_by("-created_at")
+        )
 
         beneficiaries = Beneficiary.objects.filter(
             owner=request.user
@@ -226,17 +243,11 @@ def home_view(request):
 
         payment_total = monthly_totals["payments"]
         withdrawal_total = monthly_totals["withdrawals"]
-
         monthly_spending = payment_total + withdrawal_total
 
         if monthly_spending:
-            payment_percent = (
-                payment_total / monthly_spending * 100
-            )
-
-            withdrawal_percent = (
-                withdrawal_total / monthly_spending * 100
-            )
+            payment_percent = payment_total / monthly_spending * 100
+            withdrawal_percent = withdrawal_total / monthly_spending * 100
 
         transactions = Transaction.objects.filter(
             account=account
@@ -271,6 +282,8 @@ def home_view(request):
         "account": account,
         "transactions": transactions,
         "cards": cards,
+        "issued_cards": issued_cards,
+        "pending_card_orders": pending_card_orders,
         "beneficiaries": beneficiaries,
         "recent_transactions": transactions[:3],
         "total_income": total_income,
@@ -283,11 +296,8 @@ def home_view(request):
         "user": request.user,
     }
 
-    return render(
-        request,
-        "accounts/account.html",
-        context,
-    )
+    return render(request, "accounts/account.html", context)
+
     
   
 """

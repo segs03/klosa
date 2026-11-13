@@ -7,10 +7,10 @@ class Beneficiary(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="beneficiaries",
-        null=True,
-        blank=True,
+        related_name="beneficiaries"
     )
+    
+    bank_code = models.CharField(max_length=10)        # no blank=True
 
     name = models.CharField(max_length=100)
     account_number = models.CharField(max_length=10)

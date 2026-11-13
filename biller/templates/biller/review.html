@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Confirm - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <div><h1>Confirm payment</h1><p>Check the details, then enter your PIN</p></div>
+  </header>
+  {% if error %}<p class="bl-msg" style="background:rgba(255,138,138,.14);color:#FFB3B3" role="alert">{{ error }}</p>{% endif %}
+
+  <form method="post" id="blPay" data-r style="--d:1">
+    {% csrf_token %}
+    <input type="hidden" name="provider" value="{{ d.provider }}">
+    <input type="hidden" name="product" value="{{ d.product }}">
+    <input type="hidden" name="customer_ref" value="{{ d.customer_ref }}">
+    <input type="hidden" name="amount" value="{{ d.amount }}">
+    <input type="hidden" name="token" value="{{ token }}">
+
+    <div class="bl-sum">
+      <p><span>Service</span><b>{{ cfg.title }}</b></p>
+      <p><span>Provider</span><b>{{ provider_name }}</b></p>
+      {% if product_name %}<p><span>Plan</span><b>{{ product_name }}</b></p>{% endif %}
+      <p><span>{{ cfg.ref_label }}</span><b>{{ d.customer_ref }}</b></p>
+      {% if name %}<p><span>Name</span><b>{{ name }}</b></p>{% endif %}
+      <p><span>Amount</span><b>₦{{ amount|floatformat:2 }}</b></p>
+      {% if fee %}<p><span>Fee</span><b>₦{{ fee|floatformat:2 }}</b></p>{% endif %}
+      <p><span>Total</span><b style="color:#00E5FF">₦{{ total|floatformat:2 }}</b></p>
+    </div>
+
+    <div class="bl-sec" style="margin-top:18px">
+      <label class="bl-lbl" for="id_pin">Transaction PIN</label>
+      <input class="bl-in" id="id_pin" name="pin" type="password" inputmode="numeric" maxlength="4"
+             autocomplete="off" placeholder="••••" style="letter-spacing:10px;text-align:center;font-size:22px" required>
+    </div>
+
+    <button type="submit" name="step" value="pay" class="bl-btn" id="blConfirm">Confirm and pay</button>
+    <button type="submit" name="step" value="edit" class="bl-btn ghost" formnovalidate>Edit details</button>
+  </form>
+</section>
+<script>
+(() => {
+  const pin = document.getElementById("id_pin");
+  pin.addEventListener("input", () => { pin.value = pin.value.replace(/\D/g, "").slice(0, 4); });
+  pin.focus();
+  document.getElementById("blPay").addEventListener("submit", (e) => {
+    if (e.submitter && e.submitter.value === "pay") { const b = document.getElementById("blConfirm"); b.disabled = true; b.textContent = "Paying…"; }
+  });
+})();
+</script>
+{% endblock %}

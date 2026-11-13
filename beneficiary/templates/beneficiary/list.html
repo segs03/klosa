@@ -18,7 +18,7 @@
 
         <form
             method="post"
-            action="{% url 'beneficiary:delete' beneficiary.id %}"
+            action="{% url 'beneficiary:delete' beneficiary.pk %}"
             onsubmit="return confirm('Delete this beneficiary?');"
         >
             {% csrf_token %}

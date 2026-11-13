@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="add-card-page">
+
+    <div class="page-heading">
+        <a href="javascript:history.back()" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Order a card</h2>
+        <p>Register a new Klosa demo card.</p>
+    </div>
+
+    <form method="POST" class="card-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="{{ form.card_type.id_for_label }}">Card type</label>
+            {{ form.card_type }}
+            {{ form.card_type.errors }}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.cardholder_name.id_for_label }}">Cardholder name</label>
+            {{ form.cardholder_name }}
+            {{ form.cardholder_name.errors }}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.last_four.id_for_label }}">Last four digits</label>
+            {{ form.last_four }}
+            {{ form.last_four.errors }}
+        </div>
+
+        <div class="expiry-fields">
+            <div class="form-group">
+                <label for="{{ form.expiry_month.id_for_label }}">Expiry month</label>
+                {{ form.expiry_month }}
+                {{ form.expiry_month.errors }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.expiry_year.id_for_label }}">Expiry year</label>
+                {{ form.expiry_year }}
+                {{ form.expiry_year.errors }}
+            </div>
+        </div>
+
+        <button type="submit" class="pill-button">
+            Add demo card
+        </button>
+    </form>
+
+</div>
+{% endblock %}

@@ -64,4 +64,4 @@ def credit_transactions_view(request):
 def receipt(request, reference):
     tx = get_object_or_404(Transaction, reference=reference,
                            account__user=request.user, transaction_type="transfer")
-    return render(request, "transaction/receipt.html", {"tx": tx})
+    return render(request, "transactions/receipt.html", {"tx": tx})

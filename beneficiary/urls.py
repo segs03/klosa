@@ -8,7 +8,7 @@ urlpatterns = [
     path("", views.beneficiary_list, name="list"),
     path("add/", views.add_beneficiary, name="add"),
     path(
-        "<int:beneficiary_id>/delete/",
+        "<int:pk>/delete/",
         views.delete_beneficiary,
         name="delete",
     ),

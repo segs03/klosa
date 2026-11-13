@@ -10,91 +10,43 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 
-@login_required
-def add_beneficiary(request):
-    if request.method == "POST":
-        form = BeneficiaryForm(request.POST)
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
-        if form.is_valid():
-            account_number = form.cleaned_data["account_number"]
-            bank_name = form.cleaned_data["bank_name"]
-            name = form.cleaned_data["name"]
-
-            # Check for an existing beneficiary belonging
-            # to this logged-in user.
-            exists = Beneficiary.objects.filter(
-                owner=request.user,
-                account_number=account_number,
-                bank_name=bank_name,
-                is_active=True,
-            ).exists()
-
-            if exists:
-                form.add_error(
-                    "account_number",
-                    "This beneficiary has already been saved.",
-                )
-            else:
-                try:
-                    Beneficiary.objects.create(
-                        owner=request.user,
-                        name=name,
-                        account_number=account_number,
-                        bank_name=bank_name,
-                    )
-
-                    messages.success(
-                        request,
-                        "Beneficiary saved successfully.",
-                    )
-                    return redirect("beneficiary:list")
-
-                except IntegrityError:
-                    messages.error(
-                        request,
-                        "This beneficiary could not be saved. "
-                        "Please check the details and try again.",
-                    )
-    else:
-        form = BeneficiaryForm()
-
-    return render(
-        request,
-        "beneficiary/add.html",
-        {"form": form},
-    )
+from .forms import BeneficiaryForm
+from .models import Beneficiary
 
 
 @login_required
 def beneficiary_list(request):
-    beneficiaries = Beneficiary.objects.filter(
-        owner=request.user,
-        is_active=True,
-    )
-
-    return render(
-        request,
-        "beneficiary/benefit.html",
-        {"beneficiaries": beneficiaries},
-    )
+    items = Beneficiary.objects.filter(owner=request.user, is_active=True)
+    return render(request, "beneficiary/list.html", {"beneficiaries": items})
 
 
+@login_required
+def add_beneficiary(request):
+    form = BeneficiaryForm(request.POST or None, user=request.user)
+    if request.method == "POST" and form.is_valid():
+        d = form.cleaned_data
+        name = form.holder or d["name"]
+        b, created = Beneficiary.objects.get_or_create(
+            owner=request.user, bank_code=d["bank_code"], account_number=d["account_number"],
+            defaults={"name": name, "bank_name": d["bank_name"]})
+        if not created:                          # was removed earlier: bring it back
+            b.name, b.bank_name, b.is_active = name, d["bank_name"], True
+            b.save()
+        messages.success(request, "Beneficiary added.")
+        return redirect("beneficiary:list")
+    return render(request, "beneficiary/add.html", {"form": form})
 
 
 @login_required
 @require_POST
-def delete_beneficiary(request, beneficiary_id):
-    beneficiary = get_object_or_404(
-        Beneficiary,
-        id=beneficiary_id,
-        owner=request.user,
-    )
-
-    beneficiary.delete()
-
-    messages.success(
-        request,
-        "Beneficiary deleted successfully.",
-    )
-
+def delete_beneficiary(request, pk):
+    b = get_object_or_404(Beneficiary, pk=pk, owner=request.user, is_active=True)
+    b.is_active = False                          # soft delete keeps transaction history
+    b.save(update_fields=["is_active"])
+    messages.success(request, "Beneficiary removed.")
     return redirect("beneficiary:list")
