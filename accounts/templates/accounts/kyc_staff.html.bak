@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}ID reviews{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head"><div><h1>ID reviews</h1><p>{{ apps|length }} waiting</p></div></header>
+  {% for message in messages %}<p class="bl-msg">{{ message }}</p>{% endfor %}
+  {% for a in apps %}
+    <a class="bl-row" href="{% url 'accounts:kyc_review' a.pk %}">
+      <div class="grow"><b>{{ a.legal_name }}</b><small>{{ a.get_status_display }} · {{ a.submitted_at|date:"d M, H:i" }}</small></div>
+      <span class="bl-chip-s processing">Review</span>
+    </a>
+  {% empty %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endfor %}
+</section>
+{% endblock %}

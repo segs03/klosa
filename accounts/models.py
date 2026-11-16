@@ -13,7 +13,7 @@ from django.db.models import Q
 
 from django.contrib.auth.models import AbstractUser
 from .utils import normalize_email
-
+from .storage import PrivateStorage
 
 
 
@@ -384,9 +384,7 @@ class KYCApplication(models.Model):
     date_of_birth = models.DateField()
 
     # Store documents using private storage, not public media URLs.
-    identity_document = models.FileField(
-        upload_to="private/kyc/",
-    )
+    identity_document = models.FileField(upload_to="kyc/", storage=PrivateStorage())
     
     identity_digest = models.CharField(
     max_length=64,
@@ -510,3 +508,23 @@ class Passkey(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.name or 'passkey'}"
+
+
+
+class VerifiedDocument(models.Model):
+    """One row per verified ID, so a person can hold a NIN and a BVN. Each ID belongs to one account."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="verified_documents")
+    document_type = models.CharField(max_length=50)
+    identity_digest = models.CharField(max_length=64, unique=True)
+    verified_at = models.DateTimeField()
+    source_application = models.OneToOneField(KYCApplication, on_delete=models.PROTECT, related_name="verified_document")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "document_type"], name="one_verified_document_per_type")]
+
+
+class WelcomeBonus(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="welcome_bonus")
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    reference = models.CharField(max_length=20, unique=True)
+    granted_at = models.DateTimeField(auto_now_add=True)

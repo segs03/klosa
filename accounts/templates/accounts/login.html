@@ -129,7 +129,6 @@
       <p>Log in to your Klosa account</p>
     </div>
 
-    {% for message in messages %}<p class="lg-msg" role="status">{{ message }}</p>{% endfor %}
     {% if error %}<p class="lg-msg err" role="alert">{{ error }}</p>{% endif %}
 
     <form method="POST" id="lgForm">

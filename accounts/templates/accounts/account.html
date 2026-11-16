@@ -1,275 +1,558 @@
-
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
 
-{% block title %} Dashboard | Klosa {% endblock%}
+{% block title %}Dashboard | Klosa{% endblock %}
+
+{% block extra_css %}
+<style>
+  .db,.dc,.dr{--navy:#061B3D;--card:#0B2E6E;--card2:#0F3A82;--cyan:#00E5FF;--muted:#9FB6E0;--ok:#35E0A1;--warn:#FFD166;--err:#FF8A8A;
+    color:#fff;padding-bottom:130px;box-sizing:border-box}
+  .db *,.dc *,.dr *{box-sizing:border-box}
+  .db a,.dc a,.dr a{text-decoration:none}
+  .db [data-r],.dc [data-r],.dr [data-r]{animation:dbUp .55s calc(var(--d,0)*70ms) cubic-bezier(.2,.8,.2,1) both}
+  .db-block,.dc-block{flex:0 0 auto;min-height:max-content}
+
+  /* top bar */
+  .db-top{display:flex;align-items:center;justify-content:space-between;margin:2px 0 14px}
+  .db-user{display:flex;align-items:center;gap:12px;color:#fff}
+  .db-av{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;font-size:19px;font-weight:700;color:#061B3D;
+    background:linear-gradient(135deg,#5FF1FF,#00E5FF);box-shadow:0 0 0 3px rgba(0,229,255,.25)}
+  .db-user small{display:block;color:var(--muted);font-size:13px}
+  .db-user b{display:block;font-size:18px;margin-top:1px}
+  .db-bell{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;cursor:pointer;color:#fff;font-size:18px;
+    background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);transition:transform .12s}
+  .db-bell:active{transform:scale(.92)}
+  .db-bell i{animation:dbRing 1.6s 1s ease-in-out 1}
+  .db-dot{position:absolute;top:9px;right:11px;width:9px;height:9px;border-radius:50%;background:var(--err);border:2px solid #0B2E6E;animation:dbPulse 2s infinite}
+
+  /* balance card */
+  .db-hero{position:relative;overflow:hidden;padding:20px 18px 18px;border-radius:26px;
+    background:linear-gradient(150deg,#0F3A82 0%,#0A2A66 55%,#061B3D 100%);border:1px solid rgba(0,229,255,.25);box-shadow:0 18px 40px rgba(0,0,0,.35)}
+  .db-hero::before{content:"";position:absolute;width:240px;height:240px;border-radius:50%;background:#00E5FF;opacity:.2;filter:blur(70px);top:-110px;right:-70px;animation:dbDrift 10s ease-in-out infinite}
+  .db-hero::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:30%;transform:skewX(-20deg);
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent);animation:dbShine 6s ease-in-out 2s infinite}
+  .db-hero>*{position:relative;z-index:1}
+  .db-lbl{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+  .db .db-lbl #visible{position:static;cursor:pointer;padding:8px;margin:-8px 0;font-size:16px;color:var(--muted)}
+  .db-tier{margin-left:auto;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(255,255,255,.12);color:#DCE7FF}
+  .db .db-balwrap{padding:0;margin:4px 0 0}
+  .db .db-bal{margin:0;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:.3px;color:#fff;font-variant-numeric:tabular-nums}
+  .db-acct{display:flex;align-items:center;gap:8px;margin:6px 0 0;color:var(--muted);font-size:14px}
+  .db-acct b{color:#fff;letter-spacing:1.5px;font-variant-numeric:tabular-nums}
+  .db-copy{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:0 11px;border:0;border-radius:99px;cursor:pointer;font-size:12px;font-weight:700;
+    color:#061B3D;background:var(--cyan);transition:transform .12s,background .3s}
+  .db-copy:active{transform:scale(.94)}.db-copy.done{background:var(--ok)}
+  .db-acts{display:flex;gap:10px;margin-top:18px}
+  .db-act{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:99px;font-size:15px;font-weight:700;color:#fff;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);transition:transform .12s}
+  .db-act:active{transform:scale(.96)}
+  .db-act.main{color:#061B3D;border:0;background:linear-gradient(135deg,#00E5FF,#5FF1FF)}
+
+  /* small blocks */
+  .db-sec{margin:20px 0 10px;display:flex;justify-content:space-between;align-items:center}
+  .db-sec p{margin:0;font-size:16px;font-weight:600}.db-sec a{color:var(--cyan);font-size:14px}
+  .db-chips{display:flex;gap:10px;margin:16px 0 0}
+  .db-chip{flex:1;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:16px;color:#fff;font-size:14px;font-weight:600;
+    background:rgba(11,46,110,.55);border:1px solid rgba(255,255,255,.1);transition:transform .12s}
+  .db-chip:active{transform:scale(.97)}.db-chip i{color:var(--cyan)}
+  .db-note{display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:14px;border-radius:18px;background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35)}
+  .db-note i{flex:none;font-size:20px;color:var(--warn)}.db-note p{flex:1;margin:0;font-size:13px;line-height:1.4;color:#FFE9B0}
+  .db-note button{flex:none;min-height:36px;padding:0 14px;border:0;border-radius:99px;cursor:pointer;font-size:13px;font-weight:700;color:#061B3D;background:var(--warn)}
+
+  /* services */
+  .db-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 6px}
+  .db-svc{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;border:0;background:none;cursor:pointer;
+    font:inherit;font-size:12px;font-weight:500;color:#fff;animation:dbUp .5s calc(var(--d,0)*60ms + 250ms) cubic-bezier(.2,.8,.2,1) both}
+  .db-ic{display:grid;place-items:center;width:56px;height:56px;border-radius:18px;font-size:22px;color:var(--c);background:var(--bg);border:1px solid var(--bd);transition:transform .15s}
+  .db-svc:active .db-ic{transform:scale(.9) rotate(-4deg)}
+  .db-svc[data-badge]::after{content:attr(data-badge);position:absolute;top:-5px;right:calc(50% - 36px);padding:1px 7px;border-radius:99px;font-size:9px;font-weight:800;color:#061B3D;background:var(--warn)}
+  .db-svc[data-badge="Soon"]::after{background:#9FB6E0}
+  .db-svc.locked .db-ic{opacity:.6}
+  .cyan{--c:#00E5FF;--bg:rgba(0,229,255,.13);--bd:rgba(0,229,255,.3)}
+  .purple{--c:#C58BFF;--bg:rgba(197,139,255,.13);--bd:rgba(197,139,255,.3)}
+  .orange{--c:#FF9F5A;--bg:rgba(255,159,90,.13);--bd:rgba(255,159,90,.3)}
+  .green{--c:#35E0A1;--bg:rgba(53,224,161,.13);--bd:rgba(53,224,161,.3)}
+  .pink{--c:#FF7EB6;--bg:rgba(255,126,182,.13);--bd:rgba(255,126,182,.3)}
+  .blue{--c:#4DA3FF;--bg:rgba(77,163,255,.13);--bd:rgba(77,163,255,.3)}
+  .yellow{--c:#FFD166;--bg:rgba(255,209,102,.13);--bd:rgba(255,209,102,.3)}
+  .violet{--c:#8F9BFF;--bg:rgba(143,155,255,.13);--bd:rgba(143,155,255,.3)}
+
+  /* this month */
+  .db-month{margin:20px 0 6px;padding:16px;border-radius:20px;background:rgba(11,46,110,.5);border:1px solid rgba(255,255,255,.09)}
+  .db-month h3{margin:0 0 2px;font-size:15px;color:var(--muted);font-weight:500}
+  .db-month strong{display:block;font-size:24px;margin-bottom:12px}
+  .db-split{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:10px}
+  .db-bar{height:8px;margin-top:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .db-bar i{display:block;height:100%;width:var(--w);border-radius:99px;transform-origin:left;animation:dbGrow 1s .5s cubic-bezier(.3,.9,.3,1) both}
+  .db-bar.a i{background:linear-gradient(90deg,#007BFF,#00E5FF)}.db-bar.b i{background:linear-gradient(90deg,#FF7EB6,#FFB36B)}
+  .db-bar.c i{background:linear-gradient(90deg,#4DA3FF,#8F9BFF)}
+
+  /* cards page and recipients page */
+  .dc-head,.dr-head{display:flex;align-items:center;justify-content:space-between;margin:2px 0 16px}
+  .dc-head h1,.dr-head h1{margin:0;font-size:26px}
+  .dc-pill{display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:0 16px;border-radius:99px;font-size:14px;font-weight:700;color:#061B3D;background:linear-gradient(135deg,#00E5FF,#5FF1FF);transition:transform .12s}
+  .dc-pill:active{transform:scale(.95)}
+  .dc-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:34px 16px;border-radius:22px;text-align:center;color:var(--muted);
+    background:rgba(11,46,110,.45);border:1px dashed rgba(0,229,255,.35)}
+  .dc-empty i{font-size:34px;color:var(--cyan);animation:dbFloat 3s ease-in-out infinite}
+  .dc-req{margin-top:22px}.dc-req h2{margin:0 0 10px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+  .dc-item{margin-bottom:12px;padding:14px 16px;border-radius:18px;background:rgba(11,46,110,.5);border:1px solid rgba(255,255,255,.09)}
+  .dc-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .dc-item h3{margin:0 0 2px;font-size:16px}.dc-item p,.dc-item small{margin:0;color:var(--muted);font-size:13px}
+  .dc-chip{flex:none;padding:3px 11px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(255,255,255,.12);color:#DCE7FF}
+  .dc-chip.status-pending{background:rgba(255,209,102,.16);color:var(--warn)}
+  .dc-chip.status-approved,.dc-chip.status-issued,.dc-chip.status-delivered,.dc-chip.status-completed{background:rgba(53,224,161,.16);color:var(--ok)}
+  .dc-chip.status-rejected,.dc-chip.status-cancelled,.dc-chip.status-failed{background:rgba(255,138,138,.16);color:var(--err)}
+  .dc-deliv{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+
+  .dr-init{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-weight:700;font-size:16px;color:#061B3D;background:linear-gradient(135deg,#5FF1FF,#00E5FF)}
+  .dr .contact .dr-init,.contact .dr-init{width:58px;height:58px;font-size:22px;margin:0 auto 6px}
+  .contact:nth-child(4n+2) .dr-init,.account-info:nth-child(4n+2) .dr-init{background:linear-gradient(135deg,#FFB36B,#FF7EB6)}
+  .contact:nth-child(4n+3) .dr-init,.account-info:nth-child(4n+3) .dr-init{background:linear-gradient(135deg,#B48CFF,#6E8BFF)}
+  .contact:nth-child(4n) .dr-init,.account-info:nth-child(4n) .dr-init{background:linear-gradient(135deg,#7BF0C3,#35E0A1)}
+  .contact{animation:dbPop .5s calc(var(--d,0)*70ms + 150ms) cubic-bezier(.3,1.5,.5,1) both}
+  .account-info{animation:dbUp .45s calc(var(--d,0)*60ms + 250ms) cubic-bezier(.2,.8,.2,1) both}
+  .dr-muted{color:var(--muted);font-size:14px}
+
+  /* toast */
+  .db-toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:80;transform:translate(-50%,-30px);opacity:0;pointer-events:none;
+    padding:10px 18px;border-radius:99px;font-size:14px;font-weight:600;color:#061B3D;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:all .3s cubic-bezier(.2,.8,.2,1)}
+  .db-toast.on{opacity:1;transform:translate(-50%,0)}
+
+  .db a:focus-visible,.db button:focus-visible,.dc a:focus-visible,.dr a:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+  @keyframes dbUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes dbPop{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:scale(1)}}
+  @keyframes dbGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes dbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(-26px,20px)}}
+  @keyframes dbShine{0%,60%{left:-60%}100%{left:130%}}
+  @keyframes dbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @keyframes dbPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,138,138,.6)}50%{box-shadow:0 0 0 6px rgba(255,138,138,0)}}
+  @keyframes dbRing{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}}
+  @media (prefers-reduced-motion:reduce){.db *,.db *::before,.db *::after,.dc *,.dr *,.contact,.account-info{animation:none!important;transition:none!important}}
+  
+      /* fill the screen: the panel takes whatever space is left */
+  .db,.dr{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;
+    margin:0 -10px;padding:0 10px;-webkit-overflow-scrolling:touch}
+  .dr-head,.dr .contacts{flex:0 0 auto}
+
+  .db-panel{display:flex;flex-direction:column;flex:1 0 auto;margin:18px -10px 0;
+    animation:dbSheet .6s .35s cubic-bezier(.2,.8,.2,1) backwards}
+  .db-panel>*{flex:1 0 auto}
+  .dr .trns{margin:18px -10px 0;animation:dbSheet .6s .35s cubic-bezier(.2,.8,.2,1) backwards}
+
+  /* readable on the dark background */
+  .dr .account-tabs .acct,.dr .search{color:#fff}
+  .dr .account-tabs .acct.selected{color:#061B3D}
+  .dr .account-info small,.dr .contact p{color:#9FB6E0}
+
+  /* empty state (the same sheet look as the panel) and a slimmer month summary */
+  .db-empty{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;min-height:260px;padding:46px 14px 120px;
+    text-align:center;color:var(--muted);border-radius:26px 26px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:0;
+    background:linear-gradient(180deg,rgba(15,58,130,.55) 0%,#061B3D 75%)}
+  .db-empty i{font-size:32px;color:var(--cyan);animation:dbFloat 3s ease-in-out infinite}
+  .db-empty b{color:#fff;font-size:16px}
+  .db-empty a{margin-top:6px}
+  .db-month{margin:14px 0 0;padding:12px 14px}
+  .db-month strong{font-size:20px;margin-bottom:6px}
+
+  @keyframes dbSheet{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+  
+    .cr-panel{margin:16px 0 0;padding:16px;border-radius:20px;background:rgba(11,46,110,.55);border:1px solid rgba(0,229,255,.25)}
+  .cr-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;color:var(--muted);font-size:14px}
+  .cr-top b{color:#fff;font-size:24px;font-variant-numeric:tabular-nums}
+  .cr-bar{height:8px;margin:12px 0 8px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .cr-bar i{display:block;height:100%;width:var(--w);border-radius:99px;background:linear-gradient(90deg,#00E5FF,#FFD166 70%,#FF8A8A);transform-origin:left;animation:dbGrow 1s .4s cubic-bezier(.3,.9,.3,1) both}
+  .cr-split{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  .cr-due{margin:10px 0 0;font-size:13px;color:#FFE9B0}
+  .cr-acts{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .cr-test{color:var(--muted);font-size:13px;text-decoration:underline}
+  
+    .db-note-btn{flex:none;display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:99px;font-size:13px;font-weight:700;color:#061B3D;background:var(--warn)}
+    
+      .dr .contact{border:0;background:none;color:#fff;font:inherit;cursor:pointer;padding:6px 4px;border-radius:16px;transition:transform .12s,background .2s}
+  .dr .contact:active{transform:scale(.93);background:rgba(255,255,255,.06)}
+  .qa-back{position:fixed;inset:0;z-index:1500;background:rgba(2,10,28,.65);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;transition:opacity .25s}
+  .qa-back.on{opacity:1}
+  .qa{position:fixed;left:0;right:0;bottom:0;z-index:1501;max-width:520px;margin:0 auto;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 18px);
+    border-radius:26px 26px 0 0;background:linear-gradient(180deg,#0F3A82,#061B3D);border:1px solid rgba(255,255,255,.12);border-bottom:0;
+    transform:translateY(100%);transition:transform .35s cubic-bezier(.2,.9,.3,1.05)}
+  .qa.on{transform:none}
+  .qa-bar{width:42px;height:5px;margin:2px auto 12px;border-radius:99px;background:rgba(255,255,255,.28)}
+  .qa-who{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .qa-who .dr-init{width:48px;height:48px;font-size:19px}
+  .qa-who b{display:block;font-size:17px}.qa-who small{color:#9FB6E0;font-size:13px}
+  .qa-act{display:flex;align-items:center;gap:14px;width:100%;min-height:54px;margin:0;padding:0 12px;border:0;border-radius:16px;background:none;color:#fff;font:inherit;font-size:16px;font-weight:500;text-decoration:none;cursor:pointer;transition:background .15s}
+  .qa-act:active{background:rgba(255,255,255,.08)}
+  .qa-act i{width:22px;text-align:center;color:#00E5FF}
+  .qa-act.danger,.qa-act.danger i{color:#FF8A8A}
+  .qa-act[hidden]{display:none}
+  .qa-close{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:99px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-weight:700}
+  @media (prefers-reduced-motion:reduce){.qa,.qa-back{transition:none}}
+</style>
+{% endblock %}
+
+{% include "biller/_style.html" %}
+
 
 {% block content %}
-<main class='main'>
+{% firstof request.user.first_name "Welcome" as dname %}
+{% firstof request.user.first_name "K" as initial %}
+
+<main class="main">
+
 <section class="tab-page active" id="home-page">
-<header class="row brand">
-<a class="row user-profile" href="{% url 'accounts:profile' %}">
-<span class="img-fluid">
-<img src="https://i.pravatar.cc/100?img=47" alt="">
-</span>
-<span class="col">
-<p class="greet">Good morning,</p>
-<p class="uname">{{request.user.username | default:request.user.first_name|upper}}</p>
-</span>
+<div class="db">
+
+  <header class="db-top db-block" data-r style="--d:0">
+    <a class="db-user" href="{% url 'accounts:profile' %}">
+      <span class="db-av">{{ initial|first|upper }}</span>
+      <span><small id="dbGreet">Welcome back</small><b>{{ dname }}</b></span>
+    </a>
+    <a class="db-bell" href="{% url 'notices:list' %}" aria-label="Notifications{% if unread_count %}, {{ unread_count }} unread{% endif %}">
+  <i class="fa-solid fa-bell"></i>{% if unread_count %}<span class="db-dot"></span>{% endif %}
 </a>
-<button class="icon-btn"><i class="fa-solid fa-bell"></i></button>
-</header>
-<div>
-<div class="row u-bal">
-<div class="">
-<span class="row"><h1 class="bal-h">Total balance</h1><i class="visible fa-solid fa-eye-slash" id="visible"></i>
-</span>
+  </header>
 
-<div class='bal-wrapper'>
-{% if account %}
-<h1 class="bal" id="bal" data-value="₦{{ account.balance | floatformat:2 }}">₦ {{account.balance | floatformat:2|intcomma}}</h1>
-<h3 class="act_num">Account Number: {{ account.account_number}}</h3>
-{% else %}
-<p>No account Found.</p>
-{% endif %}
-</div>
+  <div class="db-hero db-block" data-r style="--d:1">
+    <div class="db-lbl">
+      <span>Total balance</span>
+      <i class="visible fa-solid fa-eye-slash" id="visible"></i>
+      {% if account %}<span class="db-tier">Tier {{ account.kyc_tier }}</span>{% endif %}
+    </div>
 
+    <div class="bal-wrapper db-balwrap">
+    {% if account %}
+      <h1 class="bal db-bal" id="bal" data-value="₦ {{ account.balance|floatformat:2|intcomma }}">₦ {{ account.balance|floatformat:2|intcomma }}</h1>
+      <p class="db-acct">Account <b id="dbAcct">{{ account.account_number }}</b>
+        <button type="button" class="db-copy" id="dbCopy" aria-label="Copy account number"><i class="fa-regular fa-copy"></i><span>Copy</span></button></p>
+    {% else %}
+      <p class="dr-muted">No account found.</p>
+    {% endif %}
+    </div>
 
-<div class="row action">
-<a href="{% url 'transfers:send' %}" class="btn"><i class="fa-solid fa-paper-plane"></i> Send</a>
-<a href="{% url 'transfers:request_money' %}" class="btn btn-sec">Request</a>
-</div>
-</div>
+    <div class="db-acts">
+      <a href="{% url 'transfers:send' %}" class="db-act main row"><i class="fa-solid fa-paper-plane"></i> Send</a>
+      <a href="{% url 'transfers:request_money' %}" class="db-act"><i class="fa-solid fa-hand-holding-dollar"></i> Request</a>
+    </div>
+  </div>
 
-<div class="row bank-card" id="bank_card">
-    {% for card in cards %}
-        <span class="cards stack"
-              data-card-id="{{ card.pk }}"
-              data-card-type="{{ card.card_type }}">
-        </span>
-    {% empty %}
-        <span class="cards stack"></span>
-    {% endfor %}
-</div>
-</div>
+  {% if account and account.kyc_tier < 1 %}
+  <div class="db-note db-block" data-r style="--d:2">
+    <i class="fa-solid fa-shield-halved"></i>
+    <p>Verify your ID to raise your limits and unlock betting.</p>
+        <a class="db-note-btn" href="{% url 'accounts:verify' %}">Verify</a>
+  </div>
+  {% endif %}
 
-<div class="row credit-wrapper">
-<a href="{% url 'accounts:credit' %}">Credit facility <i class="fas fa-arrow-right"></i></a>
-<a href="{% url 'transfers:requests' %}">Money requests</a>
-</div>
+  <div class="db-chips db-block" data-r style="--d:3">
+    <a class="db-chip" href="{% url 'accounts:credit' %}"><i class="fa-solid fa-credit-card"></i> Credit facility</a>
+    <a class="db-chip" href="{% url 'transfers:requests' %}"><i class="fa-solid fa-inbox"></i> Money requests</a>
+  </div>
 
-</div>
-<!-- Quick actions -->
-        <div class="row">
-            <p>Quick actions</p>
-            <a href="{% url 'biller:hub' %}">Explore Biller hub</a>
-        </div>
-<div class="service-grid kd-services">
-            <a href="{% url 'savings:new' %}" class="kd-service">
-                <span class="kd-service-icon cyan">
-                    <i class="fa-solid fa-piggy-bank"></i>
-                </span>
-                <span>Savings</span>
-            </a>
+  <div class="db-sec db-block" data-r style="--d:4">
+    <p>Quick actions</p>
+    <a href="{% url 'biller:hub' %}">Explore bills</a>
+  </div>
+  
 
-            <a href="" class="kd-service">
-                <span class="kd-service-icon purple">
-                    <i class="fa-solid fa-hand-holding-dollar"></i>
-                </span>
-                <span>Withdraw</span>
-            </a>
+  <div class="db-grid db-block">
+    <a href="{% url 'savings:home' %}" class="db-svc cyan" style="--d:0"><span class="db-ic"><i class="fa-solid fa-piggy-bank"></i></span>Savings</a>
+    
+    <a href="{% url 'treasury:cashout' %}" class="db-svc purple{% if account.kyc_tier < 1 %} locked{% endif %}" style="--d:1"{% if account.kyc_tier < 1 %} data-badge="ID"{% endif %}><span class="db-ic"><i class="fa-solid fa-hand-holding-dollar"></i></span>Withdraw</a>
+    
+    <a href="{% url 'biller:hub' %}" class="db-svc orange" style="--d:2"><span class="db-ic"><i class="fa-solid fa-receipt"></i></span>Pay bills</a>
+    
+    <a href="{% url 'biller:service' 'airtime' %}" class="db-svc green" style="--d:3"><span class="db-ic"><i class="fa-solid fa-mobile-screen"></i></span>Airtime</a>
+    {% comment %}
+    <a href="{% url 'cashier:deposit' %}" class="db-svc yellow" style="--d:6"><span class="db-ic"><i class="fa-solid fa-money-bill-transfer"></i></span>Deposit</a>
+    
+    {% endcomment %}
+    <a href="{% url 'treasury:deposit' %}" class="db-svc pink" style="--d:4"><span class="db-ic"><i class="fa-solid fa-money-bill-transfer"></i></span>Deposit</a>
+    
+    
+    <a href="{% url 'biller:service' 'data' %}" class="db-svc blue" style="--d:5"><span class="db-ic"><i class="fa-solid fa-wifi"></i></span>Data</a>
+    
+    <a href="{% url 'biller:service' 'education' %}" class="db-svc yellow" style="--d:6"><span class="db-ic"><i class="fa-solid fa-graduation-cap"></i></span>Education</a>
+    
+    <a href="{% url 'biller:service' 'betting' %}" class="db-svc violet{% if account.kyc_tier < 1 %} locked{% endif %}" style="--d:7"{% if account.kyc_tier < 1 %} data-badge="ID"{% endif %}><span class="db-ic"><i class="fa-solid fa-dice"></i></span>Betting</a>
+  </div>
 
-            <a href="#" class="kd-service">
-                <span class="kd-service-icon orange">
-                    <i class="fa-solid fa-receipt"></i>
-                </span>
-                <span>Pay bills</span>
-            </a>
+    {% if account %}
+  <div class="db-month db-block" data-r style="--d:6">
+    <h3>Spent this month</h3>
+    <strong>₦ {{ monthly_spending|default:0|floatformat:2|intcomma }}</strong>
+    <div class="db-split"><span>Bills</span><span>₦ {{ payment_total|default:0|floatformat:2|intcomma }}</span></div>
+    <div class="db-bar a"><i style="--w:{{ payment_percent|default:0|floatformat:'0u' }}%"></i></div>
+    <div class="db-split"><span>Transfers</span><span>₦ {{ transfer_total|default:0|floatformat:2|intcomma }}</span></div>
+    <div class="db-bar c"><i style="--w:{{ transfer_percent|default:0|floatformat:'0u' }}%"></i></div>
+    <div class="db-split"><span>Withdrawals</span><span>₦ {{ withdrawal_total|default:0|floatformat:2|intcomma }}</span></div>
+    <div class="db-bar b"><i style="--w:{{ withdrawal_percent|default:0|floatformat:'0u' }}%"></i></div>
+  </div>
+  {% endif %}
 
-            <a href="#" class="kd-service">
-                <span class="kd-service-icon green">
-                    <i class="fa-solid fa-mobile-screen"></i>
-                </span>
-                <span>Airtime</span>
-            </a>
-
-            <a href="#" class="kd-service">
-                <span class="kd-service-icon pink">
-                    <i class="fa-solid fa-money-bill-transfer"></i>
-                </span>
-                <span>Deposit</span>
-            </a>
-
-            <a href="#" class="kd-service">
-                <span class="kd-service-icon blue">
-                    <i class="fa-solid fa-wifi"></i>
-                </span>
-                <span>Data</span>
-            </a>
-
-            <a href="#" class="kd-service">
-                <span class="kd-service-icon yellow">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                </span>
-                <span>Education</span>
-            </a>
-
-            <a href="" class="kd-service">
-                <span class="kd-service-icon violet">
-                    <i class="fa-solid fa-dice"></i>
-                </span>
-                <span>Betting</span>
-            </a>
-        
+    <div class="db-panel">
+    {% if transactions %}
+      {% include 'transactions/index.html' %}
+    {% else %}
+      <div class="db-empty">
+        <i class="fa-solid fa-receipt"></i>
+        <b>No transactions yet</b>
+        <span>Send money, pay a bill or save, and it will show up here.</span>
+        <a class="dc-pill" href="{% url 'transfers:send' %}">Send money</a>
+      </div>
+    {% endif %}
+  </div>
 
 </div>
-
-{% include 'transactions/index.html' %}
-
 </section>
 
 
 <section class="cards-list tab-page" id="card-page">
+<div class="dc">
 
-    <header class="row topbar">
-        <h1>Cards</h1>
-        <a href="{% url 'cards:add' %}" class="pill-button">
-            Order a card
-        </a>
-    </header>
+  <header class="dc-head dc-block" data-r style="--d:0">
+    <h1>Cards</h1>
+    <a href="{% url 'cards:add' %}" class="dc-pill pill-button"><i class="fa-solid fa-plus"></i> Order a card</a>
+  </header>
 
-    <div class="deck" id="cardDeck" role="button" tabindex="0"
-         aria-label="Tap to shuffle cards">
+  <div class="deck" id="cardDeck" role="button" tabindex="0" aria-label="Tap to shuffle cards">
+    {% for card in issued_cards %}
+      <div class="bank-card-view">
+        {% include 'includes/klosa_card.html' with card=card %}
+      </div>
+    {% empty %}
+      <div class="dc-empty">
+        <i class="fa-solid fa-credit-card"></i>
+        <b style="color:#fff">No card yet</b>
+        <span>Order a Klosa card to pay online and in shops.</span>
+      </div>
+    {% endfor %}
+  </div>
 
-        {% for card in issued_cards %}
-            <div class="bank-card-view">
-                {% include 'includes/klosa_card.html' with card=card %}
-            </div>
-        {% empty %}
-            <p class="empty-state">You haven't received a card yet.</p>
-        {% endfor %}
+  <p class="deck-hint" id="deckHint"></p>
 
+  {% if credit_info %}
+  <div class="cr-panel dc-block" data-r style="--d:2">
+    <div class="cr-top"><span>Available to spend</span><b>₦ {{ credit_info.available|floatformat:2|intcomma }}</b></div>
+    <div class="cr-bar"><i style="--w:{{ credit_info.pct }}%"></i></div>
+    <div class="cr-split"><span>Owed ₦ {{ credit_info.owed|floatformat:2|intcomma }}</span><span>Limit ₦ {{ credit_info.limit|floatformat:0|intcomma }}</span></div>
+    {% if credit_info.due %}<p class="cr-due">Repay by {{ credit_info.due|date:"d M Y" }}</p>{% endif %}
+    {% if not has_credit_card %}<p class="cr-due">Your credit is ready. Order your credit card to spend it.</p>{% endif %}
+    <div class="cr-acts">
+      {% if not has_credit_card %}<a class="dc-pill" href="{% url 'cards:add' %}">Order credit card</a>{% endif %}
+      {% if credit_info.owed %}<a class="dc-pill" href="{% url 'accounts:credit_repay' %}">Repay</a>{% endif %}
+      {% if sim and has_credit_card %}<a class="cr-test" href="{% url 'cards:simulate' %}">Test a purchase</a>{% endif %}
     </div>
+  </div>
+  {% endif %}
 
-    <p class="deck-hint" id="deckHint"></p>
-
-    {% if pending_card_orders %}
-        <div class="card-requests">
-            <h2>Card requests</h2>
-
-            {% for order in pending_card_orders %}
-                <article class="card-request">
-                    <div>
-                        <h3>{{ order.get_card_type_display }} card</h3>
-                        <p>{{ order.get_card_format_display }} card</p>
-                        <small>
-                            Requested {{ order.created_at|date:"d M Y" }}
-                        </small>
-                    </div>
-
-                    <span class="request-status status-{{ order.status }}">
-                        {{ order.get_status_display }}
-                    </span>
-                </article>
-
-                {% if order.carddelivery %}
-                    <div class="delivery-info">
-                        <p>
-                            Delivery:
-                            {{ order.carddelivery.get_status_display }}
-                        </p>
-
-                        {% if order.carddelivery.tracking_number %}
-                            <small>
-                                Tracking: {{ order.carddelivery.tracking_number }}
-                            </small>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            {% endfor %}
+  {% if pending_card_orders %}
+  <div class="dc-req dc-block">
+    <h2>Card requests</h2>
+    {% for order in pending_card_orders %}
+      <article class="dc-item" data-r style="--d:{{ forloop.counter }}">
+        <div class="dc-row">
+          <div>
+            <h3>{{ order.get_card_type_display }} card</h3>
+            <p>{{ order.get_card_format_display }} card</p>
+            <small>Requested {{ order.created_at|date:"d M Y" }}</small>
+          </div>
+          <span class="dc-chip status-{{ order.status }}">{{ order.get_status_display }}</span>
         </div>
-    {% endif %}
+        {% if order.delivery %}
+          <div class="dc-deliv">
+            <p>Delivery: {{ order.delivery.get_status_display }}</p>
+            {% if order.delivery.tracking_number %}<small>Tracking: {{ order.delivery.tracking_number }}</small>{% endif %}
+          </div>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+  {% endif %}
 
+</div>
 </section>
 
-        
-        
-<section class="recipient tab-page"  id="recipient-page">
-         <header class="row topbar">
-            <h1>Recipients</h1>
-            <a class="pill-button" href="{% url 'beneficiary:add' %}">Add</a>
-        </header>
 
-        <div class="contacts">
-        {% for item in beneficiaries %}
-            <article class="contact">
-                <img src="https://i.pravatar.cc/100?img=47" alt="">
-                <h3>{{ item.name }}</h3>
-                <p>{{ item.bank_name }}</p>
-            </article>
-            {% empty %}
-            <p>Recent Beneficiary will appear here </p>
-            
-           {% endfor %}
-          
+<section class="recipient tab-page" id="recipient-page">
+<div class="dr">
+
+  <header class="dr-head" data-r style="--d:0">
+    <h1>Recipients</h1>
+    <a class="dc-pill pill-button" href="{% url 'beneficiary:add' %}"><i class="fa-solid fa-plus"></i> Add</a>
+  </header>
+
+    <div class="contacts">
+      <div class="bl-sec" style="margin:0 0 12px">
+    <input class="bl-in" id="drSearch" placeholder="Search recipients" autocomplete="off" style="height:46px;font-size:15px">
+  </div>
+    {% for item in beneficiaries %}
+      <button type="button" class="contact" style="--d:{{ forloop.counter0 }}"
+        data-id="{{ item.pk }}" data-name="{{ item.name }}" data-bank="{{ item.bank_name }}"
+        data-last4="{{ item.account_number|slice:'-4:' }}" data-acct="{{ item.account_number }}"
+        data-klosa="{% if item.bank_code == '999' %}1{% endif %}"
+        data-del="{% url 'beneficiary:delete' item.pk %}">
+        <span class="dr-init">{{ item.name|first|upper }}</span>
+        <h3>{{ item.name }}</h3>
+        <p>{{ item.bank_name }}</p>
+      </button>
+    {% empty %}
+      <p class="dr-muted">Recipients you add will appear here.</p>
+    {% endfor %}
+  </div>
+
+  <div class="qa-back" id="qaBack" hidden></div>
+  <div class="qa" id="qa" role="dialog" aria-modal="true" aria-labelledby="qaName" hidden>
+    <div class="qa-bar"></div>
+    <div class="qa-who"><span class="dr-init" id="qaInit"></span><div><b id="qaName"></b><small id="qaSub"></small></div></div>
+    <a class="qa-act" id="qaSend" href="#"><i class="fa-solid fa-paper-plane"></i><span>Send money</span></a>
+    <a class="qa-act" id="qaReq" href="#"><i class="fa-solid fa-hand-holding-dollar"></i><span>Request money</span></a>
+    <button class="qa-act" id="qaCopy" type="button"><i class="fa-regular fa-copy"></i><span>Copy account number</span></button>
+    <form method="post" id="qaDelForm">{% csrf_token %}<button class="qa-act danger" type="submit"><i class="fa-solid fa-trash"></i><span>Remove recipient</span></button></form>
+    <button class="qa-close" id="qaClose" type="button">Close</button>
+  </div>
+
+  <div class="trns">
+    <div class="drag-handle"><span class="bar"></span></div>
+
+    <div class="row center">
+      <div class="account-tabs">
+        <span class="acct_slider"></span>
+        <button class="acct selected">All</button>
+        <button class="acct">My accounts</button>
+      </div>
+      <span class="search"><i class="fa-solid fa-search"></i></span>
+    </div>
+
+    <div class="accounts">
+      {% for item in beneficiaries %}
+        <div class="account-info" style="--d:{{ forloop.counter0 }}">
+          <div>
+            <span class="img-fluid-icon"><span class="dr-init">{{ item.name|first|upper }}</span></span>
+            <span>{{ item.name }}</span>
+          </div>
+          <small>{{ item.bank_name }} ••{{ item.account_number|slice:"-4:" }}</small>
         </div>
-
-        <div class="trns">
-            <div class="drag-handle"><span class="bar"></span></div>
-
-            <div class="row center">
-            <div class="account-tabs">
-            <span class="acct_slider"></span>
-                <button class="acct selected">All</button>
-                <button class="acct">My accounts</button>
-                </div>
-                <span class="search"><i class="fa-solid fa-search"></i></span>
-            </div>
-            
-            <div class="accounts">
-            <div class="account-info">
-            <div>
-            <span class="img-fluid-icon">
-                <img src="https://i.pravatar.cc/100?img=49" alt=""></span>
-                <span>Gigi Hadid</span>
-                </div>
-                <small>Chase 2983</small>
-            </div>
-
-            <div class="account-info">
-            <div>
-            <span class="img-fluid-icon">
-                <img src="https://i.pravatar.cc/100?img=45" alt=""></span>
-                <span>Bella Hadid</span>
-                </div>
-                <small>Mastercard 9283</small>
-            </div>
-
-            <div class="account-info">
-            <div>
-            <span class="img-fluid-icon">
-                <img src="https://i.pravatar.cc/100?img=52" alt=""></span>
-                <span>My account</span>
-                </div>
-                <small>Account 1234</small>
-            </div>
-            </div>
+      {% endfor %}
+      {% if account %}
+        <div class="account-info" style="--d:{{ beneficiaries|length }}">
+          <div>
+            <span class="img-fluid-icon"><span class="dr-init">{{ initial|first|upper }}</span></span>
+            <span>My account</span>
+          </div>
+          <small>Klosa ••{{ account.account_number|slice:"-4:" }}</small>
         </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
 </section>
 
 {% include 'accounts/settings.html' %}
 
-<nav class="row menu" >
+<nav class="row menu">
 <span class="slider"></span>
 <button class="btn tab" data-tab="recipient" aria-label="Recipients"><i class="fa-solid fa-user"></i></button>
 <button class="active btn tab" data-tab="home" aria-label="Home"><i class="fa-solid fa-home"></i></button>
 <button class="btn tab" data-tab="card" aria-label="Cards"><i class="fa-solid fa-wallet"></i></button>
-<button class="btn tab" data-tab="settings"  aria-label="Settings" ><i class="fa-solid fa-gear"></i></button>
+<button class="btn tab" data-tab="settings" aria-label="Settings"><i class="fa-solid fa-gear"></i></button>
 </nav>
+
+<div class="db-toast" id="dbToast" role="status" aria-live="polite"></div>
 </main>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+(() => {
+  const g = document.getElementById("dbGreet");
+  if (g) {
+    const h = new Date().getHours();
+    g.textContent = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  }
 
+  const toast = document.getElementById("dbToast");
+  let timer;
+  const say = (m) => {
+    toast.textContent = m; toast.classList.add("on");
+    clearTimeout(timer); timer = setTimeout(() => toast.classList.remove("on"), 2300);
+  };
+  document.querySelectorAll("[data-soon]").forEach((el) =>
+    el.addEventListener("click", () => say(el.dataset.soon)));
+
+  const copy = document.getElementById("dbCopy");
+  if (copy) copy.addEventListener("click", async () => {
+    const n = document.getElementById("dbAcct").textContent.trim();
+    const lbl = copy.querySelector("span");
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(n);
+      else {
+        const t = document.createElement("textarea"); t.value = n; t.style.cssText = "position:fixed;opacity:0";
+        document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove();
+      }
+      copy.classList.add("done"); lbl.textContent = "Copied"; say("Account number copied");
+      setTimeout(() => { copy.classList.remove("done"); lbl.textContent = "Copy"; }, 1800);
+    } catch (e) { lbl.textContent = "Press and hold"; }
+  });
+})();
+
+if (location.hash === "#card") {
+    const t = document.querySelector('[data-tab="card"]');
+    if (t) t.click();
+}
+</script>
+
+<script>
+(() => {
+  const qa = document.getElementById("qa"), back = document.getElementById("qaBack");
+  if (!qa) return;
+  const $ = (id) => document.getElementById(id);
+  const open = (b) => {
+    const d = b.dataset;
+    $("qaInit").textContent = (d.name || "?").charAt(0).toUpperCase();
+    $("qaName").textContent = d.name;
+    $("qaSub").textContent = d.bank + " ••••" + d.last4;
+    $("qaSend").href = "{% url 'transfers:send' %}?to=" + d.id;
+    $("qaReq").href = "{% url 'transfers:request_money' %}?to=" + d.id;
+    $("qaReq").hidden = !d.klosa;
+    $("qaDelForm").action = d.del;
+    $("qaCopy").dataset.acct = d.acct;
+    $("qaCopy").querySelector("span").textContent = "Copy account number";
+    qa.hidden = back.hidden = false;
+    requestAnimationFrame(() => { qa.classList.add("on"); back.classList.add("on"); });
+  };
+  const close = () => {
+    qa.classList.remove("on"); back.classList.remove("on");
+    setTimeout(() => { qa.hidden = back.hidden = true; }, 320);
+  };
+  document.querySelectorAll(".contact[data-id]").forEach((b) => b.addEventListener("click", () => open(b)));
+  back.addEventListener("click", close);
+  $("qaClose").addEventListener("click", close);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+  $("qaCopy").addEventListener("click", async (e) => {
+    const t = e.currentTarget, s = t.querySelector("span");
+    try { await navigator.clipboard.writeText(t.dataset.acct); s.textContent = "Copied"; }
+    catch (err) { s.textContent = t.dataset.acct; }
+    setTimeout(close, 900);
+  });
+  $("qaDelForm").addEventListener("submit", (e) => {
+    if (!confirm("Remove this recipient?")) e.preventDefault();
+  });
+})();
+</script>
+
+<script>
+(() => {
+  const box = document.getElementById("drSearch"); if (!box) return;
+  box.addEventListener("input", () => {
+    const q = box.value.trim().toLowerCase();
+    document.querySelectorAll(".contact[data-id]").forEach((c) => {
+      c.style.display = (c.dataset.name + " " + c.dataset.bank).toLowerCase().includes(q) ? "" : "none";
+    });
+  });
+})();
+</script>
 {% endblock %}

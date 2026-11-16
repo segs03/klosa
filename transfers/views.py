@@ -15,6 +15,11 @@ from .forms import RequestForm, TransferForm
 from .models import MoneyRequest
 from .services import TransferError, pay_money_request, sent_today, send_money
 
+from beneficiary.models import Beneficiary
+
+
+
+
 MAX_PENDING_REQUESTS = 10
 REQUEST_DAYS = 7
 
@@ -36,7 +41,13 @@ def send_money_view(request):
             request.session["send_token"] = uuid.uuid4().hex
             return redirect("transfers:send")
 
-        form = TransferForm(request.POST, account=account, used_today=used)
+        initial = {}
+        to = request.GET.get("to", "")
+        if to.isdigit():
+            ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
+            if ben:
+                initial["beneficiary"] = ben.pk
+        form = TransferForm(account=account, used_today=used, initial=initial)
 
         if form.is_valid():
             beneficiary = form.cleaned_data.get("beneficiary")
@@ -71,7 +82,13 @@ def send_money_view(request):
 
             used = sent_today(account)                      # refresh after a failed try
     else:
-        form = TransferForm(account=account, used_today=used)
+        initial = {}
+        to = request.GET.get("to", "")
+        if to.isdigit():
+            ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
+            if ben:
+                initial["beneficiary"] = ben.pk
+        form = TransferForm(account=account, used_today=used, initial=initial)
 
     token = request.session.setdefault("send_token", uuid.uuid4().hex)
     request.session.setdefault("send_ref", "KL" + uuid.uuid4().hex[:10].upper())
@@ -85,7 +102,13 @@ def send_money_view(request):
 @login_required
 def request_money(request):
     account = get_object_or_404(Account, user=request.user)
-    form = RequestForm(request.POST or None)
+    initial = {}
+    to = request.GET.get("to", "")
+    if to.isdigit():
+        ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
+        if ben and ben.bank_code == settings.KLOSA_BANK_CODE:
+            initial["account_number"] = ben.account_number
+    form = RequestForm(request.POST or None, initial=initial)
 
     if request.method == "POST" and form.is_valid():
         amount = form.cleaned_data["amount"]

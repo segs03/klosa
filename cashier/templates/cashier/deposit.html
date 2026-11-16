@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Add money - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Add money</h1><p>Fund your Klosa account</p></div>
+  </header>
+  <form method="post" id="dpForm" novalidate>
+    {% csrf_token %}
+    <div class="bl-sec" data-r style="--d:1">
+      <label class="bl-lbl" for="id_amount">Amount (₦)</label>
+      <input class="bl-in" id="id_amount" name="amount" value="{{ form.amount.value|default:'' }}" inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+      <p class="bl-hint">Between ₦{{ min|floatformat:0 }} and ₦{{ max|floatformat:0 }}</p>
+      <div class="bl-quick">{% for a in quick %}<button type="button" data-v="{{ a }}">₦{{ a }}</button>{% endfor %}</div>
+      {% for e in form.amount.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    </div>
+    <button type="submit" class="bl-btn" id="dpGo">Continue to payment</button>
+    <p class="bl-hint">You will pay on a secure page. We never see your card details.</p>
+  </form>
+  <h2>Or transfer from any bank</h2>
+  <div class="bl-sum" data-r style="--d:3">
+    <p><span>Bank</span><b>Klosa Bank</b></p>
+    <p><span>Account number</span><b>{{ account.account_number }}</b></p>
+    <p><span>Account name</span><b>{{ request.user.get_full_name|default:"Klosa customer" }}</b></p>
+  </div>
+  <p class="bl-hint">Transfers to this number arrive in your balance automatically.</p>
+</section>
+<script>
+(() => {
+  document.querySelectorAll(".bl-quick button").forEach((b) =>
+    b.addEventListener("click", () => { document.getElementById("id_amount").value = b.dataset.v; }));
+  document.getElementById("dpForm").addEventListener("submit", () => {
+    const b = document.getElementById("dpGo"); setTimeout(() => { b.disabled = true; b.textContent = "Opening…"; }, 0);
+  });
+})();
+</script>
+{% endblock %}

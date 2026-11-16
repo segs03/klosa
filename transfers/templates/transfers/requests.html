@@ -2,7 +2,6 @@
 {% block content %}
 <section style="padding:16px; color:#fff">
   <h2>Money requests</h2>
-  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
   {% for r in requests %}
     <div style="background:#0B2E6E; border-radius:16px; padding:14px; margin:12px 0">
       <b>{{ r.requester.get_full_name|default:"A Klosa customer" }}</b> asks for

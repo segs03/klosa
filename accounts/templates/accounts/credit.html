@@ -1,130 +1,48 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block title %}Credit Facility | Klosa{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'accounts/style.css' %}">
-{% endblock %}
-
+{% extends 'base.html' %}
+{% block title %}Credit - Klosa Bank{% endblock %}
 {% block content %}
-<div class="credit-page">
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Credit</h1><p>Spend now, repay later</p></div>
+  </header>
 
-    <div class="credit-header">
-        <h2>Credit facility</h2>
-        <a href="{% url 'accounts:home' %}">
-            <i class="fa-solid fa-arrow-left"></i> Back
-        </a>
+  {% if summary %}
+    <div class="bl-top" data-r style="--d:1">
+      <small>Available to spend</small><strong>₦{{ summary.available|floatformat:2 }}</strong>
+      <div class="bl-sum" style="margin-top:14px;background:transparent;border:0;padding:0">
+        <p><span>Credit limit</span><b>₦{{ summary.limit|floatformat:0 }}</b></p>
+        <p><span>You owe</span><b>₦{{ summary.owed|floatformat:2 }}</b></p>
+        {% if summary.due %}<p><span>Repay by</span><b>{{ summary.due|date:"d M Y" }}</b></p>{% endif %}
+      </div>
     </div>
-
-    {% if credit and credit.status == "active" %}
-
-        <div class="credit-overview">
-
-            <div class="credit-status">
-                <i class="fa-solid fa-circle-check"></i>
-                Active facility
-            </div>
-
-            <div class="label">Available credit</div>
-
-            <div class="available-credit">
-                ₦{{ credit.available_credit|floatformat:2 }}
-            </div>
-
-            <div class="credit-usage">
-                <span>Credit used</span>
-                <span>
-                    ₦{{ credit.outstanding_balance|floatformat:2 }}
-                    / ₦{{ credit.credit_limit|floatformat:2 }}
-                </span>
-            </div>
-
-            <div class="credit-progress">
-                <span style="width: {% widthratio credit.outstanding_balance credit.credit_limit 100 %}%"></span>
-            </div>
-
-            <div class="credit-usage">
-                <span>Outstanding</span>
-                <span>Credit limit</span>
-            </div>
-
-        </div>
-
-        <div class="credit-grid">
-
-            <div class="credit-stat">
-                <small>Credit limit</small>
-                <strong>₦{{ credit.credit_limit|floatformat:2 }}</strong>
-            </div>
-
-            <div class="credit-stat">
-                <small>Outstanding balance</small>
-                <strong>₦{{ credit.outstanding_balance|floatformat:2 }}</strong>
-            </div>
-
-            <div class="credit-stat">
-                <small>Credit score</small>
-                <strong>{{ credit.credit_score }}</strong>
-            </div>
-
-            <div class="credit-stat">
-                <small>Payment due</small>
-                <strong>
-                    {% if credit.repayment_due_date %}
-                        {{ credit.repayment_due_date|date:"d M Y" }}
-                    {% else %}
-                        Not set
-                    {% endif %}
-                </strong>
-            </div>
-
-        </div>
-
-        <h3 class="credit-section-title">Manage credit</h3>
-
-        <a href="{% url 'accounts:credit_repay' %}" class="credit-action">
-            <i class="fa-solid fa-wallet"></i>
-            <span>Make a repayment</span>
-            <i class="fa-solid fa-chevron-right arrow"></i>
-        </a>
-
-        <a href="{% url 'accounts:credit' %}" class="credit-action">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span>Credit transaction history</span>
-            <i class="fa-solid fa-chevron-right arrow"></i>
-        </a>
-
-    {% elif credit and credit.status == "pending" %}
-
-        <div class="credit-empty">
-            <i class="fa-solid fa-hourglass-half"></i>
-            <h3>Application pending</h3>
-            <p>Your credit facility application is being processed.</p>
-        </div>
-
+    {% if summary.owed %}<a class="bl-btn" href="{% url 'accounts:credit_repay' %}">Repay</a>{% endif %}
+    {% if credit_card %}
+      <p class="bl-hint">Your credit card ends {{ credit_card.last_four }}.</p>
+    {% elif card_order %}
+      <p class="bl-msg" role="status">Your credit card request is {{ card_order.get_status_display|lower }}.</p>
     {% else %}
-
-        <div class="credit-empty">
-            <i class="fa-solid fa-credit-card"></i>
-            <h3>Access credit with Klosa</h3>
-            <p>
-                Apply for a credit facility and manage your
-                available credit, repayments and transaction history
-                in one place.
-            </p>
-
-            <a href="{% url 'accounts:credit_apply' %}" class="credit-button">
-                Apply for credit
-            </a>
-        </div>
-
+      <a class="bl-btn ghost" href="{% url 'cards:add' %}">Order your credit card</a>
     {% endif %}
+    {% if recent %}<h2>Recent activity</h2>{% for t in recent %}
+      <div class="bl-row"><div class="grow"><b>{{ t.get_transaction_type_display }}</b><small>{{ t.description }} · {{ t.created_at|date:"d M, H:i" }}</small></div><b>₦{{ t.amount|floatformat:2 }}</b></div>
+    {% endfor %}{% endif %}
 
-    <p class="credit-note">
-        Klosa credit facility. Credit limits and scores shown
-        here are real lending offers.
-    </p>
+  {% elif credit and credit.status == "suspended" %}
+    <p class="bl-msg" style="background:rgba(255,138,138,.14);color:#FFB3B3" role="alert">Your credit is suspended. You can still repay what you owe.</p>
+    {% if credit.outstanding_balance %}<a class="bl-btn" href="{% url 'accounts:credit_repay' %}">Repay ₦{{ credit.outstanding_balance|floatformat:2 }}</a>{% endif %}
 
-</div>
+  {% elif application and application.status == "pending" %}
+    <p class="bl-msg" role="status">Your request for ₦{{ application.requested_amount|floatformat:0 }} was received. Our team is reviewing it.</p>
+  {% elif application and application.status == "assessed" %}
+    <p class="bl-msg" role="status">Your request passed the first review. It is waiting for a final decision.</p>
+  {% else %}
+    {% if application and application.status == "rejected" %}
+      <p class="bl-msg" style="background:rgba(255,209,102,.14);color:#FFE9B0" role="status">Your last request was declined.{% if application.decision_reason %} {{ application.decision_reason }}{% endif %} You can ask again.</p>
+    {% endif %}
+    {% if problem %}<p class="bl-msg" role="status">{{ problem }}</p>{% endif %}
+    <a class="bl-btn" href="{% url 'accounts:credit_request' %}">Request credit</a>
+  {% endif %}
+</section>
 {% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Customer{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% url 'backoffice:customers' as back %}
+  {% include "backoffice/_head.html" with title=cust.get_full_name|default:"Klosa customer" sub=cust.phone_number back=back %}
+  <div class="bl-sum">
+    <p><span>Login</span><b>{% if cust.is_active %}Active{% else %}Suspended{% endif %}</b></p>
+    <p><span>Joined</span><b>{{ cust.date_joined|date:"d M Y" }}</b></p>
+    <p><span>ID verified</span><b>{% if ident %}Yes{% else %}No{% endif %}{% if kyc %} ({{ kyc.get_status_display }}){% endif %}</b></p>
+    {% if account %}
+      <p><span>Account</span><b>{{ account.account_number }}</b></p>
+      <p><span>Balance</span><b>₦{{ account.balance|floatformat:2 }}</b></p>
+      <p><span>Tier</span><b>{{ account.kyc_tier }}</b></p>
+      <p><span>PIN</span><b>{% if account.pin_hash %}Set{% else %}Not set{% endif %}{% if account.locked_until %} · locked until {{ account.locked_until|date:"H:i" }}{% endif %}</b></p>
+      {% if account.closed_at %}<p><span>Closed</span><b>{{ account.closed_at|date:"d M Y" }}</b></p>{% endif %}
+      <p><span>Savings</span><b>₦{{ saved|floatformat:2 }}</b></p>
+      {% if credit %}<p><span>Credit</span><b>{{ credit.get_status_display }} · owes ₦{{ credit.outstanding_balance|floatformat:2 }} of ₦{{ credit.credit_limit|floatformat:0 }}</b></p>{% endif %}
+    {% endif %}
+  </div>
+  {% if can_manage %}
+  <form method="post" style="margin-top:14px">{% csrf_token %}
+    <label class="bl-lbl" for="rs">Reason (saved in the audit log)</label><input class="bl-in" id="rs" name="reason" maxlength="200" required>
+    {% if account %}<button class="bl-btn ghost" name="action" value="unlock" type="submit">Clear PIN lock</button>{% endif %}
+    {% if cust.is_active %}<button class="bl-btn ghost" name="action" value="suspend" type="submit" style="color:#FFB3B3">Suspend login</button>
+    {% else %}<button class="bl-btn" name="action" value="reactivate" type="submit">Restore login</button>{% endif %}
+  </form>
+  {% endif %}
+  {% if cards %}<h2>Cards</h2>{% for c in cards %}<p class="bl-hint">{{ c.get_card_type_display }} ••••{{ c.last_four }} · {{ c.get_status_display }}</p>{% endfor %}{% endif %}
+  {% if txs %}<h2>Recent activity</h2>{% for t in txs %}
+    <div class="bl-row"><div class="grow"><b>{{ t.get_transaction_type_display }}</b><small>{{ t.description }} · {{ t.created_at|date:"d M, H:i" }}</small></div><b>₦{{ t.amount|floatformat:2 }}</b></div>{% endfor %}{% endif %}
+  {% if history %}<h2>Staff actions on this customer</h2>{% for h in history %}<p class="bl-hint">{{ h.created_at|date:"d M, H:i" }} · {{ h.staff.username }} · {{ h.action }} · {{ h.detail }}</p>{% endfor %}{% endif %}
+</section>
+{% endblock %}

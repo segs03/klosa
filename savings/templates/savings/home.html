@@ -21,7 +21,6 @@
 </style>
 <section class="sv">
   <h1>Savings</h1>
-  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
   <div class="sv-top">
     <small>Total saved</small><strong>₦{{ saved|floatformat:2 }}</strong>
     <small>Main balance: ₦{{ account.balance|floatformat:2 }}</small>

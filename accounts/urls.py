@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views, passkey, onboarding, recovery
+from . import kyc_views
 
 app_name = "accounts"
 
@@ -10,6 +11,7 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
 
     path("credit/", views.credit_view, name="credit"),
+    path("credit/request/", views.credit_request_view, name="credit_request"),
     path("credit/apply/", views.credit_apply_view, name="credit_apply"),
     path("credit/repay/", views.credit_repay_view, name="credit_repay"),
     path(
@@ -39,6 +41,7 @@ path("passkey/register/verify/",  passkey.passkey_register_verify,  name="passke
 path("passkey/login/options/",    passkey.passkey_login_options,    name="passkey_login_options"),
 path("passkey/login/verify/",     passkey.passkey_login_verify,     name="passkey_login_verify"),
 path("verify-phone/", onboarding.verify_phone_view, name="verify_phone"),
+path("verify-phone/resend/", onboarding.resend_code_view, name="resend_code"),
 
 path("signup/", onboarding.signup_view, name="signup"),
 path("pin/", views.set_pin_view, name="set_pin"),
@@ -50,4 +53,9 @@ path("backup-codes/", onboarding.backup_codes_view, name="backup_codes"),
 path("recover/", recovery.recover_request_view, name="recover"),
 path("recover/verify/", recovery.recover_verify_view, name="recover_verify"),
 path("close/", views.close_account_view, name="close_account"),
+
+    path("verify/", kyc_views.verify_view, name="verify"),
+    path("verify/staff/", kyc_views.staff_list, name="kyc_staff"),
+    path("verify/staff/<int:pk>/", kyc_views.staff_review, name="kyc_review"),
+    path("verify/staff/<int:pk>/document/", kyc_views.staff_document, name="kyc_document"),
 ]

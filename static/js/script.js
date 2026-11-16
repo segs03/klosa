@@ -5,7 +5,7 @@ let slider = document.querySelector('.slider');
 let bal = document.querySelector('#bal');
 let visible = document.querySelector('#visible');
 const pages = document.querySelectorAll(".tab-page");
-let bankCard = document.querySelector("#bank_card");
+
 
 let acct_btn = document.querySelectorAll(".acct");
 let rsi= 0;
@@ -122,23 +122,6 @@ if (acct_btn.length) {
     });
 }
 
-// stacked card click script
-function openCardPage(){
-// remove both card and tab active class
-pages.forEach(p => p.classList.remove('active'));
-tab.forEach(t => t.classList.remove('active'));
-
-// add both tab and card active class
-pages[1].classList.add('active');
-tab[2].classList.add('active');
-moveSlider(2);
-requestAnimationFrame(() => initCardDeck());
-}
-
-// bank click script
-if(bankCard){
-bankCard.addEventListener("click", openCardPage );
-}
 
 // tab slider script
 function moveSlider(index) {
@@ -174,29 +157,6 @@ moveSlider(1);
 
 
 
-
-/*
-const balanceButton = document.getElementById("visible");
-const balanceElement = document.getElementById("bal");
-
-if (balanceButton && balanceElement) {
-    let balanceHidden = false;
-
-    balanceButton.addEventListener("click", () => {
-        balanceHidden = !balanceHidden;
-
-        balanceElement.textContent = balanceHidden
-            ? "₦ ••••••••"
-            : balanceElement.dataset.value;
-
-        balanceButton.innerHTML = balanceHidden
-            ? '<i class="fa-solid fa-eye"></i>'
-            : '<i class="fa-solid fa-eye-slash"></i>';
-    });
-}
-*/
-
-
 // balance hiding script
 if(bal){
 let [whole, decimal] = bal.textContent.trim().split('.');
@@ -217,12 +177,16 @@ visible.classList.toggle('fa-eye-slash', !hidden);
 }
 
 
-// transaction and recipient panel script 
+// transaction and recipient panel script
 const panel = document.querySelectorAll(".trns");
 
-panel.forEach((p, index) => {
+panel.forEach((p) => {
 
     const handle = p.querySelector(".drag-handle");
+    if (!handle) return;                          // a panel without a handle just stays put
+
+    const holder = p.parentElement;               // keeps its height while the panel is lifted out
+    const isHome = !!p.closest("#home-page");     // only the transactions panel gets the expand behaviour
 
     let startY = 0;
     let startTop = 0;
@@ -240,6 +204,8 @@ panel.forEach((p, index) => {
 
         startTop = rect.top;
         currentTop = rect.top;
+
+        if (!holder.style.minHeight) holder.style.minHeight = `${rect.height}px`;
 
         Object.assign(p.style, {
             position: "fixed",
@@ -273,8 +239,8 @@ panel.forEach((p, index) => {
         p.style.top = `${currentTop}px`;
         p.style.height = `${window.innerHeight - currentTop}px`;
 
-        // Expand content as soon as the panel moves upward
-        if (index === 0) {
+        // Expand content as soon as the transactions panel moves upward
+        if (isHome) {
             const shouldExpand = currentTop < window.innerHeight * 0.85;
 
             if (shouldExpand !== expanded) {
@@ -308,6 +274,7 @@ panel.forEach((p, index) => {
         } else {
             p.classList.remove("expanded");
             p.removeAttribute("style");
+            holder.style.minHeight = "";              // the panel is back in place
         }
     }
 

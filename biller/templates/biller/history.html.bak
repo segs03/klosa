@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Payments - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'biller:hub' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Payments</h1><p>Your recent bill payments</p></div>
+  </header>
+  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+  {% for o in orders %}
+    <a class="bl-row" href="{% url 'biller:order' o.reference %}" data-r style="--d:{{ forloop.counter }}">
+      <div class="grow"><b>{{ o.get_category_display }} · {{ o.provider_code|upper }}</b><small>••••{{ o.customer_ref|slice:"-4:" }} · {{ o.created_at|date:"d M Y, H:i" }}</small></div>
+      <div style="text-align:right"><b>₦{{ o.amount|floatformat:2 }}</b><br><span class="bl-chip-s {{ o.status }}">{{ o.get_status_display }}</span></div>
+    </a>
+  {% empty %}<p style="color:#9FB6E0">No payments yet.</p>{% endfor %}
+</section>
+{% endblock %}

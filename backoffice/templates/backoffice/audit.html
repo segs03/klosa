@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Audit log" sub="Latest 200 staff actions" %}
+  {% for e in entries %}<div class="bl-row"><div class="grow"><b>{{ e.action }}</b><small>{{ e.staff.username }} · {{ e.target }} · {{ e.detail }}</small></div><small>{{ e.created_at|date:"d M, H:i" }}</small></div>{% empty %}<p class="bl-hint">Nothing yet.</p>{% endfor %}
+</section>
+{% endblock %}

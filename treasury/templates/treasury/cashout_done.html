@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Withdrawal code - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <div class="bl-hero" data-r style="--d:0">
+    <div class="bl-badge completed"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+    <h1 style="margin:0">Your withdrawal code</h1>
+    <p class="bl-amt">₦{{ co.amount|floatformat:2 }}</p>
+  </div>
+  {% if code %}
+    <div class="bl-token" data-r style="--d:1"><b style="font-size:36px;letter-spacing:10px">{{ code }}</b></div>
+    <p class="bl-hint" style="color:#FFE9B0">Write it down now. It is shown only once.</p>
+  {% else %}
+    <p class="bl-msg">This request was already created and its code was shown once. If you lost it, wait for it to expire and your money will come back.</p>
+  {% endif %}
+  <div class="bl-sum" data-r style="--d:2">
+    <p><span>Tell the teller</span><b>Your account number {{ account.account_number }}</b></p>
+    <p><span>Valid until</span><b>{{ co.expires_at|date:"d M Y, H:i" }}</b></p>
+    <p><span>Reference</span><b>{{ co.reference }}</b></p>
+  </div>
+  <p class="bl-hint">Take a valid ID to the branch or agent. Anyone with this code and your account number can collect the cash, so do not share it.</p>
+  <a class="bl-btn" href="{% url 'accounts:home' %}">Done</a>
+</section>
+{% endblock %}

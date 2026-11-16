@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Card requests{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Card requests" sub=orders|length %}
+  {% for o in orders %}
+    <a class="bl-row" href="{% url 'backoffice:card_detail' o.pk %}">
+      <div class="grow"><b>{{ o.get_card_type_display }} · {{ o.get_card_format_display }}</b><small>{{ o.cardholder_name }} · {{ o.created_at|date:"d M, H:i" }}</small></div>
+      <span class="bl-chip-s {% if o.status == 'pending' %}processing{% else %}completed{% endif %}">{{ o.get_status_display }}</span>
+    </a>
+  {% empty %}<p style="color:#9FB6E0">No card requests waiting.</p>{% endfor %}
+</section>
+{% endblock %}

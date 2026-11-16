@@ -60,9 +60,12 @@ INSTALLED_APPS = [
     'transfers',
     'beneficiary',
     'funding',
-    'credit',
     'biller',
     'savings',
+    'cashier',
+    'treasury',
+    'backoffice',
+    'notices',
     'fontawesomefree',
     
 ]
@@ -75,22 +78,68 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    "accounts.middleware.ForcePasswordChangeMiddleware"
 ]
 
 ROOT_URLCONF = 'bank.urls'
 
 AUTH_USER_MODEL = "accounts.User"
 
+
 AUTHENTICATION_BACKENDS = [
     "accounts.backends.IdentifierBackend",
     "django.contrib.auth.backends.ModelBackend",   # keep: passkey login uses it
 ]
+
 SMS_BACKEND = "console"      # prints codes in Termux; connect a real SMS provider before going live
 
 DEFAULT_FROM_EMAIL = "Klosa Bank <no-reply@yourdomain.com>"
 IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")       # long random value, separate from SECRET_KEY
 
 BILLER_PROVIDER = "biller.providers.mock.MockProvider"   # swap for a real provider later
+
+CASHIER_PROVIDER = "cashier.providers.mock.MockCashProvider"
+CASHIER_WEBHOOK_SECRET = os.environ.get("CASHIER_WEBHOOK_SECRET", "")   # long random value; empty means every webhook is rejected
+CASHIER_ALLOW_MOCK_PAYPAGE = DEBUG          # the fake payment page must never exist in production
+CASHIER_WITHDRAW_MIN_TIER = 1
+
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"        # outside MEDIA_ROOT, so no URL can serve it
+KYC_APPROVALS_REQUIRED = 1                             # set 2 for two-person approval
+KYC_MAX_UPLOAD = 5 * 1024 * 1024
+IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")   # keep separate from SECRET_KEY
+
+# Uploads up to 5 MB are held in memory, so Django never moves a temp file with a lock
+# (Android shared storage does not support file locking).
+FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+FILE_UPLOAD_HANDLERS = ["django.core.files.uploadhandler.MemoryFileUploadHandler"]
+DATA_UPLOAD_MAX_MEMORY_SIZE = 8 * 1024 * 1024
+
+PRIVATE_MEDIA_ROOT = os.path.expanduser("~/private_media")
+
+CARDS_ISSUER = "cards.issuer.MockIssuer"
+CARDS_WEBHOOK_SECRET = os.environ.get("CARDS_WEBHOOK_SECRET", "")   # empty means every webhook is rejected
+CARDS_ALLOW_SIMULATOR = DEBUG                          # the test-purchase page must never exist in production
+
+
+CREDIT_MIN_ACCOUNT_AGE_DAYS = int(os.environ.get("CREDIT_MIN_ACCOUNT_AGE_DAYS", "30"))
+CREDIT_MIN_BALANCE = os.environ.get("CREDIT_MIN_BALANCE", "10000")
+
+
+""" PAYSTACK """
+CASHIER_PROVIDER = "cashier.providers.paystack.PaystackProvider"
+PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")        # sk_test_... first
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
+CASHIER_FALLBACK_EMAIL_DOMAIN = "customers.yourdomain.com"             # a domain you own; phone-only customers have no email
+CASHIER_INBOUND_TRANSFERS = False
+
+
+# in TEMPLATES[0]["OPTIONS"]["context_processors"], add:
+#     "notices.context.unread",
+WELCOME_BONUS_ENABLED = os.environ.get("WELCOME_BONUS_ENABLED", "1") == "1"
+WELCOME_BONUS_AMOUNT = os.environ.get("WELCOME_BONUS_AMOUNT", "200000")
+WELCOME_BONUS_BUDGET = os.environ.get("WELCOME_BONUS_BUDGET", "20000000")   # the most Klosa will ever give away
+
 
 
 TEMPLATES = [
@@ -103,6 +152,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'notices.context.unread',
             ],
         },
     },

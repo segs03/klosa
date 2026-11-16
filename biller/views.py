@@ -108,7 +108,8 @@ def service(request, category):
     if not form.is_valid():
         return render(request, "biller/service.html", details)
 
-    d, step = form.cleaned_data, request.POST.get("step")
+    d = form.cleaned_data
+    step = request.POST.get("step") or ("pay" if request.POST.get("pin") else "review")
     if step == "edit":
         return render(request, "biller/service.html", details)
 

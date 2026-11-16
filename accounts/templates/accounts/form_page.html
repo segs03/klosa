@@ -163,7 +163,6 @@
     </ol>
     {% endif %}
 
-    {% for message in messages %}<p class="lg-msg" role="status">{{ message }}</p>{% endfor %}
     {% if error %}<p class="lg-msg err" role="alert">{{ error }}</p>{% endif %}
     {% for e in form.non_field_errors %}<p class="lg-msg err" role="alert">{{ e }}</p>{% endfor %}
 
@@ -175,6 +174,7 @@
           <div class="lg-field" style="--i:{{ forloop.counter0 }}">
             <label class="lg-check" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
             {% for e in field.errors %}<p class="lg-ferr" role="alert">{{ e }}</p>{% endfor %}
+                {% if dev_code %}<p class="lg-msg" role="status">Test mode: your code is <b>{{ dev_code }}</b></p>{% endif %}
           </div>
         {% else %}
           <div class="lg-field{% if field.name == 'code' %} otp{% endif %}{% if field.errors %} err{% endif %}" style="--i:{{ forloop.counter0 }}">
@@ -202,6 +202,18 @@
 
       <button type="submit" class="lg-btn" id="lgSubmit"><span>{{ button }}</span></button>
     </form>
+    
+        {% if resend_url %}
+    <form method="post" action="{{ resend_url }}" style="margin-top:12px">
+      {% csrf_token %}
+      <button type="submit" class="lg-btn" id="resendBtn" disabled
+        style="background:transparent;color:#00E5FF;border:1px solid rgba(0,229,255,.5);animation:none">Send a new code in <span id="resendSec">60</span>s</button>
+    </form>
+    <script>
+      (() => { let s = 60; const b = document.getElementById("resendBtn"), t = document.getElementById("resendSec");
+        const id = setInterval(() => { s--; if (s <= 0) { clearInterval(id); b.disabled = false; b.textContent = "Send a new code"; } else t.textContent = s; }, 1000); })();
+    </script>
+    {% endif %}
 
     {% if form.fields.agree %}
     <ul class="lg-perks">

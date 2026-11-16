@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Review ID{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head"><a class="bl-back" href="{% url 'accounts:kyc_staff' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a><div><h1>Review ID</h1><p>{{ app.get_status_display }}</p></div></header>
+  {% if hints.same_id %}<p class="bl-msg" style="background:rgba(255,138,138,.14);color:#FFB3B3"><b>This ID is already verified on another account.</b> It cannot be approved.</p>{% endif %}
+  {% if hints.same_name_dob %}<p class="bl-msg" style="background:rgba(255,209,102,.14);color:#FFE9B0">{{ hints.same_name_dob }} other verified account(s) have the same name and date of birth. Look closely.</p>{% endif %}
+  <div class="bl-sum">
+    <p><span>Legal name</span><b>{{ app.legal_name }}</b></p>
+    <p><span>Date of birth</span><b>{{ app.date_of_birth|date:"d M Y" }} ({{ age }})</b></p>
+    <p><span>ID type</span><b>{{ app.document_type|upper }}</b></p>
+    <p><span>Submitted</span><b>{{ app.submitted_at|date:"d M Y, H:i" }}</b></p>
+    <p><span>Phone</span><b>{{ app.user.phone_number|default:"-" }}</b></p>
+  </div>
+  <a class="bl-btn ghost" href="{% url 'accounts:kyc_document' app.pk %}">Download the ID document</a>
+  {% for r in reviews %}<p class="bl-hint">{{ r.reviewer.get_full_name|default:r.reviewer.username }}: {{ r.get_decision_display }}. {{ r.reason }}</p>{% endfor %}
+  
+    {% if can_decide %}
+  <form method="post" style="margin-top:16px">
+    {% csrf_token %}
+    <div class="bl-chips" style="margin-bottom:12px">
+      <label class="bl-chip"><input type="radio" name="decision" value="approved" required><span>Approve</span></label>
+      <label class="bl-chip"><input type="radio" name="decision" value="additional_info"><span>Need more info</span></label>
+      <label class="bl-chip"><input type="radio" name="decision" value="rejected"><span>Reject</span></label>
+    </div>
+    <label class="bl-lbl" for="id_reason">Reason (the customer sees it for "more info" and "reject")</label>
+    <textarea class="bl-in" id="id_reason" name="reason" rows="3" maxlength="500" style="height:auto;padding:12px" required></textarea>
+    <button type="submit" class="bl-btn">Save decision</button>
+  </form>
+  {% elif why %}<p class="bl-msg" role="status" style="margin-top:16px">{{ why }}</p>{% endif %}
+</section>
+{% endblock %}

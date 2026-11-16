@@ -16,11 +16,6 @@
     </header>
 
     {% if messages %}
-        {% for message in messages %}
-            <div class="credit-message {{ message.tags }}">
-                {{ message }}
-            </div>
-        {% endfor %}
     {% endif %}
 
     {% for application in applications %}

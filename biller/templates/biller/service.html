@@ -7,7 +7,6 @@
     <a class="bl-back" href="{% url 'biller:hub' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
     <div><h1>{{ cfg.title }}</h1><p>{{ cfg.blurb }}</p></div>
   </header>
-  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
 
   <form method="post" id="blForm" novalidate>
     {% csrf_token %}

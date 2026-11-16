@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Verify your ID - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<style>
+  .bl select.bl-in option{color:#000}
+  .bl input[type=file]{width:100%;padding:12px;border:1px dashed #2A4A82;border-radius:14px;background:rgba(6,27,61,.7);color:#9FB6E0}
+  .bl-check{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#C8D6F2;line-height:1.4}
+  .bl-check input{flex:none;width:22px;height:22px;accent-color:#00E5FF}
+  .bl-ul{margin:0 0 16px;padding-left:20px;color:#C8D6F2;font-size:14px;line-height:1.7}
+</style>
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Verify your ID</h1><p>Unlock higher limits and more services</p></div>
+  </header>
+  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+
+  {% if ident %}
+    <div class="bl-hero" data-r style="--d:1">
+      <div class="bl-badge completed"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+      <h1 style="margin:0">You are verified</h1>
+      <p style="color:#9FB6E0;font-size:14px">Your account is on tier {{ account.kyc_tier }}.</p>
+    </div>
+  {% elif app.status == 'pending' or app.status == 'under_review' %}
+    <div class="bl-hero" data-r style="--d:1">
+      <div class="bl-badge processing"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg></div>
+      <h1 style="margin:0">We are reviewing your ID</h1>
+      <p style="color:#9FB6E0;font-size:14px">This usually takes a short while. We will update this page.</p>
+    </div>
+  {% endif %}
+
+  {% if can_submit %}
+    {% if app.status == 'additional_info' %}
+      <p class="bl-msg" role="status"><b>We need more information.</b><br>{{ last_review.reason }}</p>
+    {% elif app.status == 'rejected' %}
+      <p class="bl-msg" style="background:rgba(255,138,138,.14);color:#FFB3B3" role="alert"><b>We could not verify this ID.</b><br>{{ last_review.reason }} You can try again.</p>
+    {% endif %}
+    <h2>What you unlock</h2>
+    <ul class="bl-ul"><li>Higher sending and withdrawal limits</li><li>Withdrawals to your bank account</li><li>Betting wallet funding</li><li>Physical and credit cards</li></ul>
+
+    {% for e in form.non_field_errors %}<p class="bl-err" role="alert">{{ e }}</p>{% endfor %}
+    <form method="post" enctype="multipart/form-data" id="kyForm" novalidate>
+      {% csrf_token %}
+      <div class="bl-sec"><label class="bl-lbl" for="id_doc_type">ID type</label>
+        <select class="bl-in" id="id_doc_type" name="doc_type" required>
+          {% for value, label in form.fields.doc_type.choices %}<option value="{{ value }}" {% if form.doc_type.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>{% for e in form.doc_type.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_id_number">ID number</label>
+        <input class="bl-in" id="id_id_number" name="id_number" value="{{ form.id_number.value|default:'' }}" autocomplete="off" inputmode="text" required>
+        <p class="bl-hint" id="idHint"></p>
+        <p class="bl-hint">We keep only a secure fingerprint of this number, not the number itself.</p>
+        {% for e in form.id_number.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_legal_name">Full legal name</label>
+        <input class="bl-in" id="id_legal_name" name="legal_name" value="{{ form.legal_name.value|default:'' }}" autocomplete="name" required>
+        {% for e in form.legal_name.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_date_of_birth">Date of birth</label>
+        <input class="bl-in" type="date" id="id_date_of_birth" name="date_of_birth" value="{{ form.date_of_birth.value|default:'' }}" required>
+        {% for e in form.date_of_birth.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_document">Photo or scan of the ID (JPG, PNG or PDF, up to 5 MB)</label>
+        <input type="file" id="id_document" name="document" accept="image/jpeg,image/png,application/pdf" required>
+        {% for e in form.document.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+      <div class="bl-sec"><label class="bl-check"><input type="checkbox" name="consent" {% if form.consent.value %}checked{% endif %}><span>{{ form.fields.consent.label }}</span></label>
+        {% for e in form.consent.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+      <button type="submit" class="bl-btn" id="kyGo">Submit for review</button>
+    </form>
+    <script>
+      document.getElementById("kyForm").addEventListener("submit", () => {
+        const b = document.getElementById("kyGo"); setTimeout(() => { b.disabled = true; b.textContent = "Uploading…"; }, 0);
+      });
+    </script>
+  {% endif %}
+  <script>
+(() => {
+  const type = document.getElementById("id_doc_type"), num = document.getElementById("id_id_number"), hint = document.getElementById("idHint");
+  const digits = () => ["nin", "bvn"].includes(type.value);
+  const show = () => { hint.textContent = digits() ? `${num.value.length}/11 digits` : ""; };
+  const sync = () => { num.inputMode = digits() ? "numeric" : "text"; num.maxLength = digits() ? 11 : 30; show(); };
+  num.addEventListener("input", () => { if (digits()) num.value = num.value.replace(/\D/g, "").slice(0, 11); show(); });
+  type.addEventListener("change", sync); sync();
+})();
+</script>
+</section>
+{% endblock %}

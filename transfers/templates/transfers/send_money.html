@@ -1,237 +1,178 @@
-
-{% extends "base.html" %}
-{% load static %}
-{% load humanize %}
-{% load l10n %}
-
-{% block title %}Send Money{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'transfers/css/style.css' %}">
-{% endblock %}
-
+{% extends 'base.html' %}
+{% block title %}Send money - Klosa Bank{% endblock %}
 {% block content %}
-<main class="main">
+{% include "biller/_style.html" %}
+<style>
+  .bl select.bl-in{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#9FB6E0 50%),linear-gradient(135deg,#9FB6E0 50%,transparent 50%);background-position:calc(100% - 22px) 22px,calc(100% - 16px) 22px;background-size:6px 6px;background-repeat:no-repeat;padding-right:38px}
+  .bl select.bl-in option{color:#000}
+  .sd-tabs{display:flex;gap:6px;padding:4px;margin-bottom:14px;border-radius:99px;background:rgba(255,255,255,.08)}
+  .sd-tabs button{flex:1;min-height:42px;border:0;border-radius:99px;background:none;color:#9FB6E0;font:inherit;font-weight:700;cursor:pointer;transition:all .25s}
+  .sd-tabs button.on{background:#00E5FF;color:#061B3D}
+  .sd-pane[hidden]{display:none}
+  .sd-pane{animation:blUp .35s both}
+  .sd-who{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px;border-radius:16px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25)}
+  .sd-who[hidden]{display:none}
+  .sd-who .av{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;font-weight:700;color:#061B3D;background:linear-gradient(135deg,#5FF1FF,#00E5FF)}
+  .sd-big{font-size:30px;font-weight:700;text-align:center;height:64px;letter-spacing:.5px}
+  .sd-left{margin:8px 0 0;text-align:center;font-size:13px;color:#9FB6E0}
+  /* PIN sheet */
+  .pn-back{position:fixed;inset:0;z-index:1600;background:rgba(2,10,28,.7);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:0;transition:opacity .25s}
+  .pn-back.on{opacity:1}
+  .pn{position:fixed;left:0;right:0;bottom:0;z-index:1601;max-width:520px;margin:0 auto;padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 16px);
+    border-radius:28px 28px 0 0;background:linear-gradient(180deg,#0F3A82,#061B3D);border:1px solid rgba(255,255,255,.12);border-bottom:0;color:#fff;
+    transform:translateY(100%);transition:transform .38s cubic-bezier(.2,.9,.3,1.05);text-align:center}
+  .pn.on{transform:none}.pn[hidden],.pn-back[hidden]{display:none}
+  .pn-bar{width:42px;height:5px;margin:2px auto 12px;border-radius:99px;background:rgba(255,255,255,.28)}
+  .pn h2{margin:0 0 2px;font-size:20px;text-transform:none;letter-spacing:0;color:#fff}
+  .pn-amt{font-size:30px;font-weight:700;margin:6px 0 2px}
+  .pn-to{margin:0 0 14px;color:#9FB6E0;font-size:14px}
+  .pn-dots{display:flex;justify-content:center;gap:16px;margin:6px 0 8px}
+  .pn-dots i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.4);transition:all .15s}
+  .pn-dots i.f{background:#00E5FF;border-color:#00E5FF;transform:scale(1.15)}
+  .pn-dots.bad{animation:pnShake .4s}
+  .pn-err{min-height:20px;margin:0 0 6px;font-size:14px;color:#FF8A8A}
+  .pn-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:330px;margin:0 auto}
+  .pn-pad button{min-height:56px;border:0;border-radius:18px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:24px;font-weight:600;cursor:pointer;transition:transform .08s,background .15s}
+  .pn-pad button:active{transform:scale(.92);background:rgba(255,255,255,.2)}
+  .pn-pad .ghost{background:none;font-size:15px;color:#9FB6E0}
+  .pn-cancel{margin:12px 0 0;border:0;background:none;color:#9FB6E0;font:inherit;font-size:15px;min-height:44px}
+  @keyframes pnShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
+  @media (prefers-reduced-motion:reduce){.pn,.pn-back,.sd-pane{transition:none;animation:none}}
+</style>
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Send money</h1><p>To a Klosa account</p></div>
+  </header>
+  <div class="bl-top" data-r style="--d:1"><small>Available balance</small><strong>₦{{ account.balance|floatformat:2 }}</strong></div>
+  {% for e in form.non_field_errors %}<p class="bl-err" role="alert" style="margin-top:12px">{{ e }}</p>{% endfor %}
 
-    <!-- Page header -->
-    <header class="top flex-start center">
-        <a href="{% url 'accounts:home' %}"
-           class="back"
-           aria-label="Go home">
-            <i class="fa-solid fa-chevron-left"></i>
-        </a>
+  <form method="post" id="sdForm" novalidate style="margin-top:16px">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="pin" id="id_pin" value="">
 
-        <div>
-            <h2>Send Money</h2>
-            <small>Quick, safe and secure transfers</small>
-        </div>
-    </header>
+    <div class="sd-tabs" role="tablist" data-r style="--d:2">
+      <button type="button" class="on" data-pane="ben" role="tab">Saved</button>
+      <button type="button" data-pane="num" role="tab">New account</button>
+    </div>
 
-    <section class="panel radius-tr-tl">
+    <div class="sd-pane" id="pane-ben">
+      <div class="bl-sec">
+        <label class="bl-lbl" for="id_beneficiary">Recipient</label>
+        <select class="bl-in" id="id_beneficiary" name="beneficiary">
+          <option value="">Choose a saved recipient</option>
+          {% for b in form.fields.beneficiary.queryset %}<option value="{{ b.pk }}" data-name="{{ b.name }}" data-bank="{{ b.bank_name }}" data-last4="{{ b.account_number|slice:'-4:' }}" {% if form.beneficiary.value|stringformat:"s" == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }} · {{ b.bank_name }} ••••{{ b.account_number|slice:"-4:" }}</option>{% endfor %}
+        </select>
+        {% for e in form.beneficiary.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+        <div class="sd-who" id="sdWho" hidden><span class="av" id="sdAv"></span><div><b id="sdName"></b><br><small id="sdSub" style="color:#9FB6E0"></small></div></div>
+        {% if not form.fields.beneficiary.queryset.exists %}<p class="bl-hint">You have no saved recipients yet. <a href="{% url 'beneficiary:add' %}" style="color:#00E5FF">Add one</a></p>{% endif %}
+      </div>
+    </div>
+    <div class="sd-pane" id="pane-num" hidden>
+      <div class="bl-sec">
+        <label class="bl-lbl" for="id_account_number">Klosa account number</label>
+        <input class="bl-in" id="id_account_number" name="account_number" value="{{ form.account_number.value|default:'' }}" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="10 digits">
+        {% for e in form.account_number.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+      </div>
+    </div>
 
-        <!-- Django messages -->
-        {% for message in messages %}
-            <p class="msg {{ message.tags }}">{{ message }}</p>
-        {% endfor %}
+    <div class="bl-sec" data-r style="--d:3">
+      <label class="bl-lbl" for="id_amount">Amount (₦)</label>
+      <input class="bl-in sd-big" id="id_amount" name="amount" value="{{ form.amount.value|default:'' }}" inputmode="decimal" autocomplete="off" placeholder="0.00">
+      <p class="sd-left">Limit left today: ₦{{ daily_left|floatformat:0 }}</p>
+      {% for e in form.amount.errors %}<p class="bl-err" style="text-align:center">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="bl-sec" data-r style="--d:4">
+      <label class="bl-lbl" for="id_description">Note (optional)</label>
+      <input class="bl-in" id="id_description" name="description" value="{{ form.description.value|default:'' }}" maxlength="255" placeholder="What is it for?">
+    </div>
+    {% for e in form.pin.errors %}<p class="bl-err" role="alert" id="pinServerErr">{{ e }}</p>{% endfor %}
+    <button type="button" class="bl-btn" id="sdNext" data-r style="--d:5">Continue</button>
+  </form>
+</section>
 
-        {% if form.non_field_errors %}
-            <p class="field-error">
-                {{ form.non_field_errors.0 }}
-            </p>
-        {% endif %}
+<div class="pn-back" id="pnBack" hidden></div>
+<div class="pn" id="pn" role="dialog" aria-modal="true" aria-labelledby="pnTitle" hidden>
+  <div class="pn-bar"></div>
+  <h2 id="pnTitle">Enter your PIN</h2>
+  <div class="pn-amt" id="pnAmt"></div><p class="pn-to" id="pnTo"></p>
+  <div class="pn-dots" id="pnDots"><i></i><i></i><i></i><i></i></div>
+  <p class="pn-err" id="pnErr" role="alert"></p>
+  <div class="pn-pad" id="pnPad">
+    {% for d in "123456789" %}<button type="button" data-k="{{ d }}">{{ d }}</button>{% endfor %}
+    <button type="button" class="ghost" data-k="clear">Clear</button><button type="button" data-k="0">0</button><button type="button" class="ghost" data-k="back" aria-label="Delete">⌫</button>
+  </div>
+  <button type="button" class="pn-cancel" id="pnCancel">Cancel</button>
+</div>
 
-        <form
-            method="post"
-            id="sendForm"
-            data-balance="{{ account.balance|unlocalize }}"
-            data-reopen="{% if form.pin.errors %}true{% else %}false{% endif %}"
-            novalidate
-        >
-            {% csrf_token %}
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const form = $("sdForm"), pin = $("id_pin"), sel = $("id_beneficiary"), num = $("id_account_number"), amt = $("id_amount");
+  const naira = (v) => "₦" + (parseFloat(v) || 0).toLocaleString("en-NG", {minimumFractionDigits: 2});
 
-            <input type="hidden" name="token" value="{{ token }}">
+  // tabs: only one recipient method is sent
+  const tabs = document.querySelectorAll(".sd-tabs button");
+  const show = (pane) => {
+    tabs.forEach((t) => t.classList.toggle("on", t.dataset.pane === pane));
+    $("pane-ben").hidden = pane !== "ben"; $("pane-num").hidden = pane !== "num";
+    if (pane === "ben") num.value = ""; else { sel.value = ""; who(); }
+  };
+  tabs.forEach((t) => t.addEventListener("click", () => show(t.dataset.pane)));
+  if (num.value) show("num");
 
-            <!-- SOURCE ACCOUNT -->
-            <label class="section-label">From</label>
+  // who you are sending to
+  function who() {
+    const o = sel.options[sel.selectedIndex];
+    const box = $("sdWho");
+    if (!sel.value) { box.hidden = true; return; }
+    $("sdAv").textContent = (o.dataset.name || "?").charAt(0).toUpperCase();
+    $("sdName").textContent = o.dataset.name; $("sdSub").textContent = o.dataset.bank + " ••••" + o.dataset.last4;
+    box.hidden = false;
+  }
+  sel.addEventListener("change", who); who();
+  num.addEventListener("input", () => { num.value = num.value.replace(/\D/g, "").slice(0, 10); });
+  amt.addEventListener("input", () => { amt.value = amt.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); });
 
-            <div class="select-card wallet-card radius-md row space-btw center">
+  // PIN sheet
+  const pn = $("pn"), back = $("pnBack"), dots = $("pnDots").children;
+  let val = "", busy = false;
+  const paint = () => { [...dots].forEach((d, i) => d.classList.toggle("f", i < val.length)); };
+  const openPin = () => {
+    val = ""; busy = false; paint(); $("pnErr").textContent = "";
+    $("pnAmt").textContent = naira(amt.value);
+    $("pnTo").textContent = sel.value ? "To " + sel.options[sel.selectedIndex].dataset.name : "To account " + num.value;
+    pn.hidden = back.hidden = false;
+    requestAnimationFrame(() => { pn.classList.add("on"); back.classList.add("on"); });
+  };
+  const closePin = () => { pn.classList.remove("on"); back.classList.remove("on"); setTimeout(() => { pn.hidden = back.hidden = true; }, 360); };
+  const fail = (m) => { $("pnErr").textContent = m; $("pnDots").classList.remove("bad"); void $("pnDots").offsetWidth; $("pnDots").classList.add("bad"); };
 
-                <div class="row gap-sm">
-                    <div class="wallet-icon radius-round center">
-                        <i class="fa-solid fa-wallet"></i>
-                    </div>
+  $("sdNext").addEventListener("click", () => {
+    const hasTo = sel.value || num.value.length === 10;
+    if (!hasTo) { alert("Choose who you are sending to."); return; }
+    if (!(parseFloat(amt.value) > 0)) { amt.focus(); return; }
+    openPin();
+  });
+  $("pnPad").addEventListener("click", (e) => {
+    const k = e.target.closest("button"); if (!k || busy) return;
+    const key = k.dataset.k;
+    if (key === "clear") val = ""; else if (key === "back") val = val.slice(0, -1);
+    else if (val.length < 4) val += key;
+    $("pnErr").textContent = ""; paint();
+    if (val.length === 4) {
+      busy = true; pin.value = val;
+      setTimeout(() => form.submit(), 180);           // the PIN goes in the same secure form as before
+    }
+  });
+  $("pnCancel").addEventListener("click", closePin); back.addEventListener("click", closePin);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !pn.hidden) closePin(); });
 
-                    <div class="wallet-info col gap-sm">
-                        <b>Main Wallet</b>
-
-                        <strong>
-                            ₦{{ account.balance|floatformat:2|intcomma }}
-                        </strong>
-
-                        <small>
-                            Daily limit left:
-                            ₦{{ daily_left|floatformat:2|intcomma }}
-                        </small>
-                    </div>
-                </div>
-
-                <i class="fa-solid fa-chevron-down arrow"></i>
-            </div>
-
-            <!-- RECIPIENT -->
-            <label
-                class="section-label to-label"
-                for="{{ form.account_number.id_for_label }}"
-            >
-                To
-            </label>
-
-            <div class="select-card recipient-card col gap-md radius-md">
-
-                <!-- Account number -->
-                <div class="row center">
-                    <div class="recipient-icon center radius-round">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-
-                    {{ form.account_number }}
-                </div>
-
-                {% for error in form.account_number.errors %}
-                    <p class="field-error">{{ error }}</p>
-                {% endfor %}
-
-                <small class="recipient-or">OR</small>
-
-                <!-- Beneficiary -->
-                <div class="col gap-sm">
-                    <div class="row center">
-                        <div class="recipient-icon center radius-round">
-                            <i class="fa-solid fa-address-book"></i>
-                        </div>
-
-                        {{ form.beneficiary }}
-                    </div>
-
-                    <span class="field-error" id="errBen">
-                        {{ form.beneficiary.errors.0 }}
-                    </span>
-
-                    {% if not form.beneficiary.field.queryset.exists %}
-                        <a href="{% url 'beneficiary:add' %}">
-                            Add a beneficiary first
-                        </a>
-                    {% endif %}
-                </div>
-
-            </div>
-
-            <!-- AMOUNT -->
-            <div class="form-group">
-
-                <label
-                    for="{{ form.amount.id_for_label }}"
-                    class="section-label"
-                >
-                    Amount (₦)
-                </label>
-
-                {{ form.amount }}
-
-                <span class="field-error" id="errAmt">
-                    {{ form.amount.errors.0 }}
-                </span>
-
-                <!-- Quick amounts -->
-                <div class="quick-amounts center">
-                    <button type="button" data-amount="100">₦100</button>
-                    <button type="button" data-amount="500">₦500</button>
-                    <button type="button" data-amount="1000">₦1,000</button>
-                    <button type="button" data-amount="2000">₦2,000</button>
-                    <button type="button" data-amount="5000">₦5,000</button>
-                    <button type="button" data-amount="10000">₦10,000</button>
-                    <button type="button" data-amount="20000">₦20,000</button>
-                    <button type="button" data-amount="50000">₦50,000</button>
-                </div>
-
-            </div>
-
-            <!-- DESCRIPTION (optional) -->
-            {% if form.description %}
-                <div class="form-group">
-                    <label for="{{ form.description.id_for_label }}">
-                        Description (optional)
-                    </label>
-
-                    {{ form.description }}
-                </div>
-            {% endif %}
-
-            <!-- CONTINUE -->
-            <button
-                type="button"
-                class="continue-btn radius row gap"
-                id="openConfirm"
-            >
-                <i class="fa-solid fa-paper-plane"></i>
-                Continue
-            </button>
-
-            <!-- CONFIRMATION DIALOG -->
-            <dialog id="confirmSheet">
-
-                <h2>Confirm transfer</h2>
-
-                <div class="confirmation-details">
-                    <p>
-                        To:
-                        <strong id="sumTo"></strong>
-                    </p>
-
-                    <p>
-                        Amount:
-                        <strong id="sumAmt"></strong>
-                    </p>
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.pin.id_for_label }}">
-                        Enter your 4-digit transaction PIN
-                    </label>
-
-                    {{ form.pin }}
-
-                    <span class="field-error" id="errPin">
-                        {{ form.pin.errors.0 }}
-                    </span>
-                </div>
-
-                <div class="sheet-actions">
-
-                    <button type="button" id="cancelConfirm">
-                        Cancel
-                    </button>
-
-                    <button
-                        type="submit"
-                        class="continue-btn"
-                        id="sendBtn"
-                        disabled
-                    >
-                        Confirm and send
-                    </button>
-
-                </div>
-
-            </dialog>
-
-        </form>
-
-    </section>
-
-</main>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'transfers/js/script.js' %}" defer></script>
+  // after a wrong PIN or another error from the server, reopen the sheet with the message
+  {% if form.pin.errors %}
+  window.addEventListener("load", () => { openPin(); fail("{{ form.pin.errors.0|escapejs }}"); });
+  {% endif %}
+})();
+</script>
 {% endblock %}

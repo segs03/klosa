@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Customers" %}
+  <form method="get" style="margin-bottom:14px"><input class="bl-in" name="q" value="{{ q }}" placeholder="Phone, account number or name" autocomplete="off"><button class="bl-btn" type="submit">Search</button></form>
+  {% for u in page %}
+    <a class="bl-row" href="{% url 'backoffice:customer' u.pk %}">
+      <div class="grow"><b>{{ u.get_full_name|default:"Klosa customer" }}</b><small>{{ u.phone_number|default:"no phone" }} · {% if u.account %}{{ u.account.account_number }}{% else %}no account{% endif %}</small></div>
+      <span class="bl-chip-s {% if u.is_active %}completed{% else %}reversed{% endif %}">{% if u.is_active %}Active{% else %}Suspended{% endif %}</span>
+    </a>
+  {% empty %}<p style="color:#9FB6E0">No customers found.</p>{% endfor %}
+  <p style="display:flex;justify-content:space-between">
+    {% if page.has_previous %}<a href="?q={{ q|urlencode }}&page={{ page.previous_page_number }}" style="color:#00E5FF">Previous</a>{% else %}<span></span>{% endif %}
+    {% if page.has_next %}<a href="?q={{ q|urlencode }}&page={{ page.next_page_number }}" style="color:#00E5FF">Next</a>{% endif %}
+  </p>
+</section>
+{% endblock %}

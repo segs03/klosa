@@ -1,15 +1,14 @@
-from decimal import Decimal
+
+from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.conf import settings
 import secrets
 
-from cards.models import BankCard
-
 from uuid import uuid4
 
-from transactions.models import CreditTransaction
+from transactions.models import CreditTransaction, Transaction
 
 from .models import (
     Account,
@@ -19,11 +18,37 @@ from .models import (
     VerifiedIdentity,
 )
 
+from cards.models import CardOrder, BankCard
+from cards.services import issue_virtual_card_order
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 # Demo approval policy
 STARTER_LIMIT = Decimal("250000.00")
 STANDARD_LIMIT = Decimal("500000.00")
 
+
+
+def eligibility_problem(account):
+    """None when the account meets the rules, otherwise one plain sentence."""
+    min_age = getattr(settings, "CREDIT_MIN_ACCOUNT_AGE_DAYS", 30)
+    min_bal = Decimal(str(getattr(settings, "CREDIT_MIN_BALANCE", "10000")))
+    age = (timezone.now() - account.created_at).days
+    if age < min_age:
+        return f"The account must be at least {min_age} days old. It is {age} day(s) old."
+    if account.balance < min_bal:
+        return f"The balance must be at least ₦{min_bal:,.0f}. It is ₦{account.balance:,.2f}."
+    return None
+
+
+def check_eligibility(account):
+    problem = eligibility_problem(account)
+    if problem:
+        raise ValidationError(problem)
 
 
 @transaction.atomic
@@ -39,17 +64,8 @@ def approve_credit(account):
     if not created and credit.status == "active":
         return credit
 
-    age_days = (timezone.now() - account.created_at).days
-
-    if age_days < 30:
-        raise ValidationError(
-            "Your account must be at least 30 days old."
-        )
-
-    if account.balance < Decimal("10000.00"):
-        raise ValidationError(
-            "Your account does not meet the demo eligibility criteria."
-        )
+    
+    check_eligibility(account)
 
     # Determine the account's credit level.
     is_verified = VerifiedIdentity.objects.filter(
@@ -108,75 +124,151 @@ def approve_credit(account):
 
 
 
-@transaction.atomic
-def make_credit_purchase(credit_account, amount, description="Card purchase"):
-    amount = Decimal(str(amount))
-
-    if not amount.is_finite() or amount <= 0:
-        raise ValidationError("Enter a valid purchase amount.")
-
-    credit = CreditAccount.objects.select_for_update().get(
-        pk=credit_account.pk
-    )
-
-    card = CreditCard.objects.get(credit_account=credit)
-
-    if credit.status != "active" or card.status != "active":
-        raise ValidationError("Your credit facility or card is inactive.")
-
-    if amount > credit.available_credit:
-        raise ValidationError("Insufficient available credit.")
-
-    credit.outstanding_balance += amount
-    credit.save(update_fields=["outstanding_balance"])
-
-    return CreditTransaction.objects.create(
-        credit_account=credit,
-        transaction_type="purchase",
-        amount=amount,
-        reference="KLC" + uuid4().hex[:16].upper(),
-        description=description,
-    )
+CENT = Decimal("0.01")
 
 
-@transaction.atomic
-def repay_credit(credit_account, amount):
-    amount = Decimal(str(amount))
+def _money(value):
+    try:
+        amount = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError):
+        raise ValidationError("Enter a valid amount.")
+    if not amount.is_finite() or amount <= 0 or amount != amount.quantize(CENT):
+        raise ValidationError("Enter an amount above zero with at most 2 decimal places.")
+    return amount
 
-    if not amount.is_finite() or amount <= 0:
-        raise ValidationError("Enter a valid repayment amount.")
 
-    credit = CreditAccount.objects.select_for_update().get(
-        pk=credit_account.pk
-    )
+def _lock_credit(credit_pk):
+    acc_id = CreditAccount.objects.filter(pk=credit_pk).values_list("account_id", flat=True).first()
+    if acc_id is None:
+        raise ValidationError("Credit facility not found.")
+    account = Account.objects.select_for_update().get(pk=acc_id)       # account first, then credit
+    credit = CreditAccount.objects.select_for_update().get(pk=credit_pk)
+    return account, credit
 
-    account = Account.objects.select_for_update().get(
-        pk=credit.account_id
-    )
 
-    if credit.status != "active":
-        raise ValidationError("Your credit facility is inactive.")
+def credit_summary(account):
+    credit = CreditAccount.objects.filter(account=account, status="active").first()
+    if credit is None:
+        return None
+    limit, owed = credit.credit_limit, credit.outstanding_balance
+    return {"credit": credit, "limit": limit, "owed": owed, "available": credit.available_credit,
+            "pct": int(min(owed / limit * 100, 100)) if limit else 0, "due": credit.repayment_due_date}
 
-    if amount > credit.outstanding_balance:
-        raise ValidationError("Repayment exceeds your outstanding balance.")
 
-    if amount > account.balance:
-        raise ValidationError("Insufficient account balance for repayment.")
+def spend_on_credit(card, amount, *, reference, merchant=""):
+    """Authorise a purchase on a credit card. It uses the credit line and never the main balance.
+    The same reference twice spends once."""
+    amount = _money(amount)
+    if not reference or len(reference) > 100:
+        raise ValidationError("Missing reference.")
+    with transaction.atomic():
+        acc_id = BankCard.objects.filter(pk=card.pk).values_list("account_id", flat=True).first()
+        facility = CreditAccount.objects.filter(account_id=acc_id).values_list("pk", flat=True).first()
+        if facility is None:
+            raise ValidationError("This card has no credit facility.")
+        account, credit = _lock_credit(facility)
+        card = BankCard.objects.select_for_update().get(pk=card.pk)
 
-    account.balance -= amount
-    account.save(update_fields=["balance"])
+        existing = CreditTransaction.objects.filter(reference=reference).first()
+        if existing:
+            if (existing.credit_account_id, existing.transaction_type, existing.amount) == (credit.pk, "purchase", amount):
+                return existing
+            raise ValidationError("Duplicate reference.")
 
-    credit.outstanding_balance -= amount
-    credit.save(update_fields=["outstanding_balance"])
+        today = timezone.localdate()
+        if card.card_type != "credit":
+            raise ValidationError("This is not a credit card.")
+        if card.status != "active":
+            raise ValidationError("This card is not active.")
+        if (card.expiry_year, card.expiry_month) < (today.year, today.month):
+            raise ValidationError("This card has expired.")
+        if account.closed_at:
+            raise ValidationError("This account is closed.")
+        if credit.status != "active":
+            raise ValidationError("Your credit facility is not active.")
+        if amount > credit.available_credit:
+            raise ValidationError("Insufficient available credit.")
 
-    return CreditTransaction.objects.create(
-        credit_account=credit,
-        transaction_type="repayment",
-        amount=amount,
-        reference="KLR" + uuid4().hex[:16].upper(),
-        description="Credit card repayment",
-    )
-    
+        credit.outstanding_balance += amount
+        credit.save(update_fields=["outstanding_balance"])
+        return CreditTransaction.objects.create(
+            credit_account=credit, transaction_type="purchase", amount=amount,
+            reference=reference, description=(merchant or "Card purchase")[:255])
+
+
+def refund_credit_purchase(purchase_reference, amount=None):
+    """One refund per purchase, full or partial. It lowers what is owed. If the purchase was
+    already repaid, the extra goes back to the main balance."""
+    if len(purchase_reference) > 99:
+        raise ValidationError("Reference too long.")
+    orig = CreditTransaction.objects.filter(reference=purchase_reference, transaction_type="purchase").first()
+    if orig is None:
+        raise ValidationError("Purchase not found.")
+    ref = purchase_reference + "R"
+    with transaction.atomic():
+        account, credit = _lock_credit(orig.credit_account_id)
+        existing = CreditTransaction.objects.filter(reference=ref).first()
+        if existing:
+            return existing
+        amount = orig.amount if amount is None else _money(amount)
+        if amount > orig.amount:
+            raise ValidationError("The refund is more than the purchase.")
+        cut = min(amount, credit.outstanding_balance)
+        extra = amount - cut
+        credit.outstanding_balance -= cut
+        credit.save(update_fields=["outstanding_balance"])
+        if extra > 0:
+            account.balance += extra
+            account.save(update_fields=["balance"])
+            Transaction.objects.create(account=account, transaction_type="deposit", amount=extra,
+                                       reference="KLF" + uuid4().hex[:12].upper(),
+                                       description=f"Refund: {orig.description}"[:255])
+        return CreditTransaction.objects.create(
+            credit_account=credit, transaction_type="refund", amount=amount, reference=ref,
+            description=f"Refund: {orig.description}"[:255])
+
+
+def repay_credit(credit_account, amount, *, reference=None, pin=None):
+    """Repay from the main balance. Pass pin to have it checked on the locked row. Both ledgers
+    get a row with the same reference, and the same reference twice pays once."""
+    amount = _money(amount)
+    reference = reference or "KLR" + uuid4().hex[:16].upper()
+    bad = result = None
+    with transaction.atomic():
+        account, credit = _lock_credit(credit_account.pk)
+        existing = CreditTransaction.objects.filter(reference=reference).first()
+        if existing:
+            if (existing.credit_account_id, existing.transaction_type, existing.amount) == (credit.pk, "repayment", amount):
+                return existing
+            raise ValidationError("Duplicate reference.")
+        if account.closed_at:
+            raise ValidationError("This account is closed.")
+        if credit.status not in ("active", "suspended"):       # a suspended customer can still repay
+            raise ValidationError("Your credit facility is not open.")
+        if pin is not None:
+            if account.is_locked():
+                raise ValidationError("Your account is temporarily locked.")
+            if not account.pin_hash:
+                raise ValidationError("Please set your transaction PIN first.")
+            if not account.check_pin(str(pin)):                # saved on the locked row
+                bad = "Your account is temporarily locked." if account.is_locked() else "Incorrect transaction PIN."
+        if bad is None:
+            if amount > credit.outstanding_balance:
+                raise ValidationError("Repayment exceeds your outstanding balance.")
+            if amount > account.balance:
+                raise ValidationError("Insufficient account balance for repayment.")
+            account.balance -= amount
+            account.save(update_fields=["balance"])
+            credit.outstanding_balance -= amount
+            credit.save(update_fields=["outstanding_balance"])
+            Transaction.objects.create(account=account, transaction_type="payment", amount=amount,
+                                       reference=reference[:20], description="Credit card repayment")
+            result = CreditTransaction.objects.create(
+                credit_account=credit, transaction_type="repayment", amount=amount,
+                reference=reference, description="Credit card repayment")
+    if bad:
+        raise ValidationError(bad)                             # raised after the commit, so the attempt is kept
+    return result
     
     
 
@@ -264,6 +356,9 @@ def submit_credit_application(*, user, requested_amount):
         raise ValidationError(
             "You already have an active credit facility."
         )
+    
+    if CreditApplication.objects.filter(user=user, status__in=("pending", "assessed")).exists():
+        raise ValidationError("You already have a credit request in progress.")
 
     policy = _get_credit_policy(account)
 
@@ -323,17 +418,7 @@ def assess_credit_application(
         user=application.user
     )
 
-    age_days = (timezone.now() - account.created_at).days
-
-    if age_days < 30:
-        raise ValidationError(
-            "The account must be at least 30 days old."
-        )
-
-    if account.balance < Decimal("10000.00"):
-        raise ValidationError(
-            "The account does not meet the demo eligibility criteria."
-        )
+    check_eligibility(account)
 
     policy = _get_credit_policy(account)
 
@@ -456,6 +541,24 @@ def decide_credit_application(
             "approved_at",
         ]
     )
+    
+
+    order, created = CardOrder.objects.get_or_create(
+        account=account,
+        card_type="credit",
+        card_format="virtual",
+        defaults={
+            "cardholder_name": (
+                account.user.get_full_name()
+                or account.user.username
+            ),
+            "status": "pending",
+        },
+    )
+
+    if created:
+        issue_virtual_card_order(order.pk)
+
 
     application.status = "approved"
     application.approved_by = approver

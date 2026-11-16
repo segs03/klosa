@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Notifications - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<style>
+  .nt{display:flex;gap:12px;align-items:flex-start;padding:14px 8px;margin:0 -8px;border-bottom:1px solid rgba(255,255,255,.08);color:#fff;border-radius:14px;transition:background .2s}
+  .nt:active{background:rgba(255,255,255,.06)}
+  .nt.unread{background:linear-gradient(90deg,rgba(0,229,255,.1),transparent)}
+  .nt-ic{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:13px;font-size:16px;background:rgba(0,229,255,.13);color:#00E5FF}
+  .nt-success .nt-ic{background:rgba(53,224,161,.14);color:#35E0A1}
+  .nt-warning .nt-ic{background:rgba(255,209,102,.14);color:#FFD166}
+  .nt-alert .nt-ic{background:rgba(255,138,138,.14);color:#FF8A8A}
+  .nt-body{flex:1;min-width:0}.nt-body b{display:block;font-size:15px}
+  .nt-body p{margin:3px 0;font-size:14px;color:#C8D6F2;line-height:1.4;overflow-wrap:anywhere}
+  .nt-body small{color:#9FB6E0;font-size:12px}
+  .nt-new{flex:none;width:9px;height:9px;margin-top:6px;border-radius:50%;background:#00E5FF}
+</style>
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Notifications</h1><p>{% if unread_count %}{{ unread_count }} unread{% else %}You are all caught up{% endif %}</p></div>
+  </header>
+  {% if unread_count %}
+  <form method="post" action="{% url 'notices:read_all' %}">{% csrf_token %}<button class="bl-link" type="submit" style="margin:0 0 8px">Mark all as read</button></form>
+  {% endif %}
+  {% for n in items %}
+    <a class="nt nt-{{ n.level }}{% if not n.read_at %} unread{% endif %}" href="{% url 'notices:open' n.pk %}">
+      <span class="nt-ic"><i class="fa-solid {% if n.level == 'success' %}fa-circle-check{% elif n.level == 'warning' %}fa-circle-exclamation{% elif n.level == 'alert' %}fa-triangle-exclamation{% else %}fa-bell{% endif %}"></i></span>
+      <span class="nt-body"><b>{{ n.title }}</b>{% if n.body %}<p>{{ n.body }}</p>{% endif %}<small>{{ n.created_at|timesince }} ago</small></span>
+      {% if not n.read_at %}<span class="nt-new" aria-label="Unread"></span>{% endif %}
+    </a>
+  {% empty %}<p style="color:#9FB6E0">Nothing yet. Important updates will show up here.</p>{% endfor %}
+</section>
+{% endblock %}

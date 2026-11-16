@@ -3,11 +3,11 @@
 {% block content %}
 {% include "biller/_style.html" %}
 <section class="bl">
+
   <header class="bl-head" data-r style="--d:0">
     <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
     <div><h1>Pay bills</h1><p>Airtime, data, bills and more</p></div>
   </header>
-  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
   <div class="bl-top" data-r style="--d:1"><small>Available balance</small><strong>₦{{ account.balance|floatformat:2 }}</strong></div>
 
   <div class="bl-grid">

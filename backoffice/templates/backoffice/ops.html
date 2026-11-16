@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Needs attention{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Needs attention" sub="Items that have been stuck for over 30 minutes" %}
+  <h2>Bill payments still processing</h2>
+  {% for o in bills %}<a class="bl-row" href="{% url 'backoffice:customer' o.account.user_id %}"><div class="grow"><b>{{ o.get_category_display }} · {{ o.provider_code|upper }}</b><small>{{ o.reference }} · {{ o.created_at|date:"d M, H:i" }}</small></div><b>₦{{ o.amount|floatformat:2 }}</b></a>{% empty %}<p class="bl-hint">None.</p>{% endfor %}
+  <h2>Withdrawals still processing</h2>
+  {% for o in withdrawals %}<a class="bl-row" href="{% url 'backoffice:customer' o.account.user_id %}"><div class="grow"><b>{{ o.bank_name }} ••{{ o.account_number|slice:"-4:" }}</b><small>{{ o.reference }} · {{ o.created_at|date:"d M, H:i" }}</small></div><b>₦{{ o.amount|floatformat:2 }}</b></a>{% empty %}<p class="bl-hint">None.</p>{% endfor %}
+  <h2>Deposits that need a decision</h2>
+  {% for o in deposits %}<a class="bl-row" href="{% url 'backoffice:customer' o.account.user_id %}"><div class="grow"><b>{{ o.reference }}</b><small>{{ o.note }}</small></div><b>₦{{ o.amount|floatformat:2 }}</b></a>{% empty %}<p class="bl-hint">None.</p>{% endfor %}
+  <h2>Card requests that failed to issue</h2>
+  {% for o in failed_cards %}<a class="bl-row" href="{% url 'backoffice:card_detail' o.pk %}"><div class="grow"><b>{{ o.cardholder_name }}</b><small>{{ o.get_card_type_display }}</small></div></a>{% empty %}<p class="bl-hint">None.</p>{% endfor %}
+</section>
+{% endblock %}

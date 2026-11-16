@@ -1,206 +1,99 @@
-
 {% load humanize %}
 {% load static %}
+<link rel="stylesheet" href="{% static 'transactions/css/style.css' %}?v=3">
 
-<head>
-<link rel="stylesheet" href="{% static 'transactions/css/style.css'  %}">
-</head>
+<style>
+  #transaction-panel .transaction-item{display:flex;align-items:center;list-style:none;margin:0;padding:0;border-bottom:1px solid rgba(255,255,255,.08);
+    --tc:#FF9A9A;--tb:rgba(255,154,154,.14)}
+  #transaction-panel .tx-body{display:flex;flex-direction:row;align-items:center;gap:12px;flex:1 1 auto;min-width:0;padding:12px 2px;color:inherit;text-decoration:none}
+  #transaction-panel .transaction-icon{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:14px;font-size:16px;background:var(--tb);color:var(--tc)}
+  #transaction-panel .transaction-details{flex:1 1 auto;min-width:0}
+  #transaction-panel .transaction-details h4{margin:0 0 2px;font-size:15px;font-weight:600;color:#fff}
+  #transaction-panel .transaction-details p{margin:0 0 2px;font-size:13px;color:#9FB6E0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #transaction-panel .transaction-details small{font-size:12px;color:#8FA9D6}
+  #transaction-panel .tx-amt{flex:none;margin-left:auto;font-size:15px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--tc)}
 
+  /* one color per type */
+  #transaction-panel [data-kind="deposit"]{--tc:#35E0A1;--tb:rgba(53,224,161,.14)}              /* money in: green */
+  #transaction-panel [data-kind="transfer"]{--tc:#4DA3FF;--tb:rgba(77,163,255,.14)}             /* sent: blue */
+  #transaction-panel [data-kind="payment"]{--tc:#FF9F5A;--tb:rgba(255,159,90,.14)}              /* bills: orange */
+  #transaction-panel [data-kind="withdrawal"]{--tc:#FF7A7A;--tb:rgba(255,122,122,.14)}          /* withdrawal: red */
+  #transaction-panel [data-kind="savings_deposit"]{--tc:#C58BFF;--tb:rgba(197,139,255,.14)}     /* to savings: purple */
+  #transaction-panel [data-kind="savings_withdrawal"]{--tc:#00E5FF;--tb:rgba(0,229,255,.14)}    /* from savings: cyan */
+  #transaction-panel [data-kind="refund"]{--tc:#FFD166;--tb:rgba(255,209,102,.14)}              /* refund: gold */
+</style>
 
 <div class="trns" id="transaction-panel">
 
-    <!-- Drag handle -->
-    <div class="drag-handle" id="transaction-handle">
-        <span></span>
-    </div>
+    <div class="drag-handle" id="transaction-handle"><span class="bar"></span></div>
 
-    <!-- Panel header -->
     <div class="trns-header">
         <div>
             <h3>Transactions</h3>
             <p>Your account activities</p>
         </div>
-
-        <a href=""
-           class="see-all">
-            receipts
-        </a>
+        <span class="trns-hint"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i> Drag up for all</span>
     </div>
 
-    <!-- Collapsed recent transactions -->
     <div class="recent-section">
         <ul class="trns-list">
             {% for transaction in recent_transactions %}
-                <li class="transaction-item">
-                    <div class="transaction-icon">
-                        {% if transaction.transaction_type == "deposit" %}
-                            ↓
-                        {% elif transaction.transaction_type == "withdrawal" %}
-                            ↑
-                        {% elif transaction.transaction_type == "transfer" %}
-                            ⇄
-                        {% else %}
-                            ₦
-                        {% endif %}
-                    </div>
-
-                    <div class="transaction-details">
-                        <h4>
-                            {{ transaction.get_transaction_type_display }}
-                        </h4>
-
-                        <p>
-                            {{ transaction.description|default:"Transaction" }}
-                        </p>
-
-                        <small>
-                            {{ transaction.created_at|date:"M d, h:i A" }}
-                        </small>
-                    </div>
-
-                    <strong style="color: {% if transaction.transaction_type == 'deposit' %} green {% else %} orangered {% endif %}">
-                       {% if transaction.transaction_type == 'deposit' %} + {% else %} - {% endif %} ₦{{ transaction.amount|floatformat:2|intcomma }}
-                    </strong>
-                </li>
+                {% include "transactions/_row.html" with t=transaction i=forloop.counter0 full=False %}
             {% empty %}
-                <li class="empty-state">
-                    No transactions yet.
-                </li>
+                <li class="empty-state">No transactions yet.</li>
             {% endfor %}
         </ul>
     </div>
 
-    <!-- Expanded content -->
     <div class="expanded-content">
 
-        <!-- Financial overview -->
         <section class="financial-overview">
-
             <div class="overview-card income-card">
-                <span>Total income</span>
-                <h3>
-                    ₦{{ total_income|floatformat:2|intcomma }}
-                </h3>
+                <span><i class="fa-solid fa-arrow-down" aria-hidden="true"></i> Total income</span>
+                <h3>₦{{ total_income|floatformat:2|intcomma }}</h3>
             </div>
-
             <div class="overview-card expense-card">
-                <span>Total expenses</span>
-                <h3>
-                    ₦{{ total_expenses|floatformat:2|intcomma }}
-                </h3>
+                <span><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> Total expenses</span>
+                <h3>₦{{ total_expenses|floatformat:2|intcomma }}</h3>
             </div>
-
         </section>
 
-        <!-- Quick actions -->
         <section class="quick-actions">
-
-            <a href="{% url 'transfers:send' %} " class="action-item">
-                <span class="action-icon">↗</span>
-                <small>Send</small>
-            </a>
-
-            <a href="/pay/" class="action-item">
-                <span class="action-icon">₦</span>
-                <small>Pay</small>
-            </a>
-
-            <a href="/withdraw/" class="action-item">
-                <span class="action-icon">↙</span>
-                <small>Withdraw</small>
-            </a>
-
+            <a href="{% url 'transfers:send' %}" class="action-item">
+                <span class="action-icon"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></span><small>Send</small></a>
+            <a href="{% url 'biller:hub' %}" class="action-item">
+                <span class="action-icon"><i class="fa-solid fa-receipt" aria-hidden="true"></i></span><small>Bills</small></a>
+            <a href="{% url 'savings:home' %}" class="action-item">
+                <span class="action-icon"><i class="fa-solid fa-piggy-bank" aria-hidden="true"></i></span><small>Save</small></a>
             <a href="{% url 'transfers:request_money' %}" class="action-item">
-                <span class="action-icon">↗</span>
-                <small>Request</small>
-            </a>
-
-            <a href="/deposit/" class="action-item">
-                <span class="action-icon">＋</span>
-                <small>Deposit</small>
-            </a>
-
+                <span class="action-icon"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i></span><small>Request</small></a>
+            <a href="{% url 'biller:service' 'airtime' %}" class="action-item">
+                <span class="action-icon"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i></span><small>Airtime</small></a>
         </section>
 
-        <!-- Transaction filters -->
         <section class="history-section">
-
             <div class="history-heading">
                 <h3>Transaction history</h3>
-                <span>{{ transactions|length }} records</span>
+                <span>{{ transactions|length }} recent</span>
             </div>
 
-            <div class="transaction-filters">
-                <button class="filter-btn active"
-                        data-filter="all">
-                    All
-                </button>
-
-                <button class="filter-btn"
-                        data-filter="deposit">
-                    Income
-                </button>
-
-                <button class="filter-btn"
-                        data-filter="expense">
-                    Expenses
-                </button>
+            <div class="transaction-filters" role="group" aria-label="Filter transactions">
+                <button type="button" class="filter-btn active" data-filter="all" aria-pressed="true">All</button>
+                <button type="button" class="filter-btn" data-filter="income" aria-pressed="false">Income</button>
+                <button type="button" class="filter-btn" data-filter="expense" aria-pressed="false">Expenses</button>
             </div>
 
-            <!-- Full transaction list -->
             <ul class="trns-list full-history">
-
                 {% for transaction in transactions %}
-
-                    <li class="transaction-item"
-                        data-type="{% if transaction.transaction_type == 'deposit' %}deposit{% elif transaction.transaction_type == 'withdrawal' or transaction.transaction_type == 'payment' %}expense{% else %}other{% endif %}">
-
-                        <div class="transaction-icon">
-                            {% if transaction.transaction_type == "deposit" %}
-                                ↓
-                            {% elif transaction.transaction_type == "withdrawal" %}
-                                ↑
-                            {% elif transaction.transaction_type == "transfer" %}
-                                ⇄
-                            {% else %}
-                                ₦
-                            {% endif %}
-                        </div>
-
-                        <div class="transaction-details">
-                            <h4>
-                                {{ transaction.get_transaction_type_display }}
-                            </h4>
-
-                            <p>
-                                {{ transaction.description|default:"Transaction" }}
-                            </p>
-
-                            <small>
-                                {{ transaction.created_at|date:"M d, Y · h:i A" }}
-                            </small>
-                        </div>
-
-                        <strong style="color: {% if transaction.transaction_type == 'deposit' %} green {% else %} orangered {% endif %}">
-                       {% if transaction.transaction_type == 'deposit' %} + {% else %} - {% endif %} ₦{{ transaction.amount|floatformat:2|intcomma }}
-                    </strong>
-
-                    </li>
-
+                    {% include "transactions/_row.html" with t=transaction i=forloop.counter0 full=True %}
                 {% empty %}
-
-                    <li class="empty-state">
-                        No transactions found.
-                    </li>
-
+                    <li class="empty-state">No transactions found.</li>
                 {% endfor %}
-
+                <li class="empty-state" id="noMatch" hidden>Nothing here for this filter.</li>
             </ul>
-
         </section>
 
     </div>
-
 </div>
 
 <script src="{% static 'transactions/js/script.js' %}"></script>

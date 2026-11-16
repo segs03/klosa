@@ -3,7 +3,7 @@
 {% block content %}
 {% include "biller/_style.html" %}
 <section class="bl">
-  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+
   <div class="bl-hero" data-r style="--d:0">
     <div class="bl-badge {{ order.status }}">
       {% if order.status == 'completed' %}<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>

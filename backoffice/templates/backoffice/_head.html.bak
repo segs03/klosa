@@ -1,0 +1,6 @@
+{% url 'backoffice:home' as home_url %}
+<header class="bl-head">
+  <a class="bl-back" href="{{ back|default:home_url }}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <div><h1>{{ title }}</h1>{% if sub %}<p>{{ sub }}</p>{% endif %}</div>
+</header>
+{% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}

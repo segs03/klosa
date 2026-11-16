@@ -30,6 +30,10 @@ path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
     path("cards/", include("cards.urls")),
     path("savings/", include("savings.urls")),
     path("bills/", include("biller.urls")),
+    path("cash/", include("cashier.urls")),
+    path("treasury/", include("treasury.urls")),
+    path("staff/", include("backoffice.urls")),
+    path("notifications/", include("notices.urls")),
     path('admin/', admin.site.urls),
 ]
 

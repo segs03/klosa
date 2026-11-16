@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Order a card - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<style>
+  .bl .bl-chip input:disabled+span{opacity:.45}
+  .bl-box{margin:0 0 16px;padding:14px;border-radius:16px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);font-size:14px;line-height:1.5}
+</style>
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Order a card</h1><p>Debit or credit, virtual or physical</p></div>
+  </header>
+  {% for message in messages %}<p class="bl-msg" role="status">{{ message }}</p>{% endfor %}
+  {% for e in form.non_field_errors %}<p class="bl-err" role="alert">{{ e }}</p>{% endfor %}
+
+  <form method="post" id="coForm" novalidate>
+    {% csrf_token %}
+    <div class="bl-sec" data-r style="--d:1"><span class="bl-lbl">Card type</span>
+      <div class="bl-chips">
+        <label class="bl-chip"><input type="radio" name="card_type" value="debit" checked><span>Debit</span></label>
+        <label class="bl-chip"><input type="radio" name="card_type" value="credit" {% if not credit or not verified %}disabled{% endif %}><span>Credit</span></label>
+      </div>
+      {% if not credit %}<p class="bl-hint">A credit card needs an approved credit facility.</p>
+      {% elif not verified %}<p class="bl-hint">A credit card needs a verified ID. <a href="{% url 'accounts:verify' %}" style="color:#00E5FF">Verify now</a></p>{% endif %}
+      {% if credit %}<div class="bl-box" id="coCredit" hidden>Available to spend: <b>₦{{ credit.available|floatformat:2 }}</b> of your ₦{{ credit.limit|floatformat:0 }} limit. You repay from your main balance.</div>{% endif %}
+    </div>
+    <div class="bl-sec" data-r style="--d:2"><span class="bl-lbl">Format</span>
+      <div class="bl-chips">
+        <label class="bl-chip"><input type="radio" name="card_format" value="virtual" checked><span>Virtual</span></label>
+        <label class="bl-chip"><input type="radio" name="card_format" value="physical" {% if not verified %}disabled{% endif %}><span>Physical</span></label>
+      </div>
+      {% if not verified %}<p class="bl-hint">A physical card needs a verified ID. <a href="{% url 'accounts:verify' %}" style="color:#00E5FF">Verify now</a></p>{% endif %}
+    </div>
+    <div class="bl-sec" data-r style="--d:3">
+      <label class="bl-lbl" for="id_cardholder_name">Name on the card</label>
+      {% if verified %}<p><b>{{ verified_name }}</b></p><p class="bl-hint">Taken from your verified ID.</p>
+      {% else %}<input class="bl-in" id="id_cardholder_name" name="cardholder_name" value="{{ form.cardholder_name.value|default:'' }}" autocomplete="off" placeholder="FULL NAME" maxlength="26">{% endif %}
+    </div>
+    <div id="coAddr" hidden>
+      <div class="bl-sec"><label class="bl-lbl" for="id_address">Delivery address</label><input class="bl-in" id="id_address" name="address" value="{{ form.address.value|default:'' }}" autocomplete="street-address"></div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_city">City</label><input class="bl-in" id="id_city" name="city" value="{{ form.city.value|default:'' }}"></div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_state">State</label><input class="bl-in" id="id_state" name="state" value="{{ form.state.value|default:'' }}"></div>
+      <div class="bl-sec"><label class="bl-lbl" for="id_phone">Phone for the courier</label><input class="bl-in" id="id_phone" name="phone" value="{{ form.phone.value|default:'' }}" inputmode="tel"></div>
+    </div>
+    <button type="submit" class="bl-btn" id="coGo">Request card</button>
+  </form>
+</section>
+<script>
+(() => {
+  const radios = (n) => document.querySelectorAll(`input[name="${n}"]`);
+  const val = (n) => (document.querySelector(`input[name="${n}"]:checked`) || {}).value;
+  const sync = () => {
+    document.getElementById("coAddr").hidden = val("card_format") !== "physical";
+    const c = document.getElementById("coCredit"); if (c) c.hidden = val("card_type") !== "credit";
+  };
+  ["card_type", "card_format"].forEach((n) => radios(n).forEach((r) => r.addEventListener("change", sync)));
+  sync();
+  document.getElementById("coForm").addEventListener("submit", () => {
+    const b = document.getElementById("coGo"); setTimeout(() => { b.disabled = true; b.textContent = "Sending…"; }, 0);
+  });
+})();
+</script>
+{% endblock %}

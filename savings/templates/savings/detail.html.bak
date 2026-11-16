@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}{{ plan.name }} - Klosa Bank{% endblock %}
+{% block content %}
+<style>
+  .sv{max-width:480px;margin:0 auto;padding:18px 14px 120px;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .sv a.back{color:#00E5FF;text-decoration:none;font-size:14px}
+  .sv h1{margin:8px 0 14px;font-size:24px}
+  .sv-top{border-radius:22px;padding:18px;background:linear-gradient(150deg,#0F3A82,#061B3D);border:1px solid rgba(0,229,255,.25);animation:svUp .5s both}
+  .sv-top small{display:block;color:#9FB6E0;font-size:13px;margin-top:4px}
+  .sv-top strong{display:block;font-size:32px;margin-top:2px}
+  .sv-bar{height:8px;margin-top:12px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .sv-bar i{display:block;height:100%;background:linear-gradient(90deg,#007BFF,#00E5FF);border-radius:99px;transition:width 1s}
+  .sv-row{display:flex;gap:10px;margin:16px 0}
+  .sv-btn{flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:99px;background:linear-gradient(135deg,#00E5FF,#5FF1FF);color:#061B3D;font-weight:700;text-decoration:none}
+  .sv-btn.ghost{background:transparent;color:#00E5FF;border:1px solid rgba(0,229,255,.5)}
+  .sv-btn.warn{background:transparent;color:#FFB3B3;border:1px solid rgba(255,138,138,.45)}
+  .sv h2{font-size:14px;letter-spacing:1.4px;text-transform:uppercase;color:#9FB6E0;margin:22px 0 6px}
+  .sv-e{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .sv-e small{display:block;color:#9FB6E0}
+  .up{color:#35E0A1}.dn{color:#FFB3B3}
+  @keyframes svUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.sv *{animation:none!important;transition:none!important}}
+</style>
+<section class="sv">
+  <a class="back" href="{% url 'savings:home' %}">← Savings</a>
+  <h1>{{ plan.name }}</h1>
+  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+  <div class="sv-top">
+    <small>{{ plan.get_kind_display }} · {{ plan.rate }}% a year{% if plan.status == 'closed' %} · Closed{% endif %}</small>
+    <strong>₦{{ plan.balance|floatformat:2 }}</strong>
+    {% if plan.kind == 'locked' and plan.status == 'active' %}
+      <small>Matures {{ plan.maturity_date|date:"d M Y" }}{% if projected %} · about ₦{{ projected|floatformat:2 }} then{% endif %}</small>
+    {% endif %}
+    {% if pct is not None %}<div class="sv-bar"><i style="width:{{ pct }}%"></i></div>
+      <small>{{ pct }}% of your ₦{{ plan.target_amount|floatformat:2 }} goal</small>{% endif %}
+  </div>
+
+  {% if plan.status == 'active' %}
+  <div class="sv-row">
+    {% if plan.kind == 'flex' %}
+      <a class="sv-btn" href="{% url 'savings:deposit' plan.pk %}">Add money</a>
+      <a class="sv-btn ghost" href="{% url 'savings:withdraw' plan.pk %}">Withdraw</a>
+    {% endif %}
+  </div>
+  <div class="sv-row">
+    <a class="sv-btn warn" href="{% url 'savings:close' plan.pk %}">
+      {% if plan.kind == 'locked' %}{% if matured %}Collect payout{% else %}Break early{% endif %}{% else %}Close plan{% endif %}</a>
+  </div>
+  {% endif %}
+
+  <h2>Activity</h2>
+  {% for e in entries %}
+    <div class="sv-e">
+      <div><b>{{ e.get_entry_type_display }}</b><small>{{ e.created_at|date:"d M Y, H:i" }}</small></div>
+      <div class="{% if e.is_credit %}up{% else %}dn{% endif %}">{% if e.is_credit %}+{% else %}−{% endif %}₦{{ e.amount|floatformat:2 }}</div>
+    </div>
+  {% empty %}<p style="color:#9FB6E0">Nothing yet.</p>{% endfor %}
+</section>
+{% endblock %}

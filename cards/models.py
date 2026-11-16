@@ -5,6 +5,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+
 
 from accounts.models import Account
 
@@ -76,6 +78,15 @@ class BankCard(models.Model):
                 name="card_last_four_numeric",
             ),
         ]
+        
+    @property
+    def is_credit_card(self):
+         return self.card_type == "credit"
+
+    @property
+    def is_debit_card(self):
+         return self.card_type == "debit"
+
 
     def __str__(self):
         return (
@@ -181,8 +192,31 @@ class CardOrder(models.Model):
         ordering = ["-created_at"]
         
         permissions = [
-        ("approve_cardorder", "Can approve physical card orders"),
-    ]
+    (
+        "approve_cardorder",
+        "Can approve physical card orders",
+    ),
+    (
+        "issue_credit_card",
+        "Can issue credit cards",
+    ),
+]
+
+    
+    def clean(self):
+        super().clean()
+
+        if (self.card_format == "physical"
+        and (
+            not self.delivery_address
+            or not self.delivery_city
+            or not self.delivery_state
+            or not self.delivery_phone
+        )
+    ):
+            raise ValidationError(
+            "Physical card orders require delivery information."
+        )
 
     def __str__(self):
         return f"Card order {self.reference}"

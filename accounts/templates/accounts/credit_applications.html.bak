@@ -1,0 +1,75 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{% static 'accounts/css/credit_application.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="credit-applications-page">
+
+    <header class="applications-header">
+        <h2>My Credit Applications</h2>
+        <p>Track the progress of your credit requests.</p>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="credit-message {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% for application in applications %}
+        <article class="application-card">
+
+            <div class="application-card-top">
+                <div>
+                    <h3>Credit request</h3>
+                    <span class="application-date">
+                        Submitted {{ application.submitted_at|date:"d M Y" }}
+                    </span>
+                </div>
+
+                <span class="application-status {{ application.status }}">
+                    {{ application.get_status_display }}
+                </span>
+            </div>
+
+            <div class="application-amount">
+                <small>Requested amount</small>
+                <strong>₦{{ application.requested_amount|floatformat:2 }}</strong>
+            </div>
+
+            {% if application.assessed_amount %}
+                <div class="application-details">
+                    <span>Assessed amount</span>
+                    <span>₦{{ application.assessed_amount|floatformat:2 }}</span>
+                </div>
+            {% endif %}
+
+            {% if application.decision_reason %}
+                <div class="application-reason">
+                    {{ application.decision_reason }}
+                </div>
+            {% elif application.assessment_reason %}
+                <div class="application-reason">
+                    {{ application.assessment_reason }}
+                </div>
+            {% endif %}
+
+        </article>
+
+    {% empty %}
+        <div class="application-empty">
+            <i class="fas fa-file-invoice"></i>
+            <h3>No applications yet</h3>
+            <p>Your submitted credit applications will appear here.</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

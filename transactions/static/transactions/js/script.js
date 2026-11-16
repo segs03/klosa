@@ -1,75 +1,31 @@
-
-/** const panel = document.querySelector("#transaction-panel");
-const handle = document.querySelector("#transaction-handle");
-
-let startY = 0;
-let currentY = 0;
-let dragging = false;
-
-handle.addEventListener("pointerdown", (event) => {
-    startY = event.clientY;
-    currentY = startY;
-    dragging = true;
-
-    handle.setPointerCapture(event.pointerId);
-});
-
-handle.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-
-    currentY = event.clientY;
-});
-
-handle.addEventListener("pointerup", () => {
-    if (!dragging) return;
-
-    const distance = startY - currentY;
-
-    if (distance > 40) {
-        panel.classList.add("expanded");
-    } else if (distance < -40) {
-        panel.classList.remove("expanded");
-    } else {
-        panel.classList.toggle("expanded");
-    }
-
-    dragging = false;
-});
-
-handle.addEventListener("pointercancel", () => {
-    dragging = false;
-});
-*/
-
 // Transaction filters
+(() => {
+    const panel = document.getElementById("transaction-panel");
+    if (!panel) return;
 
-const filterButtons = document.querySelectorAll(".filter-btn");
-const transactionItems = document.querySelectorAll(
-    ".full-history .transaction-item"
-);
+    const buttons = panel.querySelectorAll(".filter-btn");
+    const items = panel.querySelectorAll(".full-history .transaction-item");
+    const none = panel.querySelector("#noMatch");
 
-filterButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+            buttons.forEach((b) => {
+                b.classList.remove("active");
+                b.setAttribute("aria-pressed", "false");
+            });
+            button.classList.add("active");
+            button.setAttribute("aria-pressed", "true");
 
-        filterButtons.forEach((btn) => {
-            btn.classList.remove("active");
-        });
+            const filter = button.dataset.filter;
+            let shown = 0;
 
-        button.classList.add("active");
+            items.forEach((item) => {
+                const show = filter === "all" || item.dataset.type === filter;
+                item.style.display = show ? "" : "none";
+                if (show) shown++;
+            });
 
-        const filter = button.dataset.filter;
-
-        transactionItems.forEach((item) => {
-            const type = item.dataset.type;
-
-            if (
-                filter === "all" ||
-                type === filter
-            ) {
-                item.style.display = "flex";
-            } else {
-                item.style.display = "none";
-            }
+            if (none) none.hidden = shown > 0 || items.length === 0;
         });
     });
-});
+})();

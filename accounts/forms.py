@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from .utils import normalize_email, normalize_phone
+from .roles import ROLES
+    
 
 
 User = get_user_model()
@@ -92,8 +94,7 @@ class RecoverForm(forms.Form):
 
 
 class StaffCreateForm(forms.ModelForm):
-    role = forms.ChoiceField(choices=[("Support", "Support"), ("Compliance", "Compliance"),
-                                      ("Operations", "Operations")])
+    role = forms.ChoiceField(choices=[(r, r)  for r in ROLES])
 
     class Meta:
         model = User

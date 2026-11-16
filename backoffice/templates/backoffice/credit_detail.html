@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Credit application{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% url 'backoffice:credit' as back %}
+  {% include "backoffice/_head.html" with title="Credit application" sub=app.get_status_display back=back %}
+  <div class="bl-sum">
+    <p><span>Customer</span><b><a href="{% url 'backoffice:customer' app.user_id %}" style="color:#00E5FF">{{ app.user.get_full_name|default:"Klosa customer" }}</a></b></p>
+    <p><span>Requested</span><b>₦{{ app.requested_amount|floatformat:2 }}</b></p>
+    {% if app.assessed_amount %}<p><span>Assessed</span><b>₦{{ app.assessed_amount|floatformat:2 }}</b></p><p><span>Assessment note</span><b>{{ app.assessment_reason }}</b></p>{% endif %}
+    {% if account %}<p><span>Account age</span><b>{{ age_days }} days</b></p><p><span>Balance</span><b>₦{{ account.balance|floatformat:2 }}</b></p><p><span>ID tier</span><b>{{ account.kyc_tier }}</b></p>{% endif %}
+    {% if policy %}<p><span>Allowed range</span><b>₦{{ policy.minimum_limit|floatformat:0 }} to ₦{{ policy.maximum_limit|floatformat:0 }}</b></p>{% endif %}
+    {% if app.decision_reason %}<p><span>Decision</span><b>{{ app.decision_reason }}</b></p>{% endif %}
+  </div>
+  {% if problem %}<p class="bl-msg" style="background:rgba(255,209,102,.14);color:#FFE9B0">{{ problem }}</p>{% endif %}
+  {% if can_assess %}
+  <form method="post" style="margin-top:14px">{% csrf_token %}<input type="hidden" name="action" value="assess">
+    <label class="bl-lbl" for="am">Credit limit to recommend (₦)</label><input class="bl-in" id="am" name="amount" inputmode="decimal" required>
+    <label class="bl-lbl" for="rs" style="margin-top:10px">Why</label><input class="bl-in" id="rs" name="reason" maxlength="500" required>
+    <button class="bl-btn" type="submit">Save assessment</button></form>
+  {% endif %}
+  {% if can_decide %}
+  <form method="post" style="margin-top:14px">{% csrf_token %}
+    <label class="bl-lbl" for="rd">Reason for the decision</label><input class="bl-in" id="rd" name="reason" maxlength="500" required>
+    <button class="bl-btn" name="action" value="approved" type="submit">Approve</button>
+    <button class="bl-btn ghost" name="action" value="rejected" type="submit">Reject</button></form>
+  {% endif %}
+</section>
+{% endblock %}

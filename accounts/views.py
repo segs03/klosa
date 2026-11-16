@@ -1,4 +1,5 @@
 
+import uuid
 from django.contrib.auth.decorators import login_required
 
 from .models import Account, CreditAccount, CreditApplication
@@ -24,7 +25,9 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from .credit_services import (
     assess_credit_application,
     decide_credit_application,
-    approve_credit, repay_credit, submit_credit_application
+    approve_credit, repay_credit, submit_credit_application,
+    credit_summary,
+    eligibility_problem,
 )
 
 from .utils import normalize_phone, throttled
@@ -42,6 +45,13 @@ from .forms import SetPinForm, StaffCreateForm, CloseAccountForm, ProfileForm
 from .services import CloseBlocked, close_customer_account, closure_blockers
 
 from cards.models import BankCard, CardOrder
+
+from transactions.summary import summarize
+from django.conf import settings
+from django import forms
+
+
+
 
 
 @never_cache
@@ -147,7 +157,6 @@ def login_view(request):
         
         key = f"login_fail:{ident}:{request.META.get('REMOTE_ADDR', '')}"
 
-
         user = authenticate(
             request,
             username=username,
@@ -156,6 +165,8 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
+            if user.is_staff:
+                return redirect( "backoffice:home")
             return redirect("accounts:home")
 
         return render(request, "accounts/login.html", {
@@ -169,152 +180,67 @@ def login_view(request):
 
 @login_required
 def home_view(request):
+    zero = Decimal("0.00")
     account = Account.objects.filter(user=request.user).first()
 
-    transactions = Transaction.objects.none()
-    cards = BankCard.objects.none()
-    issued_cards = BankCard.objects.none()
-    pending_card_orders = CardOrder.objects.none()
-    beneficiaries = []
-
-    payment_total = Decimal("0.00")
-    withdrawal_total = Decimal("0.00")
-    monthly_spending = Decimal("0.00")
-    payment_percent = 0
-    withdrawal_percent = 0
-    total_income = Decimal("0.00")
-    total_expenses = Decimal("0.00")
-
-    if account:
-        # Issued cards displayed on the dashboard
-        issued_cards = BankCard.objects.filter(
-            account=account
-        ).order_by("-created_at")
-
-        cards = issued_cards[:3]
-
-        # Requests not yet completed
-        pending_card_orders = (
-            CardOrder.objects
-            .filter(
-                account=account,
-                status__in=["pending", "approved", "issuing"],
-            )
-            .select_related("bank_card")
-            .prefetch_related("carddelivery")
-            .order_by("-created_at")
-        )
-
-        beneficiaries = Beneficiary.objects.filter(
-            owner=request.user
-        ).order_by("name")
-
-        now = timezone.localtime()
-
-        month_start = now.replace(
-            day=1,
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
-
-        monthly_transactions = account.transactions.filter(
-            created_at__gte=month_start,
-            created_at__lte=now,
-        )
-
-        monthly_totals = monthly_transactions.aggregate(
-            payments=Coalesce(
-                Sum(
-                    "amount",
-                    filter=Q(transaction_type="payment"),
-                ),
-                Decimal("0.00"),
-            ),
-            withdrawals=Coalesce(
-                Sum(
-                    "amount",
-                    filter=Q(transaction_type="withdrawal"),
-                ),
-                Decimal("0.00"),
-            ),
-        )
-
-        payment_total = monthly_totals["payments"]
-        withdrawal_total = monthly_totals["withdrawals"]
-        monthly_spending = payment_total + withdrawal_total
-
-        if monthly_spending:
-            payment_percent = payment_total / monthly_spending * 100
-            withdrawal_percent = withdrawal_total / monthly_spending * 100
-
-        transactions = Transaction.objects.filter(
-            account=account
-        ).order_by("-created_at")
-
-        totals = transactions.aggregate(
-            income=Coalesce(
-                Sum(
-                    "amount",
-                    filter=Q(transaction_type="deposit"),
-                ),
-                Decimal("0.00"),
-            ),
-            expenses=Coalesce(
-                Sum(
-                    "amount",
-                    filter=Q(
-                        transaction_type__in=[
-                            "withdrawal",
-                            "payment",
-                        ]
-                    ),
-                ),
-                Decimal("0.00"),
-            ),
-        )
-
-        total_income = totals["income"]
-        total_expenses = totals["expenses"]
-
     context = {
         "account": account,
-        "transactions": transactions,
-        "cards": cards,
-        "issued_cards": issued_cards,
-        "pending_card_orders": pending_card_orders,
-        "beneficiaries": beneficiaries,
-        "recent_transactions": transactions[:3],
-        "total_income": total_income,
-        "total_expenses": total_expenses,
-        "monthly_spending": monthly_spending,
-        "payment_total": payment_total,
-        "withdrawal_total": withdrawal_total,
-        "payment_percent": payment_percent,
-        "withdrawal_percent": withdrawal_percent,
         "user": request.user,
+        "transactions": Transaction.objects.none(),
+        "recent_transactions": [],
+        "issued_cards": BankCard.objects.none(),
+        "pending_card_orders": CardOrder.objects.none(),
+        "beneficiaries": [],
+        "total_income": zero,
+        "total_expenses": zero,
+        "monthly_spending": zero,
+        "payment_total": zero,
+        "transfer_total": zero,
+        "withdrawal_total": zero,
+        "payment_percent": 0,
+        "transfer_percent": 0,
+        "withdrawal_percent": 0,
     }
+    if not account:
+        return render(request, "accounts/account.html", context)
 
-    return render(request, "accounts/account.html", context)
+    month_start = timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    overall = summarize(account)
+    month = summarize(account, since=month_start)
+    spent = month["expenses"]
+    pct = lambda part: (part / spent * 100) if spent else 0
 
+    latest = Transaction.objects.filter(account=account).order_by("-created_at")[:50]
+
+    context.update({
+        "transactions": latest,
+        "recent_transactions": latest[:5],
+        "issued_cards": BankCard.objects.filter(account=account).order_by("-created_at"),
+        "pending_card_orders": (
+            CardOrder.objects
+            .filter(account=account, status__in=["pending", "approved", "issuing"])
+            .select_related("bank_card")
+            .prefetch_related("delivery")
+            .order_by("-created_at")
+        ),
+        "beneficiaries": Beneficiary.objects.filter(owner=request.user, is_active=True).order_by("name"),
+        "total_income": overall["income"],
+        "total_expenses": overall["expenses"],
+        "monthly_spending": spent,
+        "payment_total": month["bills"],
+        "transfer_total": month["transfers"],
+        "withdrawal_total": month["withdrawals"],
+        "payment_percent": pct(month["bills"]),
+        "transfer_percent": pct(month["transfers"]),
+        "withdrawal_percent": pct(month["withdrawals"]),
+    })
     
-  
-"""
-@login_required
-def settings_view(request):
-    account = get_object_or_404(
-      Account,
-        user=request.user
-   )
-
-    context = {
-        "account": account,
-       "user": request.user,
-   }
-
-  return render(request, "accounts/settings.html", context)
-    """
+    has_credit_card = BankCard.objects.filter(account=account, card_type="credit").exclude(
+        status__in=["cancelled", "expired"]).exists()
+    context.update({"credit_info": credit_summary(account), "has_credit_card": has_credit_card,
+                    "sim": getattr(settings, "CARDS_ALLOW_SIMULATOR", False)})
+    return render(request, "accounts/account.html", context)
+   
 
 
 @login_required
@@ -338,29 +264,42 @@ def profile_view(request):
     
     
     
+class CreditAskForm(forms.Form):
+    amount = forms.CharField(label="Credit limit you would like (₦)", max_length=15,
+                             widget=forms.TextInput(attrs={"inputmode": "decimal"}))
+
+
+@login_required
+def credit_request_view(request):
+    get_object_or_404(Account, user=request.user)
+    if CreditApplication.objects.filter(user=request.user, status__in=("pending", "assessed")).exists():
+        messages.info(request, "Your credit request is being reviewed.")
+        return redirect("accounts:credit")
+    form = CreditAskForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            submit_credit_application(user=request.user, requested_amount=form.cleaned_data["amount"])
+        except ValidationError as e:
+            form.add_error("amount", e.messages[0])
+        else:
+            messages.success(request, "Your credit request was sent. We will review it.")
+            return redirect("accounts:credit")
+    return render(request, "accounts/form_page.html", {"title": "Request credit", "form": form, "button": "Send request"})
+    
+    
 
 @login_required
 def credit_view(request):
-    account = get_object_or_404(
-        Account,
-        user=request.user
-    )
-
-    credit = CreditAccount.objects.filter(
-        account=account
-    ).first()
-
-    credit_card = BankCard.objects.filter(
-        account=account,
-        card_type="credit"
-    ).first()
-
-    return render(request, "accounts/credit.html", {
-        "account": account,
-        "credit": credit,
-        "credit_card": credit_card,
-    })
-    
+    account = get_object_or_404(Account, user=request.user)
+    credit = CreditAccount.objects.filter(account=account).first()
+    app = CreditApplication.objects.filter(user=request.user).first()
+    card = BankCard.objects.filter(account=account, card_type="credit").exclude(status__in=["cancelled", "expired"]).first()
+    order = CardOrder.objects.filter(account=account, card_type="credit", status__in=("pending", "approved", "issuing")).first()
+    summary = credit_summary(account)
+    ctx = {"account": account, "credit": credit, "application": app, "credit_card": card, "card_order": order,
+           "summary": summary, "problem": eligibility_problem(account) if not summary else None,
+           "recent": CreditTransaction.objects.filter(credit_account=credit)[:8] if credit else []}
+    return render(request, "accounts/credit.html", ctx)  
     
  
 @login_required
@@ -399,36 +338,22 @@ def credit_apply_view(request):
 @login_required
 def credit_repay_view(request):
     account = get_object_or_404(Account, user=request.user)
-
-    credit = CreditAccount.objects.filter(
-        account=account,
-        status="active"
-    ).first()
-
+    credit = CreditAccount.objects.filter(account=account, status__in=["active", "suspended"]).first()
     if not credit:
-        messages.error(request, "No active credit facility found.")
+        messages.error(request, "No credit facility found.")
         return redirect("accounts:credit")
+    ref = request.session.setdefault("cr_ref", "KLR" + uuid.uuid4().hex[:16].upper())
 
     if request.method == "POST":
         try:
-            amount = Decimal(request.POST.get("amount", "0"))
-
-            repay_credit(credit, amount)
-
+            amount = parse_amount(request.POST.get("amount", ""))
+            repay_credit(credit, amount, reference=ref, pin=request.POST.get("pin", ""))
+            request.session.pop("cr_ref", None)
             messages.success(request, "Repayment successful.")
             return redirect("accounts:credit")
-
-        except (InvalidOperation, TypeError, ValueError):
-            messages.error(request, "Enter a valid repayment amount.")
-
         except ValidationError as e:
             messages.error(request, e.messages[0])
-
-    return render(request, "accounts/credit_repay.html", {
-        "account": account,
-        "credit": credit,
-    })
-    
+    return render(request, "accounts/credit_repay.html", {"account": account, "credit": credit})
   
   
 @login_required

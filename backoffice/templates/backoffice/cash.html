@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Cash deposits{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Cash deposits" sub="Waiting for a second person" %}
+  {% for r in reqs %}
+  <div class="bl-sum" style="margin-bottom:14px">
+    <p><span>Customer</span><b>{{ r.account.user.get_full_name|default:"Klosa customer" }} ••{{ r.account.account_number|slice:"-4:" }}</b></p>
+    <p><span>Cash received</span><b style="color:#00E5FF">₦{{ r.amount|floatformat:2 }}</b></p>
+    <p><span>Branch</span><b>{{ r.branch }}</b></p>
+    <p><span>Recorded by</span><b>{{ r.maker.get_full_name|default:r.maker.username }}</b></p>
+    <form method="post" action="{% url 'backoffice:cash_decide' r.pk %}" style="padding:10px 0">{% csrf_token %}
+      <input class="bl-in" name="reason" placeholder="Reason (needed to reject)" maxlength="200">
+      <button class="bl-btn" name="action" value="approve" type="submit">Approve and credit</button>
+      <button class="bl-btn ghost" name="action" value="reject" type="submit">Reject</button></form>
+  </div>
+  {% empty %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endfor %}
+</section>
+{% endblock %}

@@ -15,9 +15,59 @@ from django.template.response import TemplateResponse
 from .services import (
     approve_physical_card_order,
     reject_physical_card_order,
-    CardIssuanceError,
+    CardIssuanceError, approve_order, issue_order, reject_order
 )
 
+from django.core.exceptions import PermissionDenied, ValidationError
+
+
+
+
+def _each(request, queryset, fn, done):
+    ok = 0
+    for o in queryset:
+        try:
+            fn(o)
+            ok += 1
+        except (ValidationError, PermissionDenied) as e:
+            msg = e.messages[0] if isinstance(e, ValidationError) else (str(e) or "Not allowed.")
+            messages.error(request, f"{o.reference}: {msg}")
+    if ok:
+        messages.success(request, f"{ok} request(s) {done}.")
+
+
+@admin.register(CardOrder)
+class CardOrderAdmin(admin.ModelAdmin):
+    list_display = ("reference", "account", "card_type", "card_format", "status", "created_at")
+    list_filter = ("status", "card_type", "card_format")
+    actions = ["approve", "issue", "reject_ineligible", "reject_incomplete"]
+
+    def get_readonly_fields(self, request, obj=None):
+        return [f.name for f in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.action(description="Approve")
+    def approve(self, request, qs):
+        _each(request, qs, lambda o: approve_order(o.pk, request.user), "approved")
+
+    @admin.action(description="Issue approved cards")
+    def issue(self, request, qs):
+        _each(request, qs, lambda o: issue_order(o.pk), "issued")
+
+    @admin.action(description="Reject: not eligible")
+    def reject_ineligible(self, request, qs):
+        _each(request, qs, lambda o: reject_order(o.pk, request.user, "Not eligible for this card"), "rejected")
+
+    @admin.action(description="Reject: details incomplete")
+    def reject_incomplete(self, request, qs):
+        _each(request, qs, lambda o: reject_order(o.pk, request.user, "Details were incomplete"), "rejected")
+        
+        
 
 @admin.register(BankCard)
 class BankCardAdmin(admin.ModelAdmin):
@@ -66,7 +116,7 @@ class BankCardAdmin(admin.ModelAdmin):
         return False
 
 
-
+"""
 @admin.register(CardOrder)
 class CardOrderAdmin(admin.ModelAdmin):
 
@@ -183,7 +233,7 @@ class CardOrderAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return request.user.is_staff
-
+"""
 
 @admin.register(CardDelivery)
 class CardDeliveryAdmin(admin.ModelAdmin):

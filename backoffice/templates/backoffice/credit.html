@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Credit applications{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Credit applications" %}
+  {% if to_assess %}<h2>To assess</h2>{% endif %}
+  {% for a in to_assess %}
+    <a class="bl-row" href="{% url 'backoffice:credit_detail' a.pk %}"><div class="grow"><b>{{ a.user.get_full_name|default:"Klosa customer" }}</b><small>Asks for ₦{{ a.requested_amount|floatformat:0 }} · {{ a.submitted_at|date:"d M, H:i" }}</small></div><span class="bl-chip-s processing">Assess</span></a>
+  {% endfor %}
+  {% if to_decide %}<h2>To decide</h2>{% endif %}
+  {% for a in to_decide %}
+    <a class="bl-row" href="{% url 'backoffice:credit_detail' a.pk %}"><div class="grow"><b>{{ a.user.get_full_name|default:"Klosa customer" }}</b><small>Assessed ₦{{ a.assessed_amount|floatformat:0 }} · by {{ a.assessed_by.username }}</small></div><span class="bl-chip-s processing">Decide</span></a>
+  {% endfor %}
+  {% if not to_assess and not to_decide %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endif %}
+</section>
+{% endblock %}

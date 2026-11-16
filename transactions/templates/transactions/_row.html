@@ -1,0 +1,12 @@
+{% load humanize %}
+<li class="transaction-item" data-kind="{{ t.kind }}" data-type="{{ t.category }}" style="--i:{{ i }}">
+  {% if t.transaction_type == 'transfer' and t.reference %}<a class="tx-body" href="{% url 'transactions:receipt' t.reference %}">{% else %}<div class="tx-body">{% endif %}
+    <span class="transaction-icon" aria-hidden="true"><i class="fa-solid {{ t.icon }}"></i></span>
+    <div class="transaction-details">
+      <h4>{{ t.label }}</h4>
+      <p>{{ t.description|default:"Transaction" }}</p>
+      <small>{% if full %}{{ t.created_at|date:"M d, Y · h:i A" }}{% else %}{{ t.created_at|date:"M d, h:i A" }}{% endif %}</small>
+    </div>
+    <strong class="tx-amt">{% if t.is_credit %}+{% else %}−{% endif %}₦{{ t.amount|floatformat:2|intcomma }}</strong>
+  {% if t.transaction_type == 'transfer' and t.reference %}</a>{% else %}</div>{% endif %}
+</li>

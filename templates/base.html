@@ -47,6 +47,7 @@
 </div>
 
     {% block content %}
+    {% comment %}
     {% if messages %}
     {% for message in messages %}
         <div class="message {{ message.tags }}">
@@ -54,6 +55,9 @@
         </div>
     {% endfor %}
 {% endif %}
+{% endcomment %}
+
+{% include "includes/toasts.html" %}
     {% endblock %}
     
 {% block extra_js %}

@@ -1,5 +1,13 @@
 import secrets
 
+import re
+
+from django.conf import settings
+from django.contrib import messages
+from django.core.cache import cache
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
@@ -10,13 +18,62 @@ from .models import Account
 from .services import check_code, create_customer_account, make_backup_codes, send_code
 from .utils import hit, throttled
 
+
+
 User = get_user_model()
 BACKEND = "django.contrib.auth.backends.ModelBackend"
 
 
-def _page(request, title, form, button, status=200, error=""):
-    return render(request, "accounts/form_page.html",
-                  {"title": title, "form": form, "button": button, "error": error}, status=status)
+def _page(request, title, form, button, status=200, error="", **extra):
+    ctx = {"title": title, "form": form, "button": button, "error": error}
+    ctx.update(extra)
+    return render(request, "accounts/form_page.html", ctx, status=status)
+
+
+def _dev_code(phone):
+    """The code shown on screen. Only while DEBUG is on and SMS is the console."""
+    if settings.DEBUG and getattr(settings, "SMS_BACKEND", "console") == "console":
+        m = re.search(r"\b(\d{6})\b", cache.get(f"devsms:{phone}") or "")
+        return m.group(1) if m else ""
+    return ""
+
+
+def verify_phone_view(request):
+    phone = request.session.get("pending_phone")
+    if not phone:
+        return redirect("accounts:signup")
+    form = CodeForm(request.POST or None)
+    extra = {"dev_code": _dev_code(phone), "resend_url": reverse("accounts:resend_code")}
+    if request.method == "POST":
+        if throttled(request, "verify", 15):
+            return _page(request, "Enter your code", form, "Verify", 429, "Too many attempts.", **extra)
+        if form.is_valid():
+            user = User.objects.filter(phone_number=phone, phone_verified=False).first()
+            if user and check_code(user, "signup", form.cleaned_data["code"]):
+                with transaction.atomic():
+                    user.is_active = True
+                    user.phone_verified = True
+                    user.save()
+                    create_customer_account(user)
+                request.session.pop("pending_phone", None)
+                login(request, user, backend=BACKEND)
+                return redirect("accounts:onboarding")
+            form.add_error("code", "That code is wrong or expired.")
+    return _page(request, "Enter the code we sent you", form, "Verify", **extra)
+
+
+@require_POST
+def resend_code_view(request):
+    phone = request.session.get("pending_phone")
+    if not phone:
+        return redirect("accounts:signup")
+    user = User.objects.filter(phone_number=phone, phone_verified=False).first()
+    if (user and not hit(f"sms_cd:{phone}", 1, 60)           # one new code a minute
+            and not hit(f"sms:{phone}", 6, 3600)              # six an hour
+            and not throttled(request, "resend", 20)):
+        send_code(user, "signup")
+    messages.info(request, "If this number is waiting to be verified, a new code is on its way.")
+    return redirect("accounts:verify_phone")                  # same reply either way, so numbers can't be probed
 
 
 def make_username():
@@ -56,27 +113,27 @@ def signup_view(request):
     return _page(request, "Create your account", form, "Continue")
 
 
-def verify_phone_view(request):
-    phone = request.session.get("pending_phone")
-    if not phone:
-        return redirect("accounts:signup")
-    form = CodeForm(request.POST or None)
-    if request.method == "POST":
-        if throttled(request, "verify", 15):
-            return _page(request, "Enter your code", form, "Verify", 429, "Too many attempts.")
-        if form.is_valid():
-            user = User.objects.filter(phone_number=phone, phone_verified=False).first()
-            if user and check_code(user, "signup", form.cleaned_data["code"]):
-                with transaction.atomic():
-                    user.is_active = True
-                    user.phone_verified = True
-                    user.save()
-                    create_customer_account(user)
-                request.session.pop("pending_phone", None)
-                login(request, user, backend=BACKEND)
-                return redirect("accounts:onboarding")
-            form.add_error("code", "That code is wrong or expired.")
-    return _page(request, "Enter the code we sent you", form, "Verify")
+#def verify_phone_view(request):
+#    phone = request.session.get("pending_phone")
+#    if not phone:
+#        return redirect("accounts:signup")
+#    form = CodeForm(request.POST or None)
+#    if request.method == "POST":
+#        if throttled(request, "verify", 15):
+#            return _page(request, "Enter your code", form, "Verify", 429, "Too many attempts.")
+#        if form.is_valid():
+#            user = User.objects.filter(phone_number=phone, phone_verified=False).first()
+#            if user and check_code(user, "signup", form.cleaned_data["code"]):
+#                with transaction.atomic():
+#                    user.is_active = True
+#                    user.phone_verified = True
+#                    user.save()
+#                    create_customer_account(user)
+#                request.session.pop("pending_phone", None)
+#                login(request, user, backend=BACKEND)
+#                return redirect("accounts:onboarding")
+#            form.add_error("code", "That code is wrong or expired.")
+#    return _page(request, "Enter the code we sent you", form, "Verify")
 
 
 @login_required

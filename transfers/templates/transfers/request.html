@@ -1,117 +1,41 @@
-{% load static %}
-
-<!doctype html>
-<html lang="en-us">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-{% include "includes/favicon.html" %}
-<link rel="stylesheet" href="{% static 'transfers/css/style.css' %}">
-{% include 'includes/fontawesome.html'  %}
-</head>
-
-<body>
-<main class="main  col">
-<header class="top row center gap-lg">
-                <a href="javascript:history.back()"
-                   class="back"
-                   aria-label="Go back">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </a>
-                    <h2>Request Money</h2>
-        </header>
-        
-        <div class="panel radius-tr-tl col mt ">
-
-            <form method="post" id="transferForm">
-                {% csrf_token %}
-
-                <label class="section-label">From</label>
-                
-                <div class="select-card recipient-card row gap-sm space-btw center radius-md">
-                    <div class="recipient-icon center radius-round">
-                        <i class="fa-md fa-solid fa-user"></i>
-                    </div>
-                    
-                    {{ form.account_number }}
-                    
-                </div>
-
-                {% for error in form.account_number.errors %}
-                    <p class="field-error">{{ error }}</p>
-                {% endfor %}
-
-                <label class="section-label amount-label"
-                       for="{{ form.amount.id_for_label }}">
-                    Amount
-                </label>
-
-                <div class="amount row gap-sm center">
-                    {{ form.amount }}
-                    
-                    {{ form.currency }}
-                    
-                </div>
-
-                {% for error in form.amount.errors %}
-                    <p class="field-error">{{ error }}</p>
-                {% endfor %}
-
-                {% for error in form.currency.errors %}
-                    <p class="field-error">{{ error }}</p>
-                {% endfor %}
-                
-                <div class="mt">
-                {{ form.note }}
-                </div>
-
-                {% if form.non_field_errors %}
-                    <div class="field-error">
-                        {{ form.non_field_errors }}
-                    </div>
-                {% endif %}
-
-                <button type="submit" class="send-request-btn radius-md gap-md">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    Send Request
-                </button>
-
-            </form>
-            
-            <div class="col gap mt">
-            <div class="row space-btw center">
-            <h2 class="title">My Requests</h2>
-            <a href="" class="text">See all</a>
-            </div>
-            
-            <ul type="none" class="col mt-sm gap-lg">
-            <li class="row space-btw">
-            <div class="row gap">
-            <span class="img-fluid-sm"><img src="https://i.pravatar.cc/100?img=45" alt=""></span>
-            <div class="col">
-            <h2 class="title">{{ request.user}}</h2>
-            <span class="row gap-sm center"><i class="status"></i> <small class="text">Pending</small></span>
-            </div>
-            </div>
-            <div class="col">
-            <p class="text">₦500</p>
-            <small class="text-sm">Today, 26</small>
-            </li>
-            <li class="row space-btw">
-            <div class="row gap">
-            <span class="img-fluid-sm"><img src="https://i.pravatar.cc/100?img=45" alt=""></span>
-            <div class="col">
-            <h2 class="title">{{ request.user}}</h2>
-            <span class="row gap-sm center"><i class="status"></i> <small class="text">Pending</small></span>
-            </div>
-            </div>
-            <div class="col">
-            <p class="text">₦500</p>
-            <small class="text-sm">Today, 26</small>
-            </li>
-            </ul>
-
-        </div>
-</main>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Request money - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Request money</h1><p>Ask a Klosa customer to pay you</p></div>
+  </header>
+  <form method="post" id="rqForm" novalidate>
+    {% csrf_token %}
+    <div class="bl-sec" data-r style="--d:1">
+      <label class="bl-lbl" for="account_number">Their Klosa account number</label>
+      <input class="bl-in" id="account_number" name="account_number" value="{{ form.account_number.value|default:'' }}" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="10 digits">
+      {% for e in form.account_number.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="bl-sec" data-r style="--d:2">
+      <label class="bl-lbl" for="amount">Amount (₦)</label>
+      <input class="bl-in" id="amount" name="amount" value="{{ form.amount.value|default:'' }}" inputmode="decimal" autocomplete="off" placeholder="0.00" style="text-align:center;font-size:28px;font-weight:700;height:64px">
+      {% for e in form.amount.errors %}<p class="bl-err" style="text-align:center">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="bl-sec" data-r style="--d:3">
+      <label class="bl-lbl" for="id_note">Note (optional)</label>
+      <input class="bl-in" id="id_note" name="note" value="{{ form.note.value|default:'' }}" maxlength="100" placeholder="What is it for?">
+    </div>
+    {% for e in form.non_field_errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    <button type="submit" class="bl-btn" id="rqGo" data-r style="--d:4">Send request</button>
+    <p class="bl-hint" style="text-align:center">They have 7 days to pay. You can have up to 10 open requests.</p>
+  </form>
+</section>
+<script>
+(() => {
+  const n = document.getElementById("account_number"), a = document.getElementById("amount");
+  n.addEventListener("input", () => { n.value = n.value.replace(/\D/g, "").slice(0, 10); });
+  a.addEventListener("input", () => { a.value = a.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); });
+  document.getElementById("rqForm").addEventListener("submit", () => {
+    const b = document.getElementById("rqGo"); setTimeout(() => { b.disabled = true; b.textContent = "Sending…"; }, 0);
+  });
+})();
+</script>
+{% endblock %}

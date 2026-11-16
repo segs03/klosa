@@ -24,7 +24,6 @@
 <section class="sv">
   <a class="back" href="{% url 'savings:home' %}">← Savings</a>
   <h1>{{ plan.name }}</h1>
-  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
   <div class="sv-top">
     <small>{{ plan.get_kind_display }} · {{ plan.rate }}% a year{% if plan.status == 'closed' %} · Closed{% endif %}</small>
     <strong>₦{{ plan.balance|floatformat:2 }}</strong>

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Card request{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% url 'backoffice:cards' as back %}
+  {% include "backoffice/_head.html" with title="Card request" sub=order.get_status_display back=back %}
+  <div class="bl-sum">
+    <p><span>Customer</span><b><a href="{% url 'backoffice:customer' order.account.user_id %}" style="color:#00E5FF">{{ order.account.user.get_full_name|default:"Klosa customer" }}</a></b></p>
+    <p><span>Name on card</span><b>{{ order.cardholder_name }}</b></p>
+    <p><span>Type</span><b>{{ order.get_card_type_display }} · {{ order.get_card_format_display }}</b></p>
+    <p><span>ID verified</span><b>{% if verified %}Yes{% else %}No{% endif %}</b></p>
+    {% if order.card_type == 'credit' %}<p><span>Credit</span><b>{% if credit %}₦{{ credit.available|floatformat:2 }} free of ₦{{ credit.limit|floatformat:0 }}{% else %}No active facility{% endif %}</b></p>{% endif %}
+    {% if order.card_format == 'physical' %}
+      <p><span>Deliver to</span><b>{{ order.delivery_address }}, {{ order.delivery_city }}, {{ order.delivery_state }}</b></p>
+      <p><span>Courier phone</span><b>{{ order.delivery_phone }}</b></p>
+    {% endif %}
+    <p><span>Requested</span><b>{{ order.created_at|date:"d M Y, H:i" }}</b></p>
+    {% if order.rejection_reason %}<p><span>Rejected because</span><b>{{ order.rejection_reason }}</b></p>{% endif %}
+  </div>
+  {% if order.status == 'pending' %}
+    {% if own %}<p class="bl-msg">This is your own request. A colleague must review it.</p>{% else %}
+    <form method="post" style="margin-top:14px">{% csrf_token %}<button class="bl-btn" name="action" value="approve">Approve</button></form>
+    <form method="post" style="margin-top:10px">{% csrf_token %}<input type="hidden" name="action" value="reject">
+      <label class="bl-lbl" for="rr">Reason for rejecting</label>
+      <input class="bl-in" id="rr" name="reason" maxlength="500" required>
+      <button class="bl-btn ghost" type="submit">Reject</button></form>
+    {% endif %}
+  {% elif order.status == 'approved' or order.status == 'failed' %}
+    <form method="post" style="margin-top:14px">{% csrf_token %}
+      <button class="bl-btn" name="action" value="issue">{% if order.status == 'failed' %}Try issuing again{% else %}Issue the card{% endif %}</button></form>
+  {% endif %}
+</section>
+{% endblock %}

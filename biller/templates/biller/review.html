@@ -42,8 +42,14 @@
   const pin = document.getElementById("id_pin");
   pin.addEventListener("input", () => { pin.value = pin.value.replace(/\D/g, "").slice(0, 4); });
   pin.focus();
+  let sent = false;
   document.getElementById("blPay").addEventListener("submit", (e) => {
-    if (e.submitter && e.submitter.value === "pay") { const b = document.getElementById("blConfirm"); b.disabled = true; b.textContent = "Paying…"; }
+    if (sent) { e.preventDefault(); return; }              // a second tap does nothing
+    if (e.submitter && e.submitter.value === "pay") {
+      sent = true;
+      const b = document.getElementById("blConfirm");
+      setTimeout(() => { b.disabled = true; b.textContent = "Paying…"; }, 0);   // after the browser has read the form
+    }
   });
 })();
 </script>

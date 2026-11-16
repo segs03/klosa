@@ -1,6 +1,9 @@
 import secrets
 import logging
 
+from django.core.cache import cache
+from django.utils.module_loading import import_string
+
 from datetime import timedelta
 from decimal import Decimal
 
@@ -18,6 +21,10 @@ from transfers.models import MoneyRequest
 from django.db.models import Q, Sum
 
 from savings.models import SavingsPlan
+
+from cashier.models import Withdrawal
+from treasury.models import CashOut
+
 
 
 log = logging.getLogger(__name__)
@@ -57,18 +64,23 @@ def create_customer_account(user):
 
 # ----------------------------------------------------------- messages
 def deliver_sms(phone, text):
-    if getattr(settings, "SMS_BACKEND", "console") == "console":
+    backend = getattr(settings, "SMS_BACKEND", "console")
+    if backend == "console":
         print(f"[SMS to {phone}] {text}")
+        if settings.DEBUG:
+            cache.set(f"devsms:{phone}", text, 900)        # so the verify page can show it
         return
-    raise NotImplementedError("Connect your SMS provider here")
+    import_string(backend)(phone, text)                    # your provider's send function
 
 
 def notify(user, text):
     if user.phone_number:
-        deliver_sms(user.phone_number, text)
+        try:
+            deliver_sms(user.phone_number, text)
+        except Exception:
+            log.exception("SMS to user %s failed", user.pk)    # the customer can ask for a new code
     if user.email:
         send_mail("Klosa Bank", text, None, [user.email], fail_silently=True)
-
 
 # ----------------------------------------------------- one-time codes
 def send_code(user, purpose, minutes=15):
@@ -148,6 +160,13 @@ def closure_blockers(account):
     
     if saved:
         reasons.append(f"Withdraw your savings of ₦{saved:,.2f} first.")
+        
+        
+    if Withdrawal.objects.filter(account=account, status="processing").exists():
+        reasons.append("Wait for your pending withdrawal to finish first.")
+    
+    if CashOut.objects.filter(account=account, status="held").exists():
+        reasons.append("Collect or wait for your pending cash withdrawal first.")
 
     return reasons
 

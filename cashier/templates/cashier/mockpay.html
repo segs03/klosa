@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head"><div><h1>Test payment page</h1><p>This page exists only while testing</p></div></header>
+  <div class="bl-sum"><p><span>Pay to</span><b>Klosa Bank</b></p><p><span>Amount</span><b>₦{{ dep.amount|floatformat:2 }}</b></p></div>
+  <form method="post" style="margin-top:16px">
+    {% csrf_token %}
+    <button class="bl-btn" name="action" value="pay" type="submit">Pay ₦{{ dep.amount|floatformat:2 }}</button>
+    <button class="bl-btn ghost" name="action" value="cancel" type="submit">Cancel</button>
+  </form>
+</section>
+{% endblock %}
