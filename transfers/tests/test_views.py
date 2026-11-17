@@ -64,7 +64,7 @@ class SendViewTests(TestCase):
 
     def test_tier_zero_limit_is_enforced(self):
         Account.objects.filter(pk=self.a.pk).update(balance=Decimal("500000"))
-        self.post(amount="25000")
+        self.post(amount="60000")
         self.assertEqual(self.bal(self.a), Decimal("500000"))
 
     def test_closed_receiver_is_refused(self):

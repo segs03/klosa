@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 {% block title %}Credit - Klosa Bank{% endblock %}
 {% block content %}
 {% include "biller/_style.html" %}
@@ -10,10 +11,10 @@
 
   {% if summary %}
     <div class="bl-top" data-r style="--d:1">
-      <small>Available to spend</small><strong>₦{{ summary.available|floatformat:2 }}</strong>
+      <small>Available to spend</small><strong>₦{{ summary.available|floatformat:2|intcomma }}</strong>
       <div class="bl-sum" style="margin-top:14px;background:transparent;border:0;padding:0">
-        <p><span>Credit limit</span><b>₦{{ summary.limit|floatformat:0 }}</b></p>
-        <p><span>You owe</span><b>₦{{ summary.owed|floatformat:2 }}</b></p>
+        <p><span>Credit limit</span><b>₦{{ summary.limit|floatformat:0|intcomma }}</b></p>
+        <p><span>You owe</span><b>₦{{ summary.owed|floatformat:2|intcomma }}</b></p>
         {% if summary.due %}<p><span>Repay by</span><b>{{ summary.due|date:"d M Y" }}</b></p>{% endif %}
       </div>
     </div>
@@ -26,15 +27,15 @@
       <a class="bl-btn ghost" href="{% url 'cards:add' %}">Order your credit card</a>
     {% endif %}
     {% if recent %}<h2>Recent activity</h2>{% for t in recent %}
-      <div class="bl-row"><div class="grow"><b>{{ t.get_transaction_type_display }}</b><small>{{ t.description }} · {{ t.created_at|date:"d M, H:i" }}</small></div><b>₦{{ t.amount|floatformat:2 }}</b></div>
+      <div class="bl-row"><div class="grow"><b>{{ t.get_transaction_type_display }}</b><small>{{ t.description }} · {{ t.created_at|date:"d M, H:i" }}</small></div><b>₦{{ t.amount|floatformat:2|intcomma }}</b></div>
     {% endfor %}{% endif %}
 
   {% elif credit and credit.status == "suspended" %}
     <p class="bl-msg" style="background:rgba(255,138,138,.14);color:#FFB3B3" role="alert">Your credit is suspended. You can still repay what you owe.</p>
-    {% if credit.outstanding_balance %}<a class="bl-btn" href="{% url 'accounts:credit_repay' %}">Repay ₦{{ credit.outstanding_balance|floatformat:2 }}</a>{% endif %}
+    {% if credit.outstanding_balance %}<a class="bl-btn" href="{% url 'accounts:credit_repay' %}">Repay ₦{{ credit.outstanding_balance|floatformat:2|intcomma }}</a>{% endif %}
 
   {% elif application and application.status == "pending" %}
-    <p class="bl-msg" role="status">Your request for ₦{{ application.requested_amount|floatformat:0 }} was received. Our team is reviewing it.</p>
+    <p class="bl-msg" role="status">Your request for ₦{{ application.requested_amount|floatformat:0|intcomma }} was received. Our team is reviewing it.</p>
   {% elif application and application.status == "assessed" %}
     <p class="bl-msg" role="status">Your request passed the first review. It is waiting for a final decision.</p>
   {% else %}

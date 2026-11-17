@@ -16,6 +16,9 @@ from transactions.models import Transaction
 from treasury.models import CashOut, CashRequest
 from treasury.services import (TreasuryError, approve_cash_in, create_cash_in, expire_cash_outs,
                                pay_cash_out, reject_cash_in, request_cash_out)
+ 
+from transfers.services import internal_transfer                                                            
+                               
 
 User = get_user_model()
 _n = iter(range(1, 10**6))
@@ -139,7 +142,7 @@ class CashOutTests(Base):
 
     def test_limits_balance_tier_and_closed_account(self):
         with self.assertRaises(TreasuryError):
-            self.out("50001")                                   # over the tier-1 single limit
+            self.out("100001")                                   # over the tier-1 single limit
         Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("600"))
         with self.assertRaises(TreasuryError):
             self.out("700")
@@ -152,11 +155,12 @@ class CashOutTests(Base):
         self.assertEqual(CashOut.objects.count(), 0)
 
     def test_the_daily_limit(self):
-        for _ in range(4):
-            self.out("50000" if self.bal() >= 50000 else "1000")
-            Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("50000"))
+        # tier 1: ₦100,000 per withdrawal and ₦300,000 a day
+        Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("500000"))
+        for _ in range(3):
+            self.out("100000")
         with self.assertRaises(TreasuryError):
-            self.out("1000")
+            self.out("1000")                                   # ₦300,000 is reached
 
     def test_the_teller_pays_once_with_the_right_code(self):
         co, code = self.out("10000")

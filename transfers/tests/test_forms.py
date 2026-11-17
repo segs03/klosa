@@ -39,8 +39,8 @@ class TransferFormTests(TestCase):
         self.assertFalse(self.form().is_valid())
 
     def test_tier_zero_limits(self):
-        self.assertFalse(self.form(amount="20001").is_valid())
-        self.assertFalse(self.form(amount="1000", used="49500").is_valid())
+        self.assertFalse(self.form(amount="50001").is_valid())
+        self.assertFalse(self.form(amount="1000", used="99500").is_valid())
 
     def test_insufficient_balance(self):
         self.acc.balance = Decimal("500")

@@ -143,8 +143,25 @@ def service(request, category):
         review["error"] = str(e)
         return render(request, "biller/review.html", review)
 
+    
     request.session.pop("bp_token", None)
     request.session.pop("bp_ref", None)
+
+    if order.status == "completed":
+        messages.success(request, "Payment successful.")
+
+    elif order.status == "reversed":
+        messages.error(
+        request,
+        "Payment failed. Your balance has been refunded."
+    )
+
+    else:
+        messages.info(
+        request,
+        "Payment is processing. Check the status shortly."
+    )
+
     return redirect("biller:order", reference=order.reference)
 
 

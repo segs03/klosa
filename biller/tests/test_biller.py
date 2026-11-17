@@ -129,6 +129,8 @@ class BillerTests(TestCase):
 
     def test_tier_zero_daily_limit(self):
         self.pay(amount="30000")
+        self.pay(amount="30000")
+        self.pay(amount="30000")
         with self.assertRaises(PaymentError):
             self.pay(amount="30000")                     # 60,000 is over the 50,000 tier-0 limit
 

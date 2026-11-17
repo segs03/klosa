@@ -13,7 +13,8 @@ from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import Account, BackupCode, IdentityLock, OneTimeCode,  CreditAccount, OneTimeCode
+from .models import Account, BackupCode, IdentityLock, CreditAccount, OneTimeCode
+
 from .utils import digest, new_code, same
 from beneficiary.models import Beneficiary
 
@@ -32,9 +33,9 @@ MAX_CODE_TRIES = 5
 
 # Placeholder limits. Check your regulator's current KYC rules before going live.
 TIER_LIMITS = {
-    0: {"single": Decimal("20000"),  "daily": Decimal("50000")},
-    1: {"single": Decimal("50000"),  "daily": Decimal("200000")},
-    2: {"single": Decimal("200000"), "daily": Decimal("1000000")},
+    0: {"single": Decimal("50000"),  "daily": Decimal("100000")},
+    1: {"single": Decimal("100000"), "daily": Decimal("300000")},
+    2: {"single": Decimal("300000"), "daily": Decimal("1500000")},
 }
 
 

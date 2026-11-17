@@ -1,43 +1,41 @@
-{% extends "base.html" %}
-
-{% block title %}Credit Repayment | Klosa{% endblock %}
-
+{% extends 'base.html' %}
+{% block title %}Repay credit - Klosa Bank{% endblock %}
 {% block content %}
-<div class="credit-page">
-
-    <h2>Make a repayment</h2>
-
-    <div class="credit-overview">
-        <p class="label">Outstanding balance</p>
-        <h2>₦{{ credit.outstanding_balance|floatformat:2 }}</h2>
-
-        <p class="label">Available account balance</p>
-        <h3>₦{{ account.balance|floatformat:2 }}</h3>
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:credit' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Repay credit</h1><p>Paid from your main balance</p></div>
+  </header>
+  <div class="bl-top" data-r style="--d:1">
+    <small>You owe</small><strong>₦{{ credit.outstanding_balance|floatformat:2 }}</strong>
+    <small style="margin-top:8px">Your balance: ₦{{ account.balance|floatformat:2 }}</small>
+  </div>
+  <form method="post" id="rpForm" novalidate style="margin-top:16px">
+    {% csrf_token %}
+    <div class="bl-sec" data-r style="--d:2">
+      <label class="bl-lbl" for="amount">Amount (₦)</label>
+      <input class="bl-in" id="amount" name="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" required
+             style="text-align:center;font-size:28px;font-weight:700;height:64px">
+      <div class="bl-quick"><button type="button" id="rpAll">Pay all (₦{{ credit.outstanding_balance|floatformat:2 }})</button></div>
     </div>
-
-    <form method="POST" class="credit-stat">
-        {% csrf_token %}
-
-        <label for="amount">Repayment amount (₦)</label>
-
-        <input
-            type="number"
-            name="amount"
-            id="amount"
-            min="0.01"
-            max="{{ credit.outstanding_balance }}"
-            step="0.01"
-            required
-        >
-
-        <button type="submit" class="credit-button">
-            Confirm repayment
-        </button>
-    </form>
-
-    <p class="credit-note">
-        Repayment is deducted from your Klosa account balance.
-    </p>
-
-</div>
+    <div class="bl-sec" data-r style="--d:3">
+      <label class="bl-lbl" for="pin">Transaction PIN</label>
+      <input class="bl-in" id="pin" name="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" required
+             style="letter-spacing:10px;text-align:center;font-size:22px">
+    </div>
+    <button type="submit" class="bl-btn" id="rpGo" data-r style="--d:4">Confirm repayment</button>
+  </form>
+</section>
+<script>
+(() => {
+  const a = document.getElementById("amount"), p = document.getElementById("pin");
+  a.addEventListener("input", () => { a.value = a.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); });
+  p.addEventListener("input", () => { p.value = p.value.replace(/\D/g, "").slice(0, 4); });
+  document.getElementById("rpAll").addEventListener("click", () => { a.value = "{{ credit.outstanding_balance|stringformat:'s' }}"; });
+  document.getElementById("rpForm").addEventListener("submit", () => {
+    const b = document.getElementById("rpGo"); setTimeout(() => { b.disabled = true; b.textContent = "Paying…"; }, 0);
+  });
+})();
+</script>
 {% endblock %}

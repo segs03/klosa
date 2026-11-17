@@ -19,7 +19,7 @@
     {% for s in steps %}
     <p><span>{{ s.label }}</span>
       <b>{% if s.state == "done" %}<span style="color:#35E0A1">✔ Verified</span>
-         {% elif s.state == "review" %}<span style="color:#FFD166">In review</span>
+         {% elif s.state == "review" %}<span style="color:#FFD166">In review (Currently reviewing)</span>
          {% elif s.state == "more" %}<span style="color:#FFD166">More information needed</span>
          {% elif s.state == "rejected" %}<span style="color:#FF8A8A">Not accepted</span>
          {% else %}Not yet{% endif %}</b></p>

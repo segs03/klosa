@@ -14,7 +14,7 @@ from biller.providers.mock import MockProvider
 User = get_user_model()
 
 
-@override_settings(BILLPAY_PROVIDER="biller.providers.mock.MockProvider")
+@override_settings(BILLER_PROVIDER="biller.providers.mock.MockProvider")
 class ScreenTests(TestCase):
     def setUp(self):
         cache.clear()

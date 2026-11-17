@@ -25,7 +25,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from .credit_services import (
     assess_credit_application,
     decide_credit_application,
-    approve_credit, repay_credit, submit_credit_application,
+    approve_credit, repay_credit,submit_credit_application,
     credit_summary,
     eligibility_problem,
 )
@@ -52,6 +52,23 @@ from django import forms
 
 
 
+
+
+MAX_AMOUNT = Decimal("10000000")
+
+
+def parse_amount(raw):
+    try:
+        amount = Decimal(str(raw).strip())
+    except (InvalidOperation, ValueError):
+        raise ValidationError("Enter a valid amount.")
+    if not amount.is_finite() or amount <= 0:
+        raise ValidationError("Enter an amount above zero.")
+    if amount > MAX_AMOUNT:
+        raise ValidationError("Amount is too large.")
+    if amount != amount.quantize(Decimal("0.01")):
+        raise ValidationError("Use at most 2 decimal places.")
+    return amount
 
 
 @never_cache
@@ -302,38 +319,6 @@ def credit_view(request):
     return render(request, "accounts/credit.html", ctx)  
     
  
-@login_required
-def credit_apply_view(request):
-    account = get_object_or_404(Account, user=request.user)
-
-    if request.method == "POST":
-        print("CREDIT POST RECEIVED")
-
-        requested_amount = request.POST.get("amount")
-        print("REQUESTED AMOUNT:", requested_amount)
-
-        try:
-            application = submit_credit_application(
-                user=request.user,
-                requested_amount=requested_amount,
-            )
-
-            print("APPLICATION CREATED:", application.pk)
-
-            return redirect("/accounts/credit/applications/")
-
-        except ValidationError as e:
-            print("VALIDATION ERROR:", e)
-            messages.error(request, e.messages[0])
-
-        return redirect("accounts:credit_apply")
-
-    return render(
-        request,
-        "accounts/credit_apply.html",
-        {"account": account},
-    )
-
     
 @login_required
 def credit_repay_view(request):

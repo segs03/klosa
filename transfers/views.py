@@ -47,7 +47,12 @@ def send_money_view(request):
             ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
             if ben:
                 initial["beneficiary"] = ben.pk
-        form = TransferForm(account=account, used_today=used, initial=initial)
+        form = TransferForm(
+    request.POST,
+    account=account,
+    used_today=used,
+    initial=initial,
+)
 
         if form.is_valid():
             beneficiary = form.cleaned_data.get("beneficiary")
@@ -88,7 +93,12 @@ def send_money_view(request):
             ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
             if ben:
                 initial["beneficiary"] = ben.pk
-        form = TransferForm(account=account, used_today=used, initial=initial)
+        form = TransferForm(
+    request.POST,
+    account=account,
+    used_today=used,
+    initial=initial,
+)
 
     token = request.session.setdefault("send_token", uuid.uuid4().hex)
     request.session.setdefault("send_ref", "KL" + uuid.uuid4().hex[:10].upper())

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 
-# Demo approval policy
+# approval policy
 STARTER_LIMIT = Decimal("250000.00")
 STANDARD_LIMIT = Decimal("500000.00")
 

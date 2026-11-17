@@ -35,6 +35,8 @@ def hook(client, payload, secret=SECRET):
 
 @override_settings(CASHIER_PROVIDER="cashier.providers.mock.MockCashProvider", CASHIER_WEBHOOK_SECRET=SECRET,
                    CASHIER_ALLOW_MOCK_PAYPAGE=True, CASHIER_WITHDRAW_MIN_TIER=1, KLOSA_BANK_CODE="999")
+                   
+                   
 class Base(TestCase):
     def setUp(self):
         cache.clear()
@@ -235,21 +237,30 @@ class WithdrawalTests(Base):
             self.w()
         Account.objects.filter(pk=self.acc.pk).update(kyc_tier=1)
         with self.assertRaises(CashierError):
-            self.w(amount="50001")                           # over the tier-1 single limit
+            self.w(amount="100001")                           # over the tier-1 single limit
         Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("500"))
         with self.assertRaises(CashierError):
             self.w()
-        Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("100000"), closed_at=timezone.now())
+        Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("50000"), closed_at=timezone.now())
         with self.assertRaises(CashierError):
             self.w()
         self.assertEqual(Withdrawal.objects.count(), 0)
 
     def test_the_daily_limit(self):
-        Account.objects.filter(pk=self.acc.pk).update(balance=Decimal("500000"))
-        for _ in range(4):
-            self.w(amount="50000")
+        Account.objects.filter(pk=self.acc.pk).update(
+        balance=Decimal("500000")
+    )
+
+        for _ in range(3):
+            self.w(amount="100000")
+
         with self.assertRaises(CashierError):
-            self.w(amount="1000")                            # 200,000 is the tier-1 daily limit
+                self.w(amount="1000")
+
+        self.assertEqual(
+        Account.objects.get(pk=self.acc.pk).balance,
+        Decimal("200000")
+    )
 
     def test_bad_inputs_are_refused(self):
         for kw in ({"bank_name": "Klosa Bank"}, {"bank_name": "Made Up Bank"}, {"account_number": "123"},

@@ -130,14 +130,28 @@ class InternalTransferTests(TestCase):
 
     def test_tier_zero_single_limit(self):
         with self.assertRaises(TransferError):
-            internal_transfer(self.a.pk, self.b.pk, "20001")
+            internal_transfer(self.a.pk, self.b.pk, "100001")
 
     def test_daily_limit(self):
-        internal_transfer(self.a.pk, self.b.pk, "20000")
-        internal_transfer(self.a.pk, self.b.pk, "20000")
+    # Start above the daily transfer limit so that
+    # the final transfer is rejected because of the limit,
+    # not because of insufficient funds.
+        self.a.balance = Decimal("150000")
+        self.a.save(update_fields=["balance"])
+
+        internal_transfer(self.a.pk, self.b.pk, "25000")
+        internal_transfer(self.a.pk, self.b.pk, "25000")
+        internal_transfer(self.a.pk, self.b.pk, "25000")
+        internal_transfer(self.a.pk, self.b.pk, "25000")
+
+        # Total sent: ₦100,000
         with self.assertRaises(TransferError):
-            internal_transfer(self.a.pk, self.b.pk, "20000")      # 60000 is over the 50000 daily limit
-        self.assertEqual(self.bal(self.a), Decimal("60000"))
+            internal_transfer(self.a.pk, self.b.pk, "25000")
+
+            self.assertEqual(
+        self.bal(self.a),
+        Decimal("50000"),
+    )
 
     def test_everything_is_undone_if_a_write_fails(self):
         with mock.patch("transfers.services.Transaction.objects.create", side_effect=RuntimeError("boom")):

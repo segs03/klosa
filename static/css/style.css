@@ -666,3 +666,11 @@ border-radius: 50%;
         transform: translateY(0);
     }
 }
+
+
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: .18s ease both fadeOut; }
+::view-transition-new(root) { animation: .28s ease both fadeIn; }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }

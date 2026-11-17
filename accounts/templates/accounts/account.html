@@ -115,11 +115,7 @@
   .account-info{animation:dbUp .45s calc(var(--d,0)*60ms + 250ms) cubic-bezier(.2,.8,.2,1) both}
   .dr-muted{color:var(--muted);font-size:14px}
 
-  /* toast */
-  .db-toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:80;transform:translate(-50%,-30px);opacity:0;pointer-events:none;
-    padding:10px 18px;border-radius:99px;font-size:14px;font-weight:600;color:#061B3D;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:all .3s cubic-bezier(.2,.8,.2,1)}
-  .db-toast.on{opacity:1;transform:translate(-50%,0)}
-
+  
   .db a:focus-visible,.db button:focus-visible,.dc a:focus-visible,.dr a:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
   @keyframes dbUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
@@ -190,10 +186,11 @@
   .qa-act[hidden]{display:none}
   .qa-close{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:99px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-weight:700}
   @media (prefers-reduced-motion:reduce){.qa,.qa-back{transition:none}}
+  
+    .dr .contact{display:block;width:100%;min-width:0;text-align:center}
+  .dr .contact h3,.dr .contact p{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 {% endblock %}
-
-{% include "biller/_style.html" %}
 
 
 {% block content %}
@@ -265,12 +262,8 @@
     <a href="{% url 'biller:hub' %}" class="db-svc orange" style="--d:2"><span class="db-ic"><i class="fa-solid fa-receipt"></i></span>Pay bills</a>
     
     <a href="{% url 'biller:service' 'airtime' %}" class="db-svc green" style="--d:3"><span class="db-ic"><i class="fa-solid fa-mobile-screen"></i></span>Airtime</a>
-    {% comment %}
-    <a href="{% url 'cashier:deposit' %}" class="db-svc yellow" style="--d:6"><span class="db-ic"><i class="fa-solid fa-money-bill-transfer"></i></span>Deposit</a>
     
-    {% endcomment %}
     <a href="{% url 'treasury:deposit' %}" class="db-svc pink" style="--d:4"><span class="db-ic"><i class="fa-solid fa-money-bill-transfer"></i></span>Deposit</a>
-    
     
     <a href="{% url 'biller:service' 'data' %}" class="db-svc blue" style="--d:5"><span class="db-ic"><i class="fa-solid fa-wifi"></i></span>Data</a>
     
@@ -330,8 +323,9 @@
       </div>
     {% endfor %}
   </div>
-
+{% comment %}
   <p class="deck-hint" id="deckHint"></p>
+{% endcomment %}
 
   {% if credit_info %}
   <div class="cr-panel dc-block" data-r style="--d:2">
@@ -385,9 +379,7 @@
   </header>
 
     <div class="contacts">
-      <div class="bl-sec" style="margin:0 0 12px">
-    <input class="bl-in" id="drSearch" placeholder="Search recipients" autocomplete="off" style="height:46px;font-size:15px">
-  </div>
+     
     {% for item in beneficiaries %}
       <button type="button" class="contact" style="--d:{{ forloop.counter0 }}"
         data-id="{{ item.pk }}" data-name="{{ item.name }}" data-bank="{{ item.bank_name }}"
@@ -413,6 +405,7 @@
     <form method="post" id="qaDelForm">{% csrf_token %}<button class="qa-act danger" type="submit"><i class="fa-solid fa-trash"></i><span>Remove recipient</span></button></form>
     <button class="qa-close" id="qaClose" type="button">Close</button>
   </div>
+  
 
   <div class="trns">
     <div class="drag-handle"><span class="bar"></span></div>
@@ -461,7 +454,6 @@
 <button class="btn tab" data-tab="settings" aria-label="Settings"><i class="fa-solid fa-gear"></i></button>
 </nav>
 
-<div class="db-toast" id="dbToast" role="status" aria-live="polite"></div>
 </main>
 {% endblock %}
 
@@ -474,14 +466,6 @@
     g.textContent = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   }
 
-  const toast = document.getElementById("dbToast");
-  let timer;
-  const say = (m) => {
-    toast.textContent = m; toast.classList.add("on");
-    clearTimeout(timer); timer = setTimeout(() => toast.classList.remove("on"), 2300);
-  };
-  document.querySelectorAll("[data-soon]").forEach((el) =>
-    el.addEventListener("click", () => say(el.dataset.soon)));
 
   const copy = document.getElementById("dbCopy");
   if (copy) copy.addEventListener("click", async () => {
@@ -544,15 +528,4 @@ if (location.hash === "#card") {
 })();
 </script>
 
-<script>
-(() => {
-  const box = document.getElementById("drSearch"); if (!box) return;
-  box.addEventListener("input", () => {
-    const q = box.value.trim().toLowerCase();
-    document.querySelectorAll(".contact[data-id]").forEach((c) => {
-      c.style.display = (c.dataset.name + " " + c.dataset.bank).toLowerCase().includes(q) ? "" : "none";
-    });
-  });
-})();
-</script>
 {% endblock %}

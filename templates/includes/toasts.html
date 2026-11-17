@@ -11,6 +11,11 @@
   @media (prefers-reduced-motion:reduce){.kt{transition:none}}
 </style>
 <div class="kt-wrap" id="ktWrap" role="status" aria-live="polite">
+    {% for message in messages %}
+        <div class="kt kt-{{ message.tags }}">
+            <span>{{ message }}</span>
+        </div>
+    {% endfor %}
 </div>
 <script>
 (() => {

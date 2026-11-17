@@ -12,7 +12,7 @@ urlpatterns = [
 
     path("credit/", views.credit_view, name="credit"),
     path("credit/request/", views.credit_request_view, name="credit_request"),
-    path("credit/apply/", views.credit_apply_view, name="credit_apply"),
+   
     path("credit/repay/", views.credit_repay_view, name="credit_repay"),
     path(
     "credit/applications/",
