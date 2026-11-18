@@ -13,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,13 +30,52 @@ if "test" in sys.argv:
 # SECURITY WARNING: keep the secret key used in production secret!
 
 
-DEBUG = os.getenv("DEBUG", "True") == "True"
+def env_bool(name, default=False):
+    return os.getenv(name, str(default)).strip().lower() in {
+        "1", "true", "yes", "on"
+    }
 
-SECRET_KEY = os.getenv("SECRET_KEY")
 
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS", "127.0.0.1,localhost"
-).split(",")
+DEBUG = env_bool("DEBUG", True)
+
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+
+if not DEBUG and not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "SECRET_KEY must be configured in production."
+    )
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        "ALLOWED_HOSTS", "127.0.0.1,localhost"
+    ).split(",")
+    if host.strip()
+]
+
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+SECURE_SSL_REDIRECT = not DEBUG
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+X_FRAME_OPTIONS = "DENY"
+
+SECURE_HSTS_SECONDS = int(
+    os.getenv("SECURE_HSTS_SECONDS", "0")
+)
+
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
 
 
 KYC_IDENTITY_HMAC_KEY = os.environ.get(
@@ -67,7 +107,6 @@ INSTALLED_APPS = [
     'backoffice',
     'notices',
     'fontawesomefree',
-    
 ]
 
 MIDDLEWARE = [
@@ -89,56 +128,73 @@ AUTH_USER_MODEL = "accounts.User"
 
 AUTHENTICATION_BACKENDS = [
     "accounts.backends.IdentifierBackend",
-    "django.contrib.auth.backends.ModelBackend",   # keep: passkey login uses it
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
-SMS_BACKEND = "console"      # prints codes in Termux; connect a real SMS provider before going live
+SMS_BACKEND = "console"
 
 DEFAULT_FROM_EMAIL = "Klosa Bank <no-reply@yourdomain.com>"
-IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")       # long random value, separate from SECRET_KEY
 
-BILLER_PROVIDER = "biller.providers.mock.MockProvider"   # swap for a real provider later
+IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")
 
-CASHIER_PROVIDER = "cashier.providers.mock.MockCashProvider"
-CASHIER_WEBHOOK_SECRET = os.environ.get("CASHIER_WEBHOOK_SECRET", "")   # long random value; empty means every webhook is rejected
-CASHIER_ALLOW_MOCK_PAYPAGE = DEBUG          # the fake payment page must never exist in production
+BILLER_PROVIDER = "biller.providers.mock.MockProvider"
+
+# CASHIER_PROVIDER = "cashier.providers.mock.MockCashProvider"
+
+CASHIER_WEBHOOK_SECRET = os.environ.get("CASHIER_WEBHOOK_SECRET", "")
+
+CASHIER_ALLOW_MOCK_PAYPAGE = DEBUG
+
 CASHIER_WITHDRAW_MIN_TIER = 1
 
-PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"        # outside MEDIA_ROOT, so no URL can serve it
-KYC_APPROVALS_REQUIRED = 1                             # set 2 for two-person approval
+KYC_APPROVALS_REQUIRED = 1
+              
 KYC_MAX_UPLOAD = 5 * 1024 * 1024
-IDENTITY_HASH_KEY = os.environ.get("IDENTITY_HASH_KEY", "")   # keep separate from SECRET_KEY
 
-# Uploads up to 5 MB are held in memory, so Django never moves a temp file with a lock
-# (Android shared storage does not support file locking).
-FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
-FILE_UPLOAD_HANDLERS = ["django.core.files.uploadhandler.MemoryFileUploadHandler"]
+
+if DEBUG:
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+    FILE_UPLOAD_HANDLERS = [
+        "django.core.files.uploadhandler.MemoryFileUploadHandler"
+    ]
+else:
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 2.5 * 1024 * 1024
+
+
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 8 * 1024 * 1024
 
-PRIVATE_MEDIA_ROOT = os.path.expanduser("~/private_media")
 
 CARDS_ISSUER = "cards.issuer.MockIssuer"
-CARDS_WEBHOOK_SECRET = os.environ.get("CARDS_WEBHOOK_SECRET", "")   # empty means every webhook is rejected
-CARDS_ALLOW_SIMULATOR = DEBUG                          # the test-purchase page must never exist in production
+
+CARDS_WEBHOOK_SECRET = os.environ.get("CARDS_WEBHOOK_SECRET", "")
+
+CARDS_ALLOW_SIMULATOR = DEBUG
 
 
 CREDIT_MIN_ACCOUNT_AGE_DAYS = int(os.environ.get("CREDIT_MIN_ACCOUNT_AGE_DAYS", "30"))
+
 CREDIT_MIN_BALANCE = os.environ.get("CREDIT_MIN_BALANCE", "10000")
 
 
 """ PAYSTACK """
 CASHIER_PROVIDER = "cashier.providers.paystack.PaystackProvider"
-PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")        # sk_test_... first
+
+PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
+
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
-CASHIER_FALLBACK_EMAIL_DOMAIN = "customers.yourdomain.com"             # a domain you own; phone-only customers have no email
+
+CASHIER_FALLBACK_EMAIL_DOMAIN = "customers.yourdomain.com"
+
 CASHIER_INBOUND_TRANSFERS = False
 
 
-# in TEMPLATES[0]["OPTIONS"]["context_processors"], add:
-#     "notices.context.unread",
+
 WELCOME_BONUS_ENABLED = os.environ.get("WELCOME_BONUS_ENABLED", "1") == "1"
+
 WELCOME_BONUS_AMOUNT = os.environ.get("WELCOME_BONUS_AMOUNT", "200000")
-WELCOME_BONUS_BUDGET = os.environ.get("WELCOME_BONUS_BUDGET", "20000000")   # the most Klosa will ever give away
+
+WELCOME_BONUS_BUDGET = os.environ.get("WELCOME_BONUS_BUDGET", "20000000")
 
 
 
@@ -211,7 +267,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "/static/"
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+PRIVATE_MEDIA_ROOT = Path(
+    os.getenv(
+        "PRIVATE_MEDIA_ROOT",
+        str(BASE_DIR.parent / "klosa_private_media")
+    )
+).expanduser()
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
@@ -239,8 +304,10 @@ MAILERS = {
 # settings.py
 WEBAUTHN_RP_ID = "localhost"                  # production: your domain, e.g. "klosa.bank"
 WEBAUTHN_RP_NAME = "Klosa Bank"
+
 WEBAUTHN_ORIGIN = "http://localhost:8000"     # production: "https://klosa.bank"
 
 KLOSA_BANK_CODE = "999"             # placeholder: use the code your regulator assigns to Klosa
+
 ALLOW_EXTERNAL_TRANSFERS = False    # keep False until a payout provider is connected
 

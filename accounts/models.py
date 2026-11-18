@@ -138,12 +138,12 @@ class BackupCode(models.Model):
     used_at = models.DateTimeField(null=True, blank=True)
 
 
-class IdentityLock(models.Model):
-    """One ID number can belong to one account. Only a keyed hash is stored."""
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    id_hash = models.CharField(max_length=64, unique=True)
-    id_type = models.CharField(max_length=10)
-    created_at = models.DateTimeField(auto_now_add=True)
+#class IdentityLock(models.Model):
+#    """One ID number can belong to one account. Only a keyed hash is stored."""
+#    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+#    id_hash = models.CharField(max_length=64, unique=True)
+#    id_type = models.CharField(max_length=10)
+#    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class RecoveryRequest(models.Model):

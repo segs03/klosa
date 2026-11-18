@@ -1,4 +1,4 @@
-import hashlib
+#import hashlib
 import hmac
 import re
 
@@ -195,44 +195,44 @@ def review_application(application_id, reviewer, decision, reason):
     return app
 
 
-def generate_identity_digest(
-    *,
-    country_code,
-    document_type,
-    normalized_identifier,
-):
-    """
-    Generate a deterministic, keyed digest.
-    The raw identity number is never stored.
-    """
+#def generate_identity_digest(
+#    *,
+#    country_code,
+#    document_type,
+#    normalized_identifier,
+#):
+#    """
+#    Generate a deterministic, keyed digest.
+#    The raw identity number is never stored.
+#    """
 
-    secret = getattr(
-        settings,
-        "KYC_IDENTITY_HMAC_KEY",
-        None,
-    )
+#    secret = getattr(
+#        settings,
+#        "KYC_IDENTITY_HMAC_KEY",
+#        None,
+#    )
 
-    if not secret:
-        raise ValidationError(
-            "KYC identity hashing key is not configured."
-        )
+#    if not secret:
+#        raise ValidationError(
+#            "KYC identity hashing key is not configured."
+#        )
 
-    if not normalized_identifier:
-        raise ValidationError(
-            "An identity reference is required."
-        )
+#    if not normalized_identifier:
+#        raise ValidationError(
+#            "An identity reference is required."
+#        )
 
-    value = "|".join([
-        country_code.strip().upper(),
-        document_type.strip().lower(),
-        normalized_identifier.strip().upper(),
-    ])
+#    value = "|".join([
+#        country_code.strip().upper(),
+#        document_type.strip().lower(),
+#        normalized_identifier.strip().upper(),
+#    ])
 
-    return hmac.new(
-        secret.encode("utf-8"),
-        value.encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
+#    return hmac.new(
+#        secret.encode("utf-8"),
+#        value.encode("utf-8"),
+#        hashlib.sha256,
+#    ).hexdigest()
 
 
 def _check_kyc_reviewer(reviewer):

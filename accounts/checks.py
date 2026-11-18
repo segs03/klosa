@@ -18,7 +18,20 @@ def no_test_features_in_production(app_configs, **kwargs):
     for name in ("SECRET_KEY", "IDENTITY_HASH_KEY"):
         if not getattr(settings, name, ""):
             errors.append(Error(f"{name} is empty.", id="klosa.E003"))
-            
+    
+    for name in (
+    "SECRET_KEY",
+    "IDENTITY_HASH_KEY",
+    "KYC_IDENTITY_HMAC_KEY",
+):
+        if not getattr(settings, name, ""):
+            errors.append(
+            Error(
+                f"{name} is empty.",
+                id="klosa.E003",
+            )
+        )        
+                            
     if getattr(settings, "SMS_BACKEND", "console") == "console":
         errors.append(Error("SMS_BACKEND is the console. Customers will never receive codes.", id="klosa.E004"))
         

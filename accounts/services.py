@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import Account, BackupCode, IdentityLock, CreditAccount, OneTimeCode
+from .models import Account, BackupCode, CreditAccount, OneTimeCode
 
 from .utils import digest, new_code, same
 from beneficiary.models import Beneficiary
@@ -131,17 +131,17 @@ def use_backup_code(user, raw):
 
 
 # ------------------------------------------------------ one ID, one account
-def register_identity(user, id_type, id_number):
-    """Call ONLY after your identity provider confirmed this ID belongs to this person."""
-    if IdentityLock.objects.filter(user=user).exists():
-        raise ValidationError("An ID is already registered for this account.")
-    key = getattr(settings, "IDENTITY_HASH_KEY", "") or None
-    h = digest(id_type.upper(), id_number.strip(), key=key)
-    try:
-        with transaction.atomic():
-            IdentityLock.objects.create(user=user, id_hash=h, id_type=id_type.upper())
-    except IntegrityError:
-        raise ValidationError("This ID is already linked to another account.")
+#def register_identity(user, id_type, id_number):
+#    """Call ONLY after your identity provider confirmed this ID belongs to this person."""
+#    if IdentityLock.objects.filter(user=user).exists():
+#        raise ValidationError("An ID is already registered for this account.")
+#    key = getattr(settings, "IDENTITY_HASH_KEY", "") or None
+#    h = digest(id_type.upper(), id_number.strip(), key=key)
+#    try:
+#        with transaction.atomic():
+#            IdentityLock.objects.create(user=user, id_hash=h, id_type=id_type.upper())
+#    except IntegrityError:
+#        raise ValidationError("This ID is already linked to another account.")
         
         
 class CloseBlocked(Exception):
