@@ -19,6 +19,11 @@ from django.urls import path, include
 
 from django.views.generic import RedirectView
 
+from django.conf import settings
+from accounts.security import healthz
+
+    
+
 
 urlpatterns = [
 path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
@@ -34,6 +39,7 @@ path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
     path("treasury/", include("treasury.urls")),
     path("staff/", include("backoffice.urls")),
     path("notifications/", include("notices.urls")),
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls), 
+    path("healthz/", healthz),
 ]
 

@@ -1,0 +1,10 @@
+MAILTO=ops@bank.example.com
+*/5 * * * * klosa klosa-manage reconcile_bills
+*/5 * * * * klosa klosa-manage reconcile_cashier
+0   * * * * klosa klosa-manage expire_cashouts
+10  0 * * * klosa klosa-manage accrue_savings
+30  0 * * * klosa klosa-manage credit_offers
+0   1 * * * klosa klosa-manage audit_balances
+15  1 * * * klosa klosa-manage liabilities_report
+30  1 * * * klosa klosa-manage clearsessions
+0   2 * * * root /srv/klosa/app/deploy/backup.sh

@@ -8,6 +8,11 @@ from django.utils import timezone
 from .models import (JournalEntry, JournalLine, FundingPeriod,FundingPeriod, Investor, InvestorCapitalEntry, LedgerAccount, InvestorAllocation,
 )
 
+from funding.security import need
+from backoffice.audit import log as audit_log
+
+
+
 
 # Keep these codes aligned with the chart of accounts.
 ACCOUNT_CODES = {
@@ -47,22 +52,20 @@ def add_journal_line(entry, account_key, debit, credit, description):
     )
 
 
+
 def get_open_period(effective_date):
-    try:
-        return FundingPeriod.objects.get(
-            start_date__lte=effective_date,
-            end_date__gte=effective_date,
-            status="open",
-        )
-    except FundingPeriod.DoesNotExist:
-        raise ValidationError(
-            "No open accounting period covers this effective date."
-        )
+    periods = list(FundingPeriod.objects.select_for_update().filter(
+        start_date__lte=effective_date, end_date__gte=effective_date, status="open"))
+    if len(periods) != 1:
+        raise ValidationError("Exactly one open accounting period must cover this date.")
+    return periods[0]
+    
 
 
 @transaction.atomic
 def post_investor_capital_event(
     *,
+    posted_by,
     investor_id,
     entry_type,
     amount,
@@ -72,6 +75,8 @@ def post_investor_capital_event(
     allocation=None,
 ):
     amount = Decimal(str(amount)).quantize(Decimal("0.01"))
+    
+    need(posted_by, "funding.add_investorcapitalentry")
 
     if amount <= Decimal("0.00"):
         raise ValidationError("Amount must be greater than zero.")
@@ -95,6 +100,8 @@ def post_investor_capital_event(
         reference=reference
     ).exists():
         raise ValidationError("This reference has already been used.")
+        
+    audit_log(posted_by, "capital_" + entry_type, reference, str(amount))
 
     period = get_open_period(effective_date)
 

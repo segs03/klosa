@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Staff verification{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0"><div><h1>{% if setup %}Set up verification{% else %}Verify it is you{% endif %}</h1><p>Staff accounts need a second step</p></div></header>
+  {% if setup %}
+  <div class="bl-sum" data-r style="--d:1">
+    <p><span>1</span><b>Install an authenticator app (Google, Microsoft or Aegis)</b></p>
+    <p><span>2</span><b><a href="{{ uri }}" style="color:#00E5FF">Tap here to add Klosa to it</a></b></p>
+    <p><span>Or key</span><b id="tfKey" style="letter-spacing:1px">{{ secret }}</b></p>
+  </div>
+  <p class="bl-hint">Never share this key. Anyone with it can pass this step.</p>
+  {% endif %}
+  {% if error %}<p class="bl-err" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" style="margin-top:16px">
+    {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+    <label class="bl-lbl" for="tfCode">6-digit code from the app</label>
+    <input class="bl-in" id="tfCode" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" autofocus required
+           style="text-align:center;font-size:26px;letter-spacing:10px">
+    <button class="bl-btn" type="submit">{% if setup %}Confirm and continue{% else %}Verify{% endif %}</button>
+  </form>
+</section>
+{% endblock %}

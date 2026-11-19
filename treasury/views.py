@@ -62,8 +62,7 @@ def deposit_info(request):
     provider = str(getattr(settings, "CASHIER_PROVIDER", ""))
     return render(request, "treasury/deposit_info.html", {
         "account": account, "min": rules.CASHIN_MIN,
-        "card_on": "mock" not in provider.lower() or settings.DEBUG,
-        "transfer_on": getattr(settings, "CASHIER_INBOUND_TRANSFERS", False)})
+         "card_on": bool(settings.FEATURES.get("cashier")) and ("mock" not in provider.lower() or settings.DEBUG),})
 
 
 @login_required

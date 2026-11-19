@@ -10,6 +10,9 @@ ZERO = Decimal("0.00")
 HUNDRED = Decimal("100.00")
 
 
+
+
+
 class Investor(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -55,11 +58,15 @@ class CapitalContribution(models.Model):
     related_name="verified_capital_contributions",
 )
 
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="recorded_capital_contributions")
+
     verified_at = models.DateTimeField(null=True, blank=True)
     journal_reference = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        permissions = [("verify_capitalcontribution", "Can verify capital contributions")]
         ordering = ["-received_at"]
         constraints = [
             models.CheckConstraint(
@@ -210,6 +217,13 @@ class FundingPeriod(models.Model):
                 name="funding_period_dates_valid",
             ),
         ]
+        
+    def clean(self):
+        super().clean()
+        if self.start_date and self.end_date:
+            clash = FundingPeriod.objects.filter(start_date__lte=self.end_date, end_date__gte=self.start_date).exclude(pk=self.pk)
+            if clash.exists():
+                raise ValidationError("This period overlaps another period.")
 
     def __str__(self):
         return f"{self.start_date:%B %Y}"
@@ -275,6 +289,9 @@ class InvestorAllocation(models.Model):
     on_delete=models.PROTECT,
     related_name="approved_investor_allocations",
 )
+
+    proposed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="proposed_investor_allocations")
 
     approved_at = models.DateTimeField(null=True, blank=True)
     
@@ -342,6 +359,7 @@ class InvestorAllocation(models.Model):
             "approve_investorallocation",
             "Can approve investor allocations",
         ),
+        ("propose_investorallocation", "Can propose investor allocations"),
     ]
 
 
@@ -584,20 +602,9 @@ class InvestorCapitalEntry(models.Model):
 
     class Meta:
         ordering = ["effective_date", "created_at"]
-
-        constraints = [
-            models.UniqueConstraint(
-            fields=["allocation"],
-            condition=Q(allocation__isnull=False),
-            name="unique_capital_entry_per_allocation",
-        ),
-    ]
-
-    indexes = [
-        models.Index(
-            fields=["investor", "effective_date"],
-            name="investor_capital_date_idx",
-        ),
+        constraints = [models.UniqueConstraint(fields=["allocation"], condition=Q(allocation__isnull=False),
+                                               name="unique_capital_entry_per_allocation")]
+        indexes = [models.Index(fields=["investor", "effective_date"], name="investor_capital_date_idx")
     ]
 
     def __str__(self):

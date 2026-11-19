@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views, passkey, onboarding, recovery
-from . import kyc_views
+from . import kyc_views, twofactor
+
 
 app_name = "accounts"
 
@@ -58,4 +59,5 @@ path("close/", views.close_account_view, name="close_account"),
     path("verify/staff/", kyc_views.staff_list, name="kyc_staff"),
     path("verify/staff/<int:pk>/", kyc_views.staff_review, name="kyc_review"),
     path("verify/staff/<int:pk>/document/", kyc_views.staff_document, name="kyc_document"),
+    path("2fa/", twofactor.twofa, name="twofa"),
 ]

@@ -32,28 +32,3 @@
   <p class="bl-hint">Your balance updates once a second staff member approves it.</p>
 </section>
 {% endblock %}
-
-
-
-
-
-
-
-
-{% comment %}
-{% extends 'base.html' %}
-{% block title %}Add cash - Klosa Bank{% endblock %}
-{% block content %}
-{% include "biller/_style.html" %}
-<section class="bl">
-  <header class="bl-head"><a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
-    <div><h1>Add cash</h1><p>Deposit at a Klosa branch or agent</p></div></header>
-  <div class="bl-sum">
-    <p><span>Account number</span><b>{{ account.account_number }}</b></p>
-    <p><span>Account name</span><b>{{ request.user.get_full_name|default:"Klosa customer" }}</b></p>
-    <p><span>Smallest deposit</span><b>₦{{ min|floatformat:0 }}</b></p>
-  </div>
-  <p class="bl-hint">Give the teller your account number and the cash. Your balance updates as soon as a second staff member approves it.</p>
-</section>
-{% endblock %}
-{% endcomment %}

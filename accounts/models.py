@@ -138,6 +138,23 @@ class BackupCode(models.Model):
     used_at = models.DateTimeField(null=True, blank=True)
 
 
+class StaffTOTP(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="totp")
+    secret_enc = models.BinaryField()
+    confirmed = models.BooleanField(default=False)
+    last_step = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def create_for(cls, user):
+        from . import totp
+        return cls.objects.create(user=user, secret_enc=totp.encrypt(totp.new_secret()))
+
+    def secret(self):
+        from . import totp
+        return totp.decrypt(bytes(self.secret_enc))
+
+
 #class IdentityLock(models.Model):
 #    """One ID number can belong to one account. Only a keyed hash is stored."""
 #    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)

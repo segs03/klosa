@@ -30,8 +30,6 @@ def period_list_view(request):
     )
 
 
-
-
 @login_required
 @permission_required(
     "funding.reopen_fundingperiod",
@@ -58,8 +56,10 @@ def reopen_period_view(request, period_id):
                 )
                 return redirect("funding:periods")
 
-            except (ValidationError, PermissionDenied) as error:
-                messages.error(request, str(error))
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
+            except PermissionDenied as error:
+                messages.error(request, str(error) or "Not allowed.")
 
     else:
         form = PeriodReopeningForm()

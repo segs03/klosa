@@ -9,7 +9,9 @@ class ForcePasswordChangeMiddleware:
     def __call__(self, request):
         user = request.user
         if user.is_authenticated and getattr(user, "must_change_password", False):
-            allowed = {reverse("accounts:password_change"), reverse("accounts:logout")}
+            allowed = {reverse("accounts:password_change"), reverse("accounts:logout"),
+ reverse("accounts:twofa"),
+            }
             if request.path not in allowed and not request.path.startswith("/static/"):
                 return redirect("accounts:password_change")
         return self.get_response(request)

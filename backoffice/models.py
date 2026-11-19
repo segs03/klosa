@@ -17,3 +17,17 @@ class AuditLog(models.Model):
             ("view_operations", "Can see stuck payments"),
             ("view_audit", "Can read the audit log"),
         ]
+        
+        
+class SecurityEvent(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    username = models.CharField(max_length=150, blank=True)
+    event = models.CharField(max_length=40)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    agent = models.CharField(max_length=200, blank=True)
+    detail = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["event", "created_at"]), models.Index(fields=["ip", "created_at"])]

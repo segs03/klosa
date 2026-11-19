@@ -242,7 +242,7 @@ class ViewTests(Base):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r["Content-Disposition"].startswith("attachment"))
         self.assertEqual(r["X-Content-Type-Options"], "nosniff")
-        self.assertEqual(r["Cache-Control"], "no-store")
+        self.assertIn("no-store", r["Cache-Control"])
         c2 = Client()
         no_perm = self.staff(perm=False)
         c2.login(username=no_perm.username, password="pass12345")

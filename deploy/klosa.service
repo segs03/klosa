@@ -1,0 +1,19 @@
+[Unit]
+Description=Klosa Bank
+After=network.target postgresql.service redis-server.service
+
+[Service]
+User=klosa
+Group=klosa
+WorkingDirectory=/srv/klosa/app
+EnvironmentFile=/etc/klosa/env
+RuntimeDirectory=klosa
+ExecStart=/srv/klosa/venv/bin/gunicorn bank.wsgi -c /srv/klosa/app/deploy/gunicorn.conf.py
+Restart=always
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/klosa/private_media /run/klosa
+
+[Install]
+WantedBy=multi-user.target

@@ -10,4 +10,9 @@ ROLES = {
     "Teller": ["record_cash", "pay_cashout", "view_cashrequest", "view_cashout"],
     "Cash approver": ["approve_cash", "view_cashrequest", "view_cashout"],
     "Auditor": ["view_audit", "view_customers", "view_operations"],
+        "Finance": ["view_fundingperiod", "review_fundingperiod", "add_capitalcontribution", "view_capitalcontribution",
+                "view_investorallocation", "propose_investorallocation", "add_investorcapitalentry"],
+    "Finance approver": ["verify_capitalcontribution", "approve_investorallocation", "close_fundingperiod",
+                         "view_capitalcontribution", "view_investorallocation", "view_fundingperiod"],
+    "Finance head": ["reopen_fundingperiod", "view_fundingperiod"],
 }
