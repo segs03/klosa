@@ -20,11 +20,12 @@ from decimal import Decimal
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").strip().lower()
+DJANGO_ENV = os.environ.get(
+    "DJANGO_ENV", "development"
+).strip().lower()
+
 TESTING = "test" in sys.argv
 
-# Development uses the project's .env.
-# Production uses /etc/klosa/env.
 if DJANGO_ENV == "production":
     load_dotenv("/etc/klosa/env", override=False)
 else:
@@ -129,41 +130,42 @@ FACE_PROVIDER = "accounts.face.ManualReview"      # a provider class with assess
 # 5. DATABASE
 # ============================================================
 
-if env("DATABASE_URL"):
-    DATABASES = {"default": dj_database_url.parse(env("DATABASE_URL"), conn_max_age=60, ssl_require=True)}
-_host = env("RENDER_EXTERNAL_HOSTNAME")
-if _host:
-    ALLOWED_HOSTS.append(_host)
-    CSRF_TRUSTED_ORIGINS.append("https://" + _host)
-    SITE_URL = "https://" + _host
+DATABASE_URL = env("DATABASE_URL")
 
-STORAGES = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-            "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"}}
-TRUSTED_PROXY_HOPS = int(env("TRUSTED_PROXY_HOPS", "0"))
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME", "klosadb"),
-        "USER": env("DB_USER", "klosa"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST", "127.0.0.1"),
-        "PORT": env("DB_PORT", "5432"),
-
-        "CONN_MAX_AGE": (
-            0 if TESTING
-            else int(env("DB_CONN_MAX_AGE", "60"))
-        ),
-
-        "CONN_HEALTH_CHECKS": True,
-
-        "OPTIONS": {
-            "sslmode": env("DB_SSLMODE", "prefer"),
-        },
+if DATABASE_URL:
+    DATABASES = {
+        "default": {
+            **dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=0 if TESTING else 60,
+                conn_health_checks=True,
+                ssl_require=True,
+            ),
+        }
     }
-}
 
+elif DEBUG or TESTING:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env("DB_NAME", "klosadb"),
+            "USER": env("DB_USER", "klosa"),
+            "PASSWORD": env("DB_PASSWORD"),
+            "HOST": env("DB_HOST", "127.0.0.1"),
+            "PORT": env("DB_PORT", "5432"),
+            "CONN_MAX_AGE": 0 if TESTING else 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "sslmode": env("DB_SSLMODE", "prefer"),
+            },
+        }
+    }
 
+else:
+    raise ImproperlyConfigured(
+        "DATABASE_URL must be configured."
+    )
+    
 # ============================================================
 # 6. CACHE AND SESSIONS
 # ============================================================
@@ -279,8 +281,12 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 8 * 1024 * 1024
 PRIVATE_MEDIA_ROOT = Path(
     env(
         "PRIVATE_MEDIA_ROOT",
-        str(BASE_DIR.parent / "klosa_private_media"),
+        str(BASE_DIR.parent / "private_media"),
     )
+).expanduser()
+
+MEDIA_ROOT = Path(
+    env("MEDIA_ROOT", str(BASE_DIR / "media"))
 ).expanduser()
 
 
@@ -577,5 +583,3 @@ LOGGING = {
 
 
 MEDIA_URL = "/media/"
-
-MEDIA_ROOT = "/data/data/com.termux/files/home/klosa_media"
