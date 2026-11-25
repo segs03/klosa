@@ -10,7 +10,6 @@ python scripts/fetch_face_models.py || echo "WARNING: face models were not downl
 python manage.py collectstatic --noinput
 python manage.py migrate --noinput
 python manage.py createcachetable          # rate-limit counters shared by all server processes
-python manage.py seed_mvp                  # credit policies and staff groups; never overwrites
 
 # First admin. Needs DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, DJANGO_SUPERUSER_PASSWORD.
 # Harmless when the admin already exists.
