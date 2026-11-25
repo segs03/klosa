@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Review face check{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% url 'accounts:face_queue' as back %}
+  {% include "backoffice/_head.html" with title="Face check" sub=check.get_status_display back=back %}
+  <div class="bl-sum">
+  {% if check.score is not None %}<p><span>Match score</span><b>{{ check.score }} ({{ check.provider_ref }})</b></p>{% endif %}
+  <p><span>Customer</span><b>{{ check.user.get_full_name|default:"Klosa customer" }}</b></p>
+    <p><span>Prompts</span><b>{{ labels|join:" · " }}</b></p>
+    {% if check.reason %}<p><span>Decision note</span><b>{{ check.reason }}</b></p>{% endif %}</div>
+  <h2>Captured frames, in order</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+    {% for f in frames %}<a href="{% url 'accounts:face_image' check.pk f.step %}" target="_blank" rel="noopener"><img src="{% url 'accounts:face_image' check.pk f.step %}" alt="Frame {{ forloop.counter }}" style="width:100%;border-radius:12px"></a>{% endfor %}
+  </div>
+  {% if doc %}<a class="bl-btn ghost" href="{% url 'accounts:kyc_document' doc.pk %}" style="margin-top:14px">Open the ID document</a>{% endif %}
+  {% if can_decide %}
+  <form method="post" style="margin-top:14px">{% csrf_token %}
+    <label class="bl-lbl" for="fr">Reason (shown to the customer if you fail it)</label><input class="bl-in" id="fr" name="reason" maxlength="300">
+    <button class="bl-btn" name="decision" value="passed" type="submit">Same person: pass</button>
+    <button class="bl-btn ghost" name="decision" value="failed" type="submit">Does not match: fail</button></form>
+  {% elif check.user_id == request.user.pk %}<p class="bl-msg">This is your own face check. A colleague must review it.</p>{% endif %}
+</section>
+{% endblock %}

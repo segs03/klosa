@@ -12,7 +12,7 @@ POSITIVE = [MinValueValidator(Decimal("0.01"))]
 class Deposit(models.Model):
     STATUS = [("pending", "Pending"), ("completed", "Completed"), ("failed", "Failed"),
               ("expired", "Expired"), ("review", "Needs review")]
-    METHODS = [("card", "Card"), ("transfer", "Bank transfer")]
+    METHODS = [("card", "Card"), ("transfer", "Bank transfer"), ("bank", "Bank account")]
 
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="deposits")
     method = models.CharField(max_length=10, choices=METHODS, default="card")

@@ -1,35 +1,55 @@
 
+
+
+
 {% extends 'base.html' %}
-{% load static %}
+{% block title %}Recipients - Klosa Bank{% endblock %}
 
-{% block title %} Beneficiary | Klosa {% endblock %}
-{% block extra_css %} 
-<link rel="stylesheet" href="{% static 'beneficiary/css/style.css'%} ">
-{% endblock %}
-
-{% block content %} 
-{% for beneficiary in beneficiaries %}
-    <div class="beneficiary-item">
-        <div class="beneficiary-info">
-            <h4>{{ beneficiary.name }}</h4>
-            <p>{{ beneficiary.bank_name }}</p>
-            <p>{{ beneficiary.account_number }}</p>
-        </div>
-
-        <form
-            method="post"
-            action="{% url 'beneficiary:delete' beneficiary.pk %}"
-            onsubmit="return confirm('Delete this beneficiary?');"
-        >
-            {% csrf_token %}
-            <button type="submit" class="delete-beneficiary">
-                <i class="fa-solid fa-trash"></i>
-                Delete
-            </button>
-        </form>
+{% block content %}
+{% include "biller/_style.html" %}
+<style>
+  .rc-add{margin-left:auto;display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:0 16px;border-radius:99px;font-size:14px;font-weight:700;color:#061B3D;background:linear-gradient(135deg,#00E5FF,#5FF1FF)}
+  .rc{display:flex;align-items:center;gap:14px;width:100%;padding:12px 6px;border:0;border-bottom:1px solid rgba(255,255,255,.08);border-radius:16px;background:none;color:#fff;font:inherit;text-align:left;cursor:pointer;transition:background .2s;animation:blUp .45s calc(var(--d,0)*45ms) var(--ease) both}
+  .rc:active{background:rgba(255,255,255,.06)}
+  .rc-av{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;font-size:18px;font-weight:700;color:#061B3D;background:linear-gradient(135deg,#5FF1FF,#00E5FF)}
+  .rc:nth-child(4n+2) .rc-av{background:linear-gradient(135deg,#FFB36B,#FF7EB6)}
+  .rc:nth-child(4n+3) .rc-av{background:linear-gradient(135deg,#B48CFF,#6E8BFF)}
+  .rc:nth-child(4n) .rc-av{background:linear-gradient(135deg,#7BF0C3,#35E0A1)}
+  .rc-txt{flex:1;min-width:0}.rc-txt b{display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rc-txt small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+  .rc-go{flex:none;width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .rc-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:40px 16px;text-align:center;color:var(--muted);border-radius:22px;border:1px dashed rgba(0,229,255,.35);background:rgba(11,46,110,.4)}
+  .rc-empty i{font-size:34px;color:var(--cyan)}
+</style>
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Recipients</h1><p>{{ total }} of {{ limit }} saved</p></div>
+    <a class="rc-add" href="{% url 'beneficiary:add' %}"><i class="fa-solid fa-plus"></i> Add</a>
+  </header>
+  {% if total %}
+  <form method="get" style="margin-bottom:8px">
+    <input class="bl-in" name="q" value="{{ q }}" placeholder="Search name, bank or last digits" autocomplete="off" style="height:46px;font-size:15px">
+  </form>
+  {% endif %}
+  {% for b in beneficiaries %}
+    <button type="button" class="rc" style="--d:{{ forloop.counter0 }}"
+      data-id="{{ b.pk }}" data-name="{{ b.name }}" data-bank="{{ b.bank_name }}"
+      data-last4="{{ b.account_number|slice:'-4:' }}" data-acct="{{ b.account_number }}"
+      data-klosa="{% if b.bank_code == klosa_code %}1{% endif %}" data-del="{% url 'beneficiary:delete' b.pk %}">
+      <span class="rc-av">{{ b.name|first|upper }}</span>
+      <span class="rc-txt"><b>{{ b.name }}</b><small>{{ b.bank_name }} ••••{{ b.account_number|slice:"-4:" }}</small></span>
+      <svg class="rc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  {% empty %}
+    <div class="rc-empty" data-r style="--d:1">
+      <i class="fa-solid fa-user-plus"></i>
+      <b style="color:#fff">{% if q %}No match for "{{ q }}"{% else %}No recipients yet{% endif %}</b>
+      <span>Save the people you pay often, and send to them in two taps.</span>
+      {% if not q %}<a class="bl-btn" style="width:auto;padding:0 22px" href="{% url 'beneficiary:add' %}">Add a recipient</a>{% endif %}
     </div>
-{% empty %}
-    <p>No saved beneficiaries yet.</p>
-{% endfor %}
-
+  {% endfor %}
+</section>
+{% include "beneficiary/_sheet.html" %}
 {% endblock %}
+

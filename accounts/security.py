@@ -11,6 +11,7 @@ from django.urls import Resolver404, resolve, reverse
 GATES = {"biller": "bills", "cashier": "cashier", "cards": "cards"}
 OPEN_PREFIXES = ("/accounts/login", "/accounts/logout", "/accounts/2fa/", "/static/", "/healthz/")
 CSP = ("default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; "
+"media-src 'self' blob:;"
        "script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; "
        "base-uri 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'")
 
@@ -54,7 +55,7 @@ class SecurityHeadersMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         response.headers.setdefault("Content-Security-Policy", CSP)
-        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+        response.headers.setdefault("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()")
         user = getattr(request, "user", None)
         if user is not None and user.is_authenticated and not request.path.startswith("/static/"):
             response.headers["Cache-Control"] = "no-store, private"      # the back button must not show a balance

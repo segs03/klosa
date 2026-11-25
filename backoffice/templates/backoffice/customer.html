@@ -12,7 +12,7 @@
     {% if account %}
       <p><span>Account</span><b>{{ account.account_number }}</b></p>
       <p><span>Balance</span><b>₦{{ account.balance|floatformat:2 }}</b></p>
-      <p><span>Tier</span><b>{{ account.kyc_tier }}</b></p>
+      <p><span>Tier</span><b>{{ account.tier }}</b></p>
       <p><span>PIN</span><b>{% if account.pin_hash %}Set{% else %}Not set{% endif %}{% if account.locked_until %} · locked until {{ account.locked_until|date:"H:i" }}{% endif %}</b></p>
       {% if account.closed_at %}<p><span>Closed</span><b>{{ account.closed_at|date:"d M Y" }}</b></p>{% endif %}
       <p><span>Savings</span><b>₦{{ saved|floatformat:2 }}</b></p>

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 
 from accounts.services import limits_for
 from beneficiary.models import Beneficiary
+from cards.models import BankCard                          # ASSUMPTION: app label
 from django.conf import settings
 
 
@@ -37,6 +38,9 @@ class TransferForm(forms.Form):
         widget=forms.TextInput(attrs={
             "class": "form-control", "placeholder": "What's this transfer for?"}))
 
+    # "balance" or the id of one of the sender's own active cards. Choices are set in __init__.
+    pay_from = forms.ChoiceField(label="Pay from", required=False, choices=[("balance", "Account balance")])
+
     pin = forms.CharField(
         label="Transaction PIN", min_length=4, max_length=4, strip=False,
         widget=forms.PasswordInput(attrs={
@@ -47,9 +51,21 @@ class TransferForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.account = account
         self.used_today = Decimal(str(used_today))
+        self.card_options = []                              # used by the template
+        self.card_types = {}
         if account:
             self.fields["beneficiary"].queryset = Beneficiary.objects.filter(
                 owner=account.user, is_active=True).order_by("name")
+            # Only this customer's own active cards can ever be chosen.
+            cards = BankCard.objects.filter(account=account, status="active").order_by("card_type", "-created_at")
+            for c in cards:
+                value = str(c.pk)
+                self.card_types[value] = c.card_type
+                self.card_options.append({
+                    "value": value, "type": c.card_type,
+                    "label": f"{c.get_card_type_display()} •••• {c.last_four}"})
+            self.fields["pay_from"].choices = (
+                [("balance", "Account balance")] + [(o["value"], o["label"]) for o in self.card_options])
 
     def clean_account_number(self):
         number = self.cleaned_data["account_number"].strip()
@@ -85,6 +101,9 @@ class TransferForm(forms.Form):
         if ben and ben.bank_code != settings.KLOSA_BANK_CODE:
             self.add_error("beneficiary", "Transfers to other banks are not available yet.")
 
+        source = data.get("pay_from") or "balance"
+        uses_credit = self.card_types.get(source) == "credit"
+
         amount = data.get("amount")
         if amount is not None:
             lim = limits_for(self.account)
@@ -95,7 +114,9 @@ class TransferForm(forms.Form):
                 left = max(lim["daily"] - self.used_today, Decimal("0.00"))
                 self.add_error("amount",
                     f"Daily limit reached. You can send ₦{left:,.2f} more today.")
-            elif amount > self.account.balance:
+            elif not uses_credit and amount > self.account.balance:
+                # balance and debit card both spend the account balance;
+                # credit cards are checked against the credit limit in the service
                 self.add_error("amount", "Insufficient balance.")
         return data
 

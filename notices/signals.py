@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.kyc_services import DOC_TYPES, verified_types
-from accounts.models import Account, CreditAccount, CreditApplication, KYCApplication
+from accounts.models import Account, CreditAccount, CreditApplication, KYCApplication, FaceCheck
 from biller.models import BillPayment
 from cards.models import BankCard, CardOrder
 from cashier.models import Deposit, Withdrawal
@@ -15,6 +15,9 @@ from transactions.models import CreditTransaction, Transaction
 from transfers.models import MoneyRequest
 from treasury.models import CashOut, CashRequest
 from .services import notify_user
+
+from funding.models import ContributionIntent
+
 
 User = get_user_model()
 
@@ -190,6 +193,34 @@ def _welcome(u, old, new, created):
         notify_user(u, "Welcome to Klosa", "Your phone is verified. Set your PIN and add fingerprint login.", "success", reverse("accounts:onboarding"))
 
 
+def _face(c, old, new, created):
+    link = reverse("accounts:face_start")
+    if new == "review":
+        notify_user(c.user, "Face check received", "We are comparing your photos with your ID.", "info", link)
+    elif new == "passed":
+        notify_user(c.user, "Face verified", "Your face check passed.", "success", link)
+    elif new == "failed":
+        notify_user(c.user, "Face check not accepted", c.reason or "Open the page for details.", "warning", link)
+
+
+def _tier(acc, old, new, created):
+        if not created and old is not None and new > old:
+            notify_user(acc.user, "Tier upgraded", f"You are now Tier {new + 1}. Your limits are higher.", "success", reverse("accounts:upgrade"))
+            
+            
+def _intent(i, old, new, created):
+    link = reverse("funding:my_deposits")
+    if new == "received":
+        notify_user(i.investor.user, "Deposit received", f"Your {naira(i.amount)} deposit was received and is being verified.", "success", link)
+    elif new == "rejected":
+        notify_user(i.investor.user, "Deposit not accepted", i.note or "Open the page for details.", "warning", link)
+
+
+
+
+watch(ContributionIntent, "status", _intent)
+watch(Account, "kyc_tier", _tier)
+watch(FaceCheck, "status", _face)
 watch(KYCApplication, "status", _kyc)
 watch(CreditApplication, "status", _credit_app)
 watch(CardOrder, "status", _card_order)

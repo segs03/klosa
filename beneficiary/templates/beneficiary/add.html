@@ -2,40 +2,89 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %} Add Beneficiary {% endblock %}
+{% block title %}Add Beneficiary | Klosa{% endblock %}
 
-{% block extra_css %} 
+{% block extra_css%} 
 <link rel="stylesheet" href="{% static 'beneficiary/css/style.css' %}">
 {% endblock %}
 
 {% block content %}
-<main class="main col">
-<header class="row gap center">
-<a href="javascrip:history.back()" arial-label="Go back" class="back"><i class="fa-solid fa-chevron-left text-lg"></i></a>
-<h1 class="text-lg">Add Beneficiary</h1>
-</header>
-<div class="panel ">
-<form method="post" class="col gap text-lg">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit" class="btn text-md center">Add beneficiary</button>
-</form>
-<a href="{% url 'beneficiary:list' %}"> manage existing beneficiaries </a>
-</div>
+
+<main class=""  id="beneficiary-add-page">
+
+    <header class="bn-head" data-bn style="--d:0">
+        <a href="{% url 'beneficiary:list' %}" class="bn-back" aria-label="Go back">
+            <i class="fa-solid fa-chevron-left"></i>
+        </a>
+
+        <div>
+            <h2>Add beneficiary</h2>
+            <p>Save an account for future payments</p>
+        </div>
+    </header>
+
+    <section class="bn-form-hero" data-bn style="--d:1">
+        <div class="bn-hero-icon">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <h3>New recipient</h3>
+        <p>Enter the recipient's bank and account details carefully.</p>
+    </section>
+
+    <section class="bn-form-card" data-bn style="--d:2">
+        <form method="post" class="bn-form" id="bnAddForm">
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            {{ form.as_p }}
+
+            <button type="submit" class="bn-submit">
+                <i class="fa-solid fa-user-plus"></i>
+                Save beneficiary
+            </button>
+        </form>
+    </section>
+
+    <a href="{% url 'beneficiary:list' %}" class="bn-manage-link" data-bn style="--d:3">
+        <i class="fa-solid fa-users"></i>
+        Manage existing beneficiaries
+    </a>
+
+</main>
+
 <script>
 (() => {
-  const bank = document.getElementById("id_bank_name");
-  const name = document.getElementById("id_name");
-  if (!bank || !name) return;
-  const box = name.closest(".form-group") || name.parentElement;
-  const sync = () => {
-    const klosa = bank.value === "Klosa Bank";
-    box.style.display = klosa ? "none" : "";
-    name.required = !klosa;
-  };
-  bank.addEventListener("change", sync);
-  sync();
+    const root = document.getElementById("beneficiary-add-page");
+    if (!root) return;
+
+    const bank = root.querySelector("#id_bank_name");
+    const name = root.querySelector("#id_name");
+
+    if (bank && name) {
+        const field = name.closest("p") || name.parentElement;
+
+        const sync = () => {
+            const isKlosa = bank.value === "Klosa Bank";
+
+            field.hidden = isKlosa;
+            name.required = !isKlosa;
+
+            if (isKlosa) name.value = "";
+        };
+
+        bank.addEventListener("change", sync);
+        sync();
+    }
+
+    const form = root.querySelector("#bnAddForm");
+    form?.addEventListener("submit", () => {
+        const button = form.querySelector(".bn-submit");
+        if (!button) return;
+
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    });
 })();
 </script>
-</main>
 {% endblock %}

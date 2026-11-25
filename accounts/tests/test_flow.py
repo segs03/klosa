@@ -55,7 +55,7 @@ class VerifyPageTests(TestCase):
         doc(self.u, "nin")
         r = self.c.get(self.url)
         self.assertEqual(r.context["next_type"], "bvn")
-        self.assertEqual([s["state"] for s in r.context["steps"]], ["done", "todo"])
+        self.assertEqual([s["state"] for s in r.context["steps"]], ["todo", "done", "todo"])
 
     def test_when_more_information_is_needed_the_reason_and_the_form_show(self):
         a = doc(self.u, "nin", "additional_info")

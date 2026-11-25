@@ -1,5 +1,6 @@
 from django.urls import path
 from funding import views
+from . import views_contrib
 
 app_name = "funding"
 
@@ -14,4 +15,8 @@ urlpatterns = [
         views.reopen_period_view,
         name="reopen_period",
     ),
+    
+    path("my-deposits/", views_contrib.my_deposits, name="my_deposits"),
+    path("intents/", views_contrib.intents_queue, name="intents"),
+    path("contributions/", views_contrib.contributions_queue, name="contributions"),
 ]

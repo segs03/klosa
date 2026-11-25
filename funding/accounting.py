@@ -22,6 +22,9 @@ ACCOUNT_CODES = {
     "retained_allocations": "2200",
     "retained_earnings": "3000",
     "loss_clearing": "3100",
+        "customer_deposits": "2300",
+    "bonus_expense": "5200",
+    "interest_expense": "5300",
 }
 
 CAPITAL_INCREASE = {"contribution", "reinvestment"}

@@ -1,304 +1,360 @@
+/* Klosa money requests page */
+#money-requests-page {
+  --mr-bg: #071a38;
+  --mr-card: #102e5c;
+  --mr-cyan: #42d7e8;
+  --mr-text: #f5f8ff;
+  --mr-muted: #a8bad4;
+  --mr-border: rgba(255, 255, 255, .09);
 
-
-*{
-font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 18px 16px 32px;
+  color: var(--mr-text);
+  background: var(--mr-bg);
+  overflow-x: clip;
 }
 
-body{
-padding: 0;
-margin: 0;
-box-sizing: border-box;
-background: #061B3D;
+#money-requests-page *,
+#money-requests-page *::before,
+#money-requests-page *::after {
+  box-sizing: border-box;
 }
 
-.main{
-height: 100dvh;
-font-weight: 400;
+#money-requests-page .mr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-h1,h2,h3,h4{
-font-weight: 600;
-margin: 0;
-padding: 0;
-}
-
-p, ul{
-padding: 0;
-margin: 0;
-}
-
-a{
-text-decoration: none;
-}
-
-.img-fluid-sm{
-width: 40px;
-height: 40px;
-}
-
-.img-fluid-sm img{
-width: 100%;
-height: 100%;
-border-radius: 50%;
-}
-
-.mt{
-margin: 13px 0;
-}
-
-.mt-sm{
-margin: 10px 0 0 0;
-}
-
-.title{
-font-size: 16px;
-}
-
-.text{
-font-size: 14px;
-}
-
-.text-sm{
-font-weight: 400;
-font-size: 12px;
-}
-
-.top{
-padding:0 15px;
-font-size: 14px;
-color: #fff;
-}
-
-.top .back{
-text-decoration: none;
-font-size: 18px;
-color: #fff;
-}
-
-.row{
-display: flex;
-flex-direction: row;
-}
-
-.col{
-display: flex;
-flex-direction: column;
-}
-
-.center{
-align-items: center;
-}
-
-.flex-start{
-display: flex;
-gap: 25px;
-}
-
-.space-btw{
-justify-content: space-between;
-}
-
-.space-even{
-justify-content: space-evenly;
-}
-
-.gap{
-gap: 8px;
-}
-
-.gap-sm{
-gap: 6px;
-}
-
-.gap-md{
-gap: 10px;
-}
-
-.gap-lg{
-gap: 12px;
-}
-
-.radius{
-border-radius: 10px;
-}
-
-.radius-md{
-border-radius: 15px;
-}
-
-.radius-lg{
-border-radius: 20px;
-}
-
-.radius-round{
-border-radius: 50%;
-}
-
-.radius-tr-tl{
-border-radius: 12px 12px 0 0;
-}
-
-.fa {
-font-size: 14px;
-}
-
-.fa-md{
-font-size: 16px;
-}
-
-.fa-lg{
-font-size: 22px;
-}
-
-.panel{
-background-color: #fff;
-flex:1;
-padding: 12px;
-color: #061B3D;
-}
-
-
-.section-label, .wallet-info{
-font-size: 16px;
-font-weight: 600;
-margin: 5px 0;
-}
-
-.select-card{
-background-color: #eee;
-margin: 8px 0;
-padding: 10px 0;
-}
-
-.wallet-card{
-padding: 8px;
-}
-
-.recipient-card{
-padding:  8px;
-}
-
-.wallet-icon, .recipient-icon{
-background-color: #007BFF;
-color: #fff;
-display: flex;
-justify-content: center;
-width: 30px;
-height: 30px;
-}
-
-.currency {
-    border: none;
-    outline: none;
-    padding: 10px; 
-    width: fit-content;
-    font-size: 14px;
-    box-sizing: border-box;
-    background-color: #ecefef;
-}
-
-.form-control {
-    display: flex;
-    padding: 10px;
-    border-radius: 15px;
-    border: none;
-    font-size: 14px; 
-    position: relative;
-    flex: 1;
-    outline: none;
-    background-color: #ecefef;
-}
-
-.select{
-width: 80%;
-}
-
-.note-field {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    resize: vertical;
-    height: 60px;
-}
-
-.quick-amounts{
-display: grid;
-grid-template-columns: repeat(4, 1fr);
-gap: 5px;
-}
-
-.quick-amounts button{
-padding: 8px;
-border-radius: 15px;
-border: none;
-font-size: 14px;
-font-weight: 600;
-margin: 8px 0 0 0;
-}
-
-.continue-btn{
-background-color: #007BFF;
-color: #fff;
-width: 90%;
-padding: 10px; 
-font-size: 16px;
-border: none;
-box-sizing: border-box;
-font-weight: 700;
-bottom: 10px;
-position: fixed;
-justify-content: center;
-align-self: center;
-}
-
-.send-request-btn{
-display: flex;
-background-color: #007BFF;
-color: #fff;
-width: 100%;
-padding: 10px;
-font-size: 16px;
-border: none;
-justify-self: center;
-justify-content: center;
-}
-
-.status{
-height: 10px;
-width: 10px;
-border-radius: 20px;
-background: orange;
-}
-
-.scroll{
-height: 130px;
-overflow: scroll;
-background-color: red;
-}
-
-
-#confirmSheet { 
-border: 0; 
-border-radius: 20px; 
-padding: 20px; 
-width: min(92vw, 400px);
-background: #0B2E6E; 
-color: #fff;
-}
-
-#confirmSheet::backdrop { background: rgba(0,0,0,.6); }
-
-#confirmSheet input { width: 100%; font-size: 14px; letter-spacing: 12px; text-align: center; }
-
-.sheet-actions { display: flex; gap: 12px; margin-top: 16px; }
-  
-.field-error { 
-  color: #ff6b6b; 
-  font-size: 13px; 
-  display: flex; 
+#money-requests-page .mr-heading {
   margin: 0;
-  padding: 0;
+  font-size: 1.45rem;
+  font-weight: 750;
+}
+
+#money-requests-page .mr-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--mr-cyan);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+#money-requests-page .mr-header-icon,
+#money-requests-page .mr-summary-icon,
+#money-requests-page .mr-avatar,
+#money-requests-page .mr-empty-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 15px;
+  color: var(--mr-cyan);
+  background: rgba(66, 215, 232, .12);
+}
+
+#money-requests-page .mr-header-icon {
+  width: 46px;
+  height: 46px;
+  font-size: 1.15rem;
+}
+
+/* Summary */
+#money-requests-page .mr-summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  padding: 16px;
+  margin-bottom: 25px;
+  border: 1px solid var(--mr-border);
+  border-radius: 19px;
+  background: linear-gradient(120deg, #123d70, #102b55);
+  overflow: hidden;
+}
+
+#money-requests-page .mr-summary-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+}
+
+#money-requests-page .mr-summary-text {
+  min-width: 0;
+}
+
+#money-requests-page .mr-summary-text strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+#money-requests-page .mr-summary-text span {
+  color: var(--mr-muted);
+  font-size: .82rem;
+}
+
+#money-requests-page .mr-summary-decoration {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  right: -35px;
+  top: -45px;
+  border: 1px solid rgba(66, 215, 232, .18);
+  border-radius: 50%;
+}
+
+/* Request list */
+#money-requests-page .mr-section {
+  margin-top: 22px;
+}
+
+#money-requests-page .mr-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+#money-requests-page .mr-list {
+  display: grid;
+  gap: 13px;
+  min-width: 0;
+}
+
+#money-requests-page .mr-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--mr-border);
+  border-radius: 19px;
+  background: var(--mr-card);
+  box-shadow: 0 9px 24px rgba(0, 0, 0, .13);
+  animation: mrRise .45s ease both;
+}
+
+#money-requests-page .mr-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+#money-requests-page .mr-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+#money-requests-page .mr-avatar {
+  width: 42px;
+  height: 42px;
+  font-weight: 750;
+}
+
+#money-requests-page .mr-person-info {
+  min-width: 0;
+}
+
+#money-requests-page .mr-person-info strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: .94rem;
+}
+
+#money-requests-page .mr-person-info small {
+  color: var(--mr-muted);
+  font-size: .76rem;
+}
+
+#money-requests-page .mr-status {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 30px;
+  color: #8de9c0;
+  background: rgba(65, 205, 145, .12);
+  font-size: .7rem;
+}
+
+/* Amount and note */
+#money-requests-page .mr-amount-area {
+  margin: 17px 0 10px;
+}
+
+#money-requests-page .mr-amount-area small {
+  display: block;
+  color: var(--mr-muted);
+  font-size: .76rem;
+}
+
+#money-requests-page .mr-amount-area strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 1.55rem;
+}
+
+#money-requests-page .mr-note {
+  margin: 12px 0;
+  padding: 11px 12px;
+  border-left: 3px solid var(--mr-cyan);
+  border-radius: 0 10px 10px 0;
+  color: #d8e5f7;
+  background: rgba(255, 255, 255, .045);
+  overflow-wrap: anywhere;
+}
+
+#money-requests-page .mr-expiry {
+  color: var(--mr-muted);
+  font-size: .76rem;
+}
+
+#money-requests-page .mr-divider {
+  height: 1px;
+  margin: 15px 0;
+  background: var(--mr-border);
+}
+
+/* PIN and payment controls */
+#money-requests-page .mr-pay-form {
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+#money-requests-page .mr-pin-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#money-requests-page .mr-pin-wrap input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 42px 0 12px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 12px;
+  outline: none;
+  color: var(--mr-text);
+  background: #091f40;
+  font: inherit;
+  font-size: .9rem;
+}
+
+#money-requests-page .mr-pin-wrap input:focus {
+  border-color: var(--mr-cyan);
+}
+
+#money-requests-page .mr-toggle-pin {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  padding: 6px;
+  border: 0;
+  color: var(--mr-muted);
+  background: transparent;
+}
+
+#money-requests-page .mr-pay-btn,
+#money-requests-page .mr-decline-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#money-requests-page .mr-pay-btn {
+  flex: 0 0 auto;
+  color: #06223a;
+  background: linear-gradient(110deg, var(--mr-cyan), #70e6d0);
+}
+
+#money-requests-page .mr-pay-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+#money-requests-page .mr-decline-form {
+  margin-top: 9px;
+}
+
+#money-requests-page .mr-decline-btn {
+  width: 100%;
+  color: #ffb5bd;
+  background: rgba(255, 105, 125, .09);
+  border: 1px solid rgba(255, 105, 125, .18);
+}
+
+/* Empty state */
+#money-requests-page .mr-empty {
+  padding: 30px 18px;
+  text-align: center;
+  border: 1px dashed var(--mr-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .025);
+}
+
+#money-requests-page .mr-empty-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  font-size: 1.35rem;
+}
+
+#money-requests-page .mr-empty p {
+  margin: 6px 0 0;
+  color: var(--mr-muted);
+  font-size: .85rem;
+}
+
+/* Animation */
+@keyframes mrRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Small screens */
+@media (max-width: 380px) {
+  #money-requests-page {
+    padding: 15px 12px 28px;
+  }
+
+  #money-requests-page .mr-pay-form {
+    flex-wrap: wrap;
+  }
+
+  #money-requests-page .mr-pin-wrap {
+    flex-basis: 100%;
+  }
+
+  #money-requests-page .mr-pay-btn {
+    width: 100%;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  #money-requests-page .mr-card {
+    animation: none;
+  }
+}

@@ -120,7 +120,7 @@
     <h2>{{ request.user.get_full_name|default:request.user.username }}</h2>
     <p>Manage your personal information</p>
     <div class="pf-pills">
-      <span class="pf-pill">Tier {{ account.kyc_tier }}</span>
+      <span class="pf-pill">Tier {{ account.tier }}</span>
       {% if request.user.phone_verified %}<span class="pf-pill ok">Phone verified</span>{% endif %}
       {% if account.pin_hash %}<span class="pf-pill ok">PIN set</span>{% endif %}
     </div>

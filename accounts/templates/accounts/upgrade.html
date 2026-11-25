@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Account tier - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Account tier</h1><p>You are on Tier {{ acc.tier }}</p></div>
+  </header>
+  <div class="bl-sum" data-r style="--d:1">
+    {% for name, ok in checks %}<p><span>{{ name }}</span><b>{% if ok %}<span style="color:#35E0A1">✔ Done</span>{% else %}Not yet{% endif %}</b></p>{% endfor %}
+  </div>
+  {% for r in rows %}
+  <div class="bl-top" data-r style="--d:{{ forloop.counter|add:1 }};margin-top:12px;{% if not r.reached %}opacity:.8{% endif %}">
+    <small>Tier {{ r.n }}{% if r.current %} · your tier{% endif %}</small>
+    <strong style="font-size:18px">{{ r.need }}</strong>
+    <small style="margin-top:6px">{{ r.gives }}</small>
+    <small style="margin-top:6px">Up to ₦{{ r.single|floatformat:0 }} per transfer · ₦{{ r.daily|floatformat:0 }} a day</small>
+  </div>
+  {% endfor %}
+  {% if nxt %}<a class="bl-btn" href="{{ nxt.1 }}">{{ nxt.0 }}</a>
+  {% else %}<p class="bl-msg" role="status" style="margin-top:14px">You have everything needed for Tier 3.</p>
+  <form method="post" action="{% url 'accounts:recheck' %}">{% csrf_token %}<button class="bl-btn ghost" type="submit">Check my tier</button></form>{% endif %}
+</section>
+{% endblock %}

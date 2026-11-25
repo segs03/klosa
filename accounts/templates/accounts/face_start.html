@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Face check - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0">
+    <a class="bl-back" href="{% url 'accounts:verify' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <div><h1>Face check</h1><p>Prove it is really you</p></div>
+  </header>
+  {% if done %}
+    <div class="bl-hero"><div class="bl-badge completed"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div><h1 style="margin:0">Your face is verified</h1></div>
+  {% elif last.status == "review" %}
+    <p class="bl-msg" role="status">We are comparing your photos with your ID. We will tell you the result.</p>
+  {% else %}
+    {% if last.status == "failed" %}<p class="bl-msg" style="background:rgba(255,138,138,.14);color:#FFB3B3" role="alert"><b>We could not verify your face.</b><br>{{ last.reason }}</p>{% endif %}
+    <div class="bl-sum" data-r style="--d:1">
+      <p><span>1</span><b>Sit in good light, face the camera</b></p>
+      <p><span>2</span><b>Follow 3 short prompts, such as smile or look up</b></p>
+      <p><span>3</span><b>A team member compares the photos with your ID</b></p>
+    </div>
+    <form method="post" style="margin-top:16px">{% csrf_token %}
+      <label style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:#C8D6F2;line-height:1.4;margin-bottom:12px">
+        <input type="checkbox" name="consent" style="flex:none;width:22px;height:22px;accent-color:#00E5FF">
+        <span>I agree that Klosa takes photos of my face to confirm my identity, and keeps them for 30 days after the decision.</span></label>
+      <button class="bl-btn" type="submit">Start face check</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}

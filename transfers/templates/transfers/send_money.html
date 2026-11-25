@@ -83,12 +83,23 @@
       <p class="sd-left">Limit left today: ₦{{ daily_left|floatformat:0 }}</p>
       {% for e in form.amount.errors %}<p class="bl-err" style="text-align:center">{{ e }}</p>{% endfor %}
     </div>
+
     <div class="bl-sec" data-r style="--d:4">
+      <label class="bl-lbl" for="id_pay_from">Pay from</label>
+      <select class="bl-in" id="id_pay_from" name="pay_from">
+        <option value="balance" data-type="balance">Account balance · ₦{{ account.balance|floatformat:2 }}</option>
+        {% for c in form.card_options %}<option value="{{ c.value }}" data-type="{{ c.type }}" {% if form.pay_from.value|stringformat:"s" == c.value %}selected{% endif %}>{{ c.label }}</option>{% endfor %}
+      </select>
+      <p class="bl-hint" id="sdFromHint"></p>
+      {% for e in form.pay_from.errors %}<p class="bl-err" role="alert">{{ e }}</p>{% endfor %}
+    </div>
+
+    <div class="bl-sec" data-r style="--d:5">
       <label class="bl-lbl" for="id_description">Note (optional)</label>
       <input class="bl-in" id="id_description" name="description" value="{{ form.description.value|default:'' }}" maxlength="255" placeholder="What is it for?">
     </div>
     {% for e in form.pin.errors %}<p class="bl-err" role="alert" id="pinServerErr">{{ e }}</p>{% endfor %}
-    <button type="button" class="bl-btn" id="sdNext" data-r style="--d:5">Continue</button>
+    <button type="button" class="bl-btn" id="sdNext" data-r style="--d:6">Continue</button>
   </form>
 </section>
 
@@ -109,7 +120,7 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const form = $("sdForm"), pin = $("id_pin"), sel = $("id_beneficiary"), num = $("id_account_number"), amt = $("id_amount");
+  const form = $("sdForm"), pin = $("id_pin"), sel = $("id_beneficiary"), num = $("id_account_number"), amt = $("id_amount"), from = $("id_pay_from");
   const naira = (v) => "₦" + (parseFloat(v) || 0).toLocaleString("en-NG", {minimumFractionDigits: 2});
 
   // tabs: only one recipient method is sent
@@ -135,6 +146,14 @@
   num.addEventListener("input", () => { num.value = num.value.replace(/\D/g, "").slice(0, 10); });
   amt.addEventListener("input", () => { amt.value = amt.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); });
 
+  // where the money comes from
+  const fromHint = () => {
+    const t = from.options[from.selectedIndex].dataset.type;
+    $("sdFromHint").textContent = t === "credit" ? "This uses your credit limit. You will need to repay it."
+      : t === "debit" ? "This takes the money from your account balance." : "";
+  };
+  from.addEventListener("change", fromHint); fromHint();
+
   // PIN sheet
   const pn = $("pn"), back = $("pnBack"), dots = $("pnDots").children;
   let val = "", busy = false;
@@ -142,7 +161,9 @@
   const openPin = () => {
     val = ""; busy = false; paint(); $("pnErr").textContent = "";
     $("pnAmt").textContent = naira(amt.value);
-    $("pnTo").textContent = sel.value ? "To " + sel.options[sel.selectedIndex].dataset.name : "To account " + num.value;
+    const to = sel.value ? "To " + sel.options[sel.selectedIndex].dataset.name : "To account " + num.value;
+    const via = from.value !== "balance" ? " · " + from.options[from.selectedIndex].text : "";
+    $("pnTo").textContent = to + via;
     pn.hidden = back.hidden = false;
     requestAnimationFrame(() => { pn.classList.add("on"); back.classList.add("on"); });
   };

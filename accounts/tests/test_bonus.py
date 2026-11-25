@@ -66,7 +66,7 @@ class BonusTests(TestCase):
         approve(apply(self.u, "nin"))
         self.assertEqual((self.bal(), WelcomeBonus.objects.count()), (Decimal("0"), 0))
         self.acc.refresh_from_db()
-        self.assertEqual(self.acc.kyc_tier, 1)
+        self.assertEqual(self.acc.kyc_tier, 0)          # a NIN alone no longer upgrades; only the BVN does
 
     def test_nin_and_bvn_together_pay_the_gift_once_and_record_it(self):
         self.both()
@@ -141,7 +141,9 @@ class BonusTests(TestCase):
         with override_settings(PRIVATE_MEDIA_ROOT=tmp):
             approve(apply(self.u, "nin"))
             kw = dict(id_number="12345678901", legal_name="Ada Obi", date_of_birth=date(1990, 1, 1))
-            self.assertEqual(submit_application(self.u, doc_type="bvn", document=SimpleUploadedFile("a.jpg", JPG), **kw).document_type, "bvn")
+            self.assertEqual(submit_application(self.u, doc_type="passport", document=SimpleUploadedFile("a.jpg", JPG), **kw).document_type, "passport")
+            with self.assertRaises(ValidationError):          # a BVN can no longer be sent as a photo
+                submit_application(self.u, doc_type="bvn", document=SimpleUploadedFile("c.jpg", JPG), **kw)
             with self.assertRaises(ValidationError):
                 submit_application(self.u, doc_type="nin", document=SimpleUploadedFile("b.jpg", JPG), **kw)
 

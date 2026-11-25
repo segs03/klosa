@@ -10,9 +10,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from accounts.credit_services import (_get_credit_policy, assess_credit_application, credit_summary,
-                                      decide_credit_application, eligibility_problem)
-from accounts.models import Account, CreditAccount, CreditApplication, KYCApplication, VerifiedIdentity
+from accounts.credit_services import (_get_credit_policy, assess_credit_application, credit_summary,                                 decide_credit_application, eligibility_problem)
+
+from accounts.models import (Account, CreditAccount, CreditApplication, KYCApplication, VerifiedIdentity, FaceCheck)
+
 from accounts.utils import normalize_phone
 from biller.models import BillPayment
 from cards.models import BankCard, CardOrder
@@ -24,6 +25,11 @@ from treasury.models import CashRequest
 from treasury.services import TreasuryError, approve_cash_in, reject_cash_in
 from .audit import log
 from .models import AuditLog
+
+from funding.models import ContributionIntent, CapitalContribution
+
+
+
 
 User = get_user_model()
 
@@ -77,6 +83,16 @@ def home(request):
         tiles.append(("Needs attention", n, "backoffice:ops", "fa-triangle-exclamation"))
     if has("backoffice.view_audit"):
         tiles.append(("Audit log", None, "backoffice:audit", "fa-clipboard-list"))
+    
+    if has("accounts.review_facecheck"):
+        tiles.append(("Face checks", FaceCheck.objects.filter(status="review").count(), "accounts:face_queue", "fa-face-smile"))
+        
+    if has("funding.confirm_contributionintent"):
+        tiles.append(("Deposit notices", ContributionIntent.objects.filter(status="pending").count(), "funding:intents", "fa-coins"))
+        
+    if has("funding.verify_capitalcontribution"):
+        tiles.append(("Verify contributions", CapitalContribution.objects.filter(source_type="investor", verified=False).count(), "funding:contributions", "fa-scale-balanced"))
+    
     return render(request, "backoffice/home.html", {"tiles": tiles})
 
 

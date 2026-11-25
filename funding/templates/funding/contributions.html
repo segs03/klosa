@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Verify contributions{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Verify contributions" sub="A second person posts them to the ledger" %}
+  {% for c in items %}<div class="bl-sum" style="margin-bottom:14px">
+    <p><span>Investor</span><b>{{ c.investor.legal_name }}</b></p><p><span>Amount</span><b style="color:#00E5FF">₦{{ c.amount|floatformat:2 }}</b></p>
+    <p><span>Recorded by</span><b>{{ c.recorded_by.get_full_name|default:c.recorded_by.username }}</b></p>
+    <form method="post" style="padding:10px 0">{% csrf_token %}<input type="hidden" name="pk" value="{{ c.pk }}">
+      <button class="bl-btn" type="submit">Verify and post</button></form></div>
+  {% empty %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endfor %}
+</section>
+{% endblock %}

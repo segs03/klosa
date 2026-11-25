@@ -27,6 +27,7 @@ class PaystackProvider(BaseCashProvider):
         acc = deposit.account
         email = acc.user.email or f"{acc.account_number}@{settings.CASHIER_FALLBACK_EMAIL_DOMAIN}"
         data = _call("POST", "/transaction/initialize", {
+                    "channels": ["card"] if deposit.method == "card" else ["bank", "bank_transfer"],
             "email": email, "currency": "NGN", "reference": deposit.reference,
             "amount": int((deposit.amount * 100).to_integral_value()),               # kobo
             "callback_url": settings.SITE_URL.rstrip("/") + reverse("cashier:deposit_status", args=[deposit.reference])})

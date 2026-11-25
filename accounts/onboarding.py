@@ -143,7 +143,7 @@ def onboarding_view(request):
         "has_pin": bool(account.pin_hash),
         "has_passkey": request.user.passkeys.exists(),
         "has_backup": request.user.backup_codes.exists(),
-        "tier": account.kyc_tier,
+        "tier": account.tier,
     })
 
 

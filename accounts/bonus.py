@@ -13,9 +13,9 @@ from transactions.models import Transaction
 from .credit_services import _get_credit_policy, eligibility_problem
 from .kyc_services import verified_types
 from .models import Account, WelcomeBonus
+from .tiers import has_required_ids
 
 log = logging.getLogger(__name__)
-NEEDED = {"nin", "bvn"}
 
 
 def bonus_amount():
@@ -50,10 +50,10 @@ def send_credit_offer(user, account, key="credit_offer_ready"):
 
 
 def grant_welcome_bonus(user):
-    """Pays once, only when a NIN and a BVN are both verified, and only while the budget lasts.
-    Call it inside the transaction that verified the ID."""
+    """Pays once, only when the BVN and one more ID (NIN, passport or driver's licence) are both
+    verified, and only while the budget lasts. Call it inside the transaction that verified the ID."""
     amount = bonus_amount()
-    if amount is None or amount <= 0 or not NEEDED <= verified_types(user):
+    if amount is None or amount <= 0 or not has_required_ids(verified_types(user)):
         return None
     budget = Decimal(str(getattr(settings, "WELCOME_BONUS_BUDGET", "0")))
     try:

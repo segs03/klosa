@@ -9,7 +9,7 @@
     <p><span>Customer</span><b><a href="{% url 'backoffice:customer' app.user_id %}" style="color:#00E5FF">{{ app.user.get_full_name|default:"Klosa customer" }}</a></b></p>
     <p><span>Requested</span><b>₦{{ app.requested_amount|floatformat:2 }}</b></p>
     {% if app.assessed_amount %}<p><span>Assessed</span><b>₦{{ app.assessed_amount|floatformat:2 }}</b></p><p><span>Assessment note</span><b>{{ app.assessment_reason }}</b></p>{% endif %}
-    {% if account %}<p><span>Account age</span><b>{{ age_days }} days</b></p><p><span>Balance</span><b>₦{{ account.balance|floatformat:2 }}</b></p><p><span>ID tier</span><b>{{ account.kyc_tier }}</b></p>{% endif %}
+    {% if account %}<p><span>Account age</span><b>{{ age_days }} days</b></p><p><span>Balance</span><b>₦{{ account.balance|floatformat:2 }}</b></p><p><span>ID tier</span><b>{{ account.tier }}</b></p>{% endif %}
     {% if policy %}<p><span>Allowed range</span><b>₦{{ policy.minimum_limit|floatformat:0 }} to ₦{{ policy.maximum_limit|floatformat:0 }}</b></p>{% endif %}
     {% if app.decision_reason %}<p><span>Decision</span><b>{{ app.decision_reason }}</b></p>{% endif %}
   </div>

@@ -3,7 +3,7 @@ import uuid
 from django import forms
 from django.conf import settings
 
-from .kyc_services import DOC_TYPES
+from .kyc_services import DOC_TYPES, clean_id_number
 
 SIGNATURES = ((b"\xff\xd8\xff", ".jpg"), (b"\x89PNG\r\n\x1a\n", ".png"), (b"%PDF-", ".pdf"))
 
@@ -27,3 +27,12 @@ class KYCForm(forms.Form):
             raise forms.ValidationError("Upload a JPG, PNG or PDF file.")
         f.name = uuid.uuid4().hex + ext                   # never keep the customer's file name
         return f
+
+
+class BVNForm(forms.Form):
+    """BVN has no card or paper, so it needs only the number and consent."""
+    id_number = forms.CharField(label="BVN", max_length=30)
+    consent = forms.BooleanField(label="I agree that Klosa may check my BVN with the bank verification service.")
+
+    def clean_id_number(self):
+        return clean_id_number("bvn", self.cleaned_data["id_number"])

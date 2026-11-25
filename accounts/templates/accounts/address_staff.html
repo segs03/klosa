@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Address reviews - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0"><div><h1>Address reviews</h1><p>Waiting for a decision</p></div></header>
+  {% for p in proofs %}
+    <a class="bl-sum" href="{% url 'accounts:address_review' p.pk %}" data-r style="--d:1">
+      <p><span>{{ p.user.get_full_name|default:p.user.username }}</span><b>{{ p.city }}, {{ p.state }}</b></p>
+      <p><span>Submitted</span><b>{{ p.submitted_at|date:"d M Y H:i" }}</b></p>
+    </a>
+  {% empty %}
+    <p class="bl-msg" role="status">Nothing is waiting.</p>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Deposit notices{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Deposit notices" sub="Confirm that the money arrived" %}
+  {% for i in items %}<div class="bl-sum" style="margin-bottom:14px">
+    <p><span>Investor</span><b>{{ i.investor.legal_name }}</b></p><p><span>Amount</span><b style="color:#00E5FF">₦{{ i.amount|floatformat:2 }}</b></p>
+    <p><span>Reference</span><b>{{ i.reference }}</b></p><p><span>Method</span><b>{{ i.get_method_display }}</b></p>
+    <form method="post" style="padding:10px 0">{% csrf_token %}<input type="hidden" name="pk" value="{{ i.pk }}">
+      <input class="bl-in" name="reason" placeholder="Reason (needed to reject)" maxlength="200">
+      <button class="bl-btn" name="action" value="confirm" type="submit">Money arrived</button>
+      <button class="bl-btn ghost" name="action" value="reject" type="submit">Reject</button></form></div>
+  {% empty %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endfor %}
+</section>
+{% endblock %}

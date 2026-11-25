@@ -13,6 +13,8 @@ POSITIVE = [MinValueValidator(Decimal("0.01"))]
 
 class Transfer(models.Model):
     STATUS_CHOICES = [("pending", "Pending"), ("completed", "Completed"), ("failed", "Failed")]
+    
+    FUNDING = [("balance", "Balance"), ("debit_card", "Debit card"), ("credit_card", "Credit card")]
 
     sender = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="sent_transfers")
     receiver = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="received_transfers")
@@ -21,6 +23,14 @@ class Transfer(models.Model):
     note = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    funding_source = models.CharField(max_length=12, choices=FUNDING, default="balance")
+    
+    card = models.ForeignKey("cards.BankCard", null=True, blank=True,
+                             on_delete=models.PROTECT, related_name="transfers")
+    
+    
+    
 
     class Meta:
         ordering = ["-created_at"]

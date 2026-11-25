@@ -71,6 +71,8 @@ class DepositHubTests(TestCase):
         self.assertFalse(r.context["card_on"])
         self.assertContains(r, "1000000001")
 
-    @override_settings(DEBUG=False, CASHIER_PROVIDER="cashier.providers.paystack.PaystackProvider")
-    def test_the_card_option_appears_with_a_real_provider(self):
+@override_settings(DEBUG=False,
+                   CASHIER_PROVIDER="cashier.providers.paystack.PaystackProvider",
+                   PAYSTACK_SECRET_KEY=KEY)
+def test_the_card_option_appears_with_a_real_provider(self):
         self.assertTrue(self.client.get(reverse("treasury:deposit")).context["card_on"])

@@ -1,34 +1,23 @@
-
 {% extends 'base.html' %}
 {% block title %}Add money - Klosa Bank{% endblock %}
 {% block content %}
 {% include "biller/_style.html" %}
 <section class="bl">
-  <header class="bl-head"><a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <header class="bl-head" data-r style="--d:0"><a class="bl-back" href="{% url 'accounts:home' %}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
     <div><h1>Add money</h1><p>Choose how</p></div></header>
-
-  <h2>Card or bank, online</h2>
-  {% if card_on %}
-  <a class="bl-tile" href="{% url 'cashier:deposit' %}" style="display:block;margin-bottom:12px">
-    <span class="bl-ico"><i class="fa-solid fa-credit-card"></i></span><b>Pay with a card or bank account</b>
-    <small>You pay on a secure page. We never see your card details.</small></a>
-  {% else %}<p class="bl-hint">Not available yet.</p>{% endif %}
-
-  <h2>Transfer from another bank</h2>
-  {% if transfer_on %}
-  <div class="bl-sum">
-    <p><span>Bank</span><b>Klosa Bank</b></p>
-    <p><span>Account number</span><b>{{ account.account_number }}</b></p>
-    <p><span>Account name</span><b>{{ request.user.get_full_name|default:"Klosa customer" }}</b></p>
-  </div>
-  <p class="bl-hint">It arrives in your balance automatically.</p>
-  {% else %}<p class="bl-hint">Not available yet.</p>{% endif %}
-
+  <h2>From your bank or card</h2>
+  {% if online %}
+  <form method="post" novalidate>{% csrf_token %}
+    <div class="bl-chips" style="margin-bottom:12px">{% for v, l in form.fields.method.choices %}<label class="bl-chip"><input type="radio" name="method" value="{{ v }}" {% if forloop.first %}checked{% endif %}><span>{{ l }}</span></label>{% endfor %}</div>
+    <input class="bl-in" name="amount" value="{{ form.amount.value|default:'' }}" inputmode="decimal" autocomplete="off" placeholder="Amount (₦)" required style="text-align:center;font-size:24px;font-weight:700;height:60px">
+    {% for e in form.amount.errors %}<p class="bl-err" style="text-align:center">{{ e }}</p>{% endfor %}
+    <button class="bl-btn" type="submit">Continue to the secure payment page</button>
+  </form>
+  <p class="bl-hint">You enter your card or bank details on the payment company's secure page. Klosa never sees or stores them.</p>
+  {% else %}<p class="bl-hint">Not available yet. It switches on when a payment company is connected.</p>{% endif %}
+  {% if transfer_on %}<h2>Transfer from another bank</h2><div class="bl-sum"><p><span>Bank</span><b>Klosa Bank</b></p><p><span>Account number</span><b>{{ account.account_number }}</b></p></div>{% endif %}
   <h2>Cash at a branch or agent</h2>
-  <div class="bl-sum">
-    <p><span>Give the teller</span><b>{{ account.account_number }}</b></p>
-    <p><span>Smallest deposit</span><b>₦{{ min|floatformat:0 }}</b></p>
-  </div>
-  <p class="bl-hint">Your balance updates once a second staff member approves it.</p>
+  <div class="bl-sum"><p><span>Give the teller</span><b>{{ account.account_number }}</b></p><p><span>Smallest deposit</span><b>₦{{ min|floatformat:0 }}</b></p></div>
+  <p class="bl-hint">Your balance updates after a second staff member approves it.</p>
 </section>
 {% endblock %}

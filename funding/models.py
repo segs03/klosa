@@ -613,3 +613,38 @@ class InvestorCapitalEntry(models.Model):
             f"{self.get_entry_type_display()} - {self.amount}"
         )
 
+
+class ContributionIntent(models.Model):
+    STATUS = [("pending", "Waiting for funds"), ("received", "Funds received"),
+              ("rejected", "Rejected"), ("expired", "Expired")]
+    METHODS = [("bank_transfer", "Bank transfer"), ("cash", "Cash at a branch")]
+
+    investor = models.ForeignKey(Investor, on_delete=models.PROTECT, related_name="intents")
+    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    method = models.CharField(max_length=15, choices=METHODS)
+    reference = models.CharField(max_length=20, unique=True)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    note = models.CharField(max_length=200, blank=True)
+    contribution = models.OneToOneField(CapitalContribution, null=True, blank=True, on_delete=models.PROTECT,
+                                        related_name="intent")
+    handled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                   related_name="+")
+    handled_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [("confirm_contributionintent", "Can confirm that contributor funds arrived")]
+        constraints = [models.CheckConstraint(condition=Q(amount__gt=0), name="intent_amount_positive")]
+
+
+class LedgerPosting(models.Model):
+    """Which source row became which journal entry, so nothing is posted twice."""
+    source_type = models.CharField(max_length=20)
+    source_id = models.BigIntegerField()
+    entry = models.OneToOneField(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="posting")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["source_type", "source_id"], name="one_posting_per_source")]

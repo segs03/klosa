@@ -120,6 +120,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+FACE_PROVIDER = "accounts.face.ManualReview"      # a provider class with assess(check) -> (status, score, ref)
+
 
 # ============================================================
 # 5. DATABASE
@@ -237,6 +239,13 @@ KYC_APPROVALS_REQUIRED = 1
 
 KYC_MAX_UPLOAD = 5 * 1024 * 1024
 
+BVN_API_URL = "https://api.withmono.com/v3/lookup/bvn/initiate"   # from your provider
+
+BVN_API_KEY = env("BVN_API_KEY")
+
+FACE_PROVIDER = env("FACE_PROVIDER", "accounts.face.ManualReview")
+
+FACE_MODEL_DIR = env("FACE_MODEL_DIR", str(BASE_DIR / "models"))
 
 # ============================================================
 # 10. FILE UPLOADS AND PRIVATE STORAGE
@@ -313,6 +322,8 @@ ALLOW_EXTERNAL_TRANSFERS = flag(
 
 KLOSA_BANK_CODE = env("KLOSA_BANK_CODE", "999")
 
+COMPANY_BANK = {"bank": env("COMPANY_BANK_NAME"), "name": env("COMPANY_ACCOUNT_NAME"), "number": env("COMPANY_ACCOUNT_NUMBER")}
+
 
 # ============================================================
 # 12. CREDIT FACILITY
@@ -323,6 +334,10 @@ CREDIT_MIN_ACCOUNT_AGE_DAYS = int(
 )
 
 CREDIT_MIN_BALANCE = env("CREDIT_MIN_BALANCE", "10000")
+
+CREDIT_P2P_SINGLE = "50000"    # max per credit-card payment to a person
+
+CREDIT_P2P_DAILY = "100000"    # max per day by credit card
 
 
 # ============================================================
@@ -450,12 +465,15 @@ EMAIL_BACKEND = env(
 )
 
 EMAIL_HOST = env("EMAIL_HOST")
+
 EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 
 EMAIL_USE_TLS = flag("EMAIL_USE_TLS", True)
+
 EMAIL_USE_SSL = flag("EMAIL_USE_SSL", False)
 
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 EMAIL_TIMEOUT = int(env("EMAIL_TIMEOUT", "10"))
@@ -541,3 +559,8 @@ LOGGING = {
         },
     },
 }
+
+
+MEDIA_URL = "/media/"
+
+MEDIA_ROOT = "/data/data/com.termux/files/home/klosa_media"

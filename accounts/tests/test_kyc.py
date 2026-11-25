@@ -111,9 +111,18 @@ class ReviewTests(Base):
         a.refresh_from_db()
         self.acc.refresh_from_db()
         self.user.refresh_from_db()
-        self.assertEqual((a.status, self.acc.kyc_tier), ("verified", 1))
+        self.assertEqual((a.status, self.acc.kyc_tier), ("verified", 0))   # a NIN alone no longer upgrades
         self.assertTrue(VerifiedIdentity.objects.filter(user=self.user, identity_digest=a.identity_digest).exists())
         self.assertEqual((self.user.first_name, self.user.last_name), ("Ada", "Chinwe Obi"))
+
+    def test_a_bvn_approval_raises_the_tier(self):
+        app = KYCApplication.objects.create(
+            user=self.user, country_code="NG", document_type="bvn", legal_name="Ada Obi",
+            date_of_birth=date(1990, 1, 1), identity_document="kyc/x.jpg",
+            identity_digest=id_digest("bvn", "12345678901"))
+        review_application(app.pk, self.staff(), "approved", "ok")
+        self.acc.refresh_from_db()
+        self.assertEqual(self.acc.kyc_tier, 1)
 
     def test_rejection_and_requests_for_more_information(self):
         a = self.submit()
@@ -278,7 +287,7 @@ class NumberFormatTests(Base):
         self.assertEqual(a.identity_digest, id_digest("nin", "12345678901"))
 
     def test_a_bvn_follows_the_same_rule(self):
-        self.assertIn("BVN", self.msg(doc_type="bvn", id_number="12"))
+        self.assertIn("number only", self.msg(doc_type="bvn", id_number="12"))
 
     def test_other_documents_keep_their_own_rules(self):
         self.assertEqual(self.submit(doc_type="passport", id_number="a12345678").document_type, "passport")

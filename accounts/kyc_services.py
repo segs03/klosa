@@ -74,6 +74,8 @@ def verified_types(user):
 def submit_application(user, *, doc_type, id_number, legal_name, date_of_birth, document):
     if doc_type not in DOC_TYPES:
         raise ValidationError("Choose an ID type.")
+    if doc_type == "bvn":
+        raise ValidationError("BVN is verified from the number only.")
     number = clean_id_number(doc_type, id_number)
     name = " ".join((legal_name or "").split())
     if not re.fullmatch(r"[A-Za-z][A-Za-z .'\-]{2,148}", name):
@@ -147,10 +149,11 @@ def _verify(app):
                     identity_digest=app.identity_digest, verified_at=timezone.now(), source_application=app)
     except IntegrityError:
         raise ValidationError(taken)
+        
     app.status = "verified"
-    if account.kyc_tier < 1:
-        account.kyc_tier = 1
-        account.save(update_fields=["kyc_tier"])
+    from .tiers import refresh_tier
+    refresh_tier(app.user)
+
     user = app.user
     if not (user.first_name or user.last_name):           # receipts then show a real name
         first, _, last = app.legal_name.partition(" ")

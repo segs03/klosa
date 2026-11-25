@@ -1,4 +1,5 @@
 p{% extends 'base.html' %}
+{% load humanize %}
 {% block title %}{{ label }} - Klosa Bank{% endblock %}
 {% block content %}
 {% include "biller/_style.html" %}
@@ -11,7 +12,7 @@ p{% extends 'base.html' %}
       {% else %}<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg>{% endif %}
     </div>
     <h1 style="margin:0">{% if order.status == 'completed' %}Payment successful{% elif order.status == 'reversed' %}Payment refunded{% else %}Processing{% endif %}</h1>
-    <p class="bl-amt">₦{{ total|floatformat:2 }}</p>
+    <p class="bl-amt">₦{{ total|floatformat:2|intcomma }}</p>
     {% if order.status == 'processing' %}<p style="color:#9FB6E0;font-size:14px">Your money is held while we confirm with the provider. This usually takes under a minute.</p>{% endif %}
     {% if order.status == 'reversed' %}<p style="color:#9FB6E0;font-size:14px">The provider could not complete this payment, so your money is back in your account.</p>{% endif %}
   </div>
@@ -24,8 +25,8 @@ p{% extends 'base.html' %}
     <p><span>Service</span><b>{{ label }}</b></p>
     <p><span>Provider</span><b>{{ order.provider_code|upper }}</b></p>
     <p><span>Number or ID</span><b>••••{{ order.customer_ref|slice:"-4:" }}</b></p>
-    <p><span>Amount</span><b>₦{{ order.amount|floatformat:2 }}</b></p>
-    {% if order.fee %}<p><span>Fee</span><b>₦{{ order.fee|floatformat:2 }}</b></p>{% endif %}
+    <p><span>Amount</span><b>₦{{ order.amount|floatformat:2|intcomma }}</b></p>
+    {% if order.fee %}<p><span>Fee</span><b>₦{{ order.fee|floatformat:2|intcomma }}</b></p>{% endif %}
     <p><span>Reference</span><b>{{ order.reference }}</b></p>
     <p><span>Date</span><b>{{ order.created_at|date:"d M Y, H:i" }}</b></p>
   </div>

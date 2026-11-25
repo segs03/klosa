@@ -1,22 +1,224 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Money Requests | Klosa{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'transfers/css/style.css' %}">
+{% endblock %}
+
 {% block content %}
-<section style="padding:16px; color:#fff">
-  <h2>Money requests</h2>
-  {% for r in requests %}
-    <div style="background:#0B2E6E; border-radius:16px; padding:14px; margin:12px 0">
-      <b>{{ r.requester.get_full_name|default:"A Klosa customer" }}</b> asks for
-      <b>₦{{ r.amount|floatformat:2 }}</b>
-      {% if r.note %}<p>"{{ r.note }}"</p>{% endif %}
-      <small>Expires {{ r.expires_at|date:"d M" }}</small>
-      <form method="post" action="{% url 'transfers:pay_request' r.pk %}" style="margin-top:10px">
-        {% csrf_token %}
-        <input type="password" name="pin" inputmode="numeric" maxlength="4" placeholder="PIN" required>
-        <button type="submit">Pay</button>
-      </form>
-      <form method="post" action="{% url 'transfers:decline_request' r.pk %}">
-        {% csrf_token %}<button type="submit">Decline</button>
-      </form>
-    </div>
-  {% empty %}<p>No open requests.</p>{% endfor %}
-</section>
+<main class="" id="money-requests-page">
+
+    <!-- Header -->
+    <header class="mr-header" data-mr style="--delay:0">
+        <div class="mr-heading">
+            <span class="mr-eyebrow">KLОSA PAYMENTS</span>
+            <h2>Money requests</h2>
+            <p>Review and manage payment requests sent to you.</p>
+        </div>
+
+        <div class="mr-header-icon">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+        </div>
+    </header>
+
+    <!-- Summary -->
+    <section class="mr-summary" data-mr style="--delay:1">
+        <div class="mr-summary-icon">
+            <i class="fa-solid fa-inbox"></i>
+        </div>
+
+        <div class="mr-summary-text">
+            <span>Pending requests</span>
+            <strong>{{ requests|length }}</strong>
+            <small>Requests awaiting your response</small>
+        </div>
+
+        <div class="mr-summary-decoration"></div>
+    </section>
+
+    <!-- Request list -->
+    <section class="mr-section">
+
+        <div class="mr-section-heading" data-mr style="--delay:2">
+            <div>
+                <h3>Your requests</h3>
+                <p>Check the details before making payment.</p>
+            </div>
+        </div>
+
+        <div class="mr-list">
+
+            {% for r in requests %}
+            <article class="mr-card"
+                     data-mr
+                     style="--delay:{{ forloop.counter|add:2 }}">
+
+                <div class="mr-card-top">
+                    <div class="mr-person">
+                        <div class="mr-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div class="mr-person-info">
+                            <strong>
+                                {{ r.requester.get_full_name|default:"A Klosa customer" }}
+                            </strong>
+                            <span>Requested money from you</span>
+                        </div>
+                    </div>
+
+                    <span class="mr-status">
+                        <i class="fa-solid fa-circle"></i>
+                        Pending
+                    </span>
+                </div>
+
+                <div class="mr-amount-area">
+                    <span>Amount requested</span>
+                    <h2>₦{{ r.amount|floatformat:2 }}</h2>
+                </div>
+
+                {% if r.note %}
+                <div class="mr-note">
+                    <i class="fa-regular fa-message"></i>
+                    <p>{{ r.note }}</p>
+                </div>
+                {% endif %}
+
+                <div class="mr-expiry">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>Expires {{ r.expires_at|date:"d M Y, h:i A" }}</span>
+                </div>
+
+                <div class="mr-divider"></div>
+
+                <!-- Payment form -->
+                <form method="post"
+                      action="{% url 'transfers:pay_request' r.pk %}"
+                      class="mr-pay-form">
+
+                    {% csrf_token %}
+
+                    <label for="mr-pin-{{ r.pk }}">Confirm with your PIN</label>
+
+                    <div class="mr-pin-wrap">
+                        <i class="fa-solid fa-lock"></i>
+
+                        <input
+                            type="password"
+                            name="pin"
+                            id="mr-pin-{{ r.pk }}"
+                            inputmode="numeric"
+                            pattern="[0-9]{4}"
+                            maxlength="4"
+                            minlength="4"
+                            autocomplete="off"
+                            placeholder="Enter 4-digit PIN"
+                            required
+                        >
+
+                        <button type="button"
+                                class="mr-toggle-pin"
+                                aria-label="Show PIN"
+                                data-pin-target="mr-pin-{{ r.pk }}">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+
+                    <button type="submit" class="mr-pay-btn">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        Pay ₦{{ r.amount|floatformat:2 }}
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <!-- Decline form -->
+                <form method="post"
+                      action="{% url 'transfers:decline_request' r.pk %}"
+                      class="mr-decline-form"
+                      onsubmit="return confirm('Are you sure you want to decline this request?');">
+
+                    {% csrf_token %}
+
+                    <button type="submit" class="mr-decline-btn">
+                        <i class="fa-solid fa-xmark"></i>
+                        Decline request
+                    </button>
+                </form>
+
+            </article>
+
+            {% empty %}
+
+            <div class="mr-empty" data-mr style="--delay:2">
+                <div class="mr-empty-icon">
+                    <i class="fa-solid fa-inbox"></i>
+                </div>
+
+                <h3>All clear!</h3>
+                <p>You don't have any pending money requests right now.</p>
+            </div>
+
+            {% endfor %}
+
+        </div>
+    </section>
+
+</main>
+
+<script>
+(() => {
+    const root = document.getElementById("money-requests-page");
+    if (!root) return;
+
+    // Show and hide PIN
+    root.querySelectorAll(".mr-toggle-pin").forEach(button => {
+        button.addEventListener("click", () => {
+            const input = root.querySelector(
+                `#${button.dataset.pinTarget}`
+            );
+
+            if (!input) return;
+
+            const visible = input.type === "password";
+            input.type = visible ? "text" : "password";
+
+            button.innerHTML = visible
+                ? '<i class="fa-regular fa-eye-slash"></i>'
+                : '<i class="fa-regular fa-eye"></i>';
+
+            button.setAttribute(
+                "aria-label",
+                visible ? "Hide PIN" : "Show PIN"
+            );
+        });
+    });
+
+    // Restrict PIN input to digits
+    root.querySelectorAll('input[name="pin"]').forEach(input => {
+        input.addEventListener("input", () => {
+            input.value = input.value.replace(/\D/g, "").slice(0, 4);
+        });
+    });
+
+    // Prevent accidental repeated payment submissions
+    root.querySelectorAll(".mr-pay-form").forEach(form => {
+        form.addEventListener("submit", event => {
+            if (!form.reportValidity()) {
+                event.preventDefault();
+                return;
+            }
+
+            const button = form.querySelector(".mr-pay-btn");
+            if (!button) return;
+
+            button.disabled = true;
+            button.innerHTML =
+                '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        });
+    });
+})();
+</script>
 {% endblock %}

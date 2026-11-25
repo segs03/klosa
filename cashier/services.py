@@ -55,11 +55,13 @@ def signature_ok(body, header):
 
 
 # ------------------------------------------------------------------ deposits
-def start_deposit(account, amount):
+def start_deposit(account, amount, method="card"):
+    if method not in ("card", "bank"):
+        raise CashierError("Choose how you will pay.")
     amount = clean_amount(amount, rules.DEPOSIT_MIN, rules.DEPOSIT_MAX)
     if account.closed_at:
         raise CashierError("Your account is closed.")
-    dep = Deposit.objects.create(account=account, amount=amount, reference=new_ref("DP"))
+    dep = Deposit.objects.create(account=account, method=method, amount=amount, reference=new_ref("DP"))
     try:
         url, pref = get_provider().start_checkout(dep)
     except Exception:

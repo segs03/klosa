@@ -51,7 +51,7 @@ def _name(account):
     return account.user.get_full_name().strip() or "Klosa customer"
 
 
-def move_money(sender, receiver, amount, *, note="", beneficiary=None, reference=None):
+def move_money(sender, receiver, amount, *, note="", beneficiary=None, reference=None, via=""):
     """Both accounts must already be locked, inside transaction.atomic()."""
     if sender.pk == receiver.pk:
         raise TransferError("You can't send money to your own account.")
@@ -80,7 +80,8 @@ def move_money(sender, receiver, amount, *, note="", beneficiary=None, reference
 
     to_name, from_name = _name(receiver), _name(sender)
     out = dict(account=sender, transaction_type="transfer", amount=amount, reference=ref,
-               description=(f"Transfer to {to_name}" + (f": {note}" if note else ""))[:255],
+               description=(f"Transfer to {to_name}" + (f" ({via})" if via else "")
+                            + (f": {note}" if note else ""))[:255],
                beneficiary=beneficiary)
     inc = dict(account=receiver, transaction_type="deposit", amount=amount, reference=ref,
                description=f"Transfer from {from_name}"[:255])
@@ -89,6 +90,8 @@ def move_money(sender, receiver, amount, *, note="", beneficiary=None, reference
         inc.update(counterparty_name=from_name, counterparty_account=sender.account_number)
     Transaction.objects.create(**out)
     Transaction.objects.create(**inc)
+    
+    
     return transfer
 
 

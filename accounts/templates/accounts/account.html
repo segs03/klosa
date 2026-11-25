@@ -216,7 +216,7 @@
     <div class="db-lbl">
       <span>Total balance</span>
       <i class="visible fa-solid fa-eye-slash" id="visible"></i>
-      {% if account %}<span class="db-tier">Tier {{ account.kyc_tier }}</span>{% endif %}
+      {% if account %}<a href="{% url 'accounts:upgrade' %}" class="db-tier">Tier {{ account.tier }}</a>{% endif %}
     </div>
 
     <div class="bal-wrapper db-balwrap">

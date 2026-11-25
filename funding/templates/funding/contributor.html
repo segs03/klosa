@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}My investment - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<style>.bl select.bl-in option{color:#000}</style>
+<section class="bl">
+  <header class="bl-head" data-r style="--d:0"><div><h1>My investment</h1><p>{{ investor.legal_name }}</p></div></header>
+  <div class="bl-top" data-r style="--d:1"><small>Invested capital</small><strong>₦{{ capital|floatformat:2 }}</strong>
+    <small style="margin-top:8px">Retained profit: ₦{{ retained|floatformat:2 }}</small></div>
+  <h2>Add money</h2>
+  <form method="post" novalidate>{% csrf_token %}
+    <div class="bl-sec"><label class="bl-lbl" for="am">Amount (₦)</label>
+      <input class="bl-in" id="am" name="amount" value="{{ form.amount.value|default:'' }}" inputmode="decimal" autocomplete="off" placeholder="Minimum 10,000" required>
+      {% for e in form.amount.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>
+    <div class="bl-sec"><label class="bl-lbl" for="mt">How will you pay?</label>
+      <select class="bl-in" id="mt" name="method">{% for v, l in form.fields.method.choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+    <button class="bl-btn" type="submit">Create deposit notice</button>
+  </form>
+  {% if bank.number %}<div class="bl-sum" style="margin-top:14px"><p><span>Pay to</span><b>{{ bank.bank }}</b></p>
+    <p><span>Account name</span><b>{{ bank.name }}</b></p><p><span>Account number</span><b>{{ bank.number }}</b></p></div>
+  <p class="bl-hint">Put your notice reference as the payment narration. Your capital updates after our team confirms and a second person verifies it.</p>{% endif %}
+  <h2>Your notices</h2>
+  {% for i in intents %}<div class="bl-row"><div class="grow"><b>{{ i.reference }}</b><small>{{ i.get_method_display }} · {{ i.created_at|date:"d M Y" }}{% if i.note %} · {{ i.note }}{% endif %}</small></div>
+    <div style="text-align:right"><b>₦{{ i.amount|floatformat:2 }}</b><br><span class="bl-chip-s {% if i.status == 'received' %}completed{% elif i.status == 'pending' %}processing{% else %}reversed{% endif %}">{{ i.get_status_display }}</span></div></div>
+  {% empty %}<p style="color:#9FB6E0">No notices yet.</p>{% endfor %}
+  <h2>Capital ledger</h2>
+  {% for e in entries %}<div class="bl-row"><div class="grow"><b>{{ e.get_entry_type_display }}</b><small>{{ e.effective_date|date:"d M Y" }}</small></div><b>₦{{ e.amount|floatformat:2 }}</b></div>
+  {% empty %}<p style="color:#9FB6E0">Nothing posted yet.</p>{% endfor %}
+</section>
+{% endblock %}

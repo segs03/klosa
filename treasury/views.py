@@ -13,6 +13,8 @@ from .services import TreasuryError, create_cash_in, pay_cash_out, request_cash_
 
 from django.conf import settings
 
+from django.http import Http404
+
 
 
 
@@ -50,19 +52,53 @@ class CashInForm(forms.Form):
     note = forms.CharField(label="Note (optional)", max_length=200, required=False)
 
 
-#@login_required
-#def deposit_info(request):
-#    account = get_object_or_404(Account, user=request.user)
-#    return render(request, "treasury/deposit_info.html", {"account": account, "min": rules.CASHIN_MIN})
-#    
  
+class OnlineDepositForm(forms.Form):
+    amount = forms.CharField(label="Amount (₦)", max_length=15)
+    method = forms.ChoiceField(choices=[("card", "Debit or credit card"), ("bank", "My bank account")])
+
+
+def _online_ready():
+    provider = str(getattr(settings, "CASHIER_PROVIDER", "")).lower()
+    return bool(settings.FEATURES.get("cashier")) and ("mock" not in provider or settings.DEBUG)
+    
+    
+def _card_ready():
+    provider = str(getattr(settings, "CASHIER_PROVIDER", "")).lower()
+
+    return (
+        _online_ready()
+        and provider.endswith("paystack.paystackprovider")
+        and bool(getattr(settings, "PAYSTACK_SECRET_KEY", ""))
+    )
+
+
 @login_required
 def deposit_info(request):
     account = get_object_or_404(Account, user=request.user)
-    provider = str(getattr(settings, "CASHIER_PROVIDER", ""))
+    online = _online_ready()
+    form = OnlineDepositForm(request.POST or None)
+    if request.method == "POST":
+        if not online:
+            raise Http404
+        if hit(f"dep:{request.user.pk}", 10, 3600):
+            form.add_error("amount", "Too many attempts. Try again later.")
+        elif form.is_valid():
+            from cashier.services import CashierError, start_deposit
+            try:
+                dep = start_deposit(account, form.cleaned_data["amount"], form.cleaned_data["method"])
+            except CashierError as e:
+                form.add_error("amount", str(e))
+            else:
+                return redirect(dep.checkout_url)
     return render(request, "treasury/deposit_info.html", {
-        "account": account, "min": rules.CASHIN_MIN,
-         "card_on": bool(settings.FEATURES.get("cashier")) and ("mock" not in provider.lower() or settings.DEBUG),})
+    "account": account,
+    "min": rules.CASHIN_MIN,
+    "form": form,
+    "online": online,
+    "card_on": _card_ready(),
+    "transfer_on": getattr(settings, "CASHIER_INBOUND_TRANSFERS", False),
+})
 
 
 @login_required

@@ -67,13 +67,14 @@ class Account(models.Model):
     pin_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
     
-    # inside class Account
     kyc_tier = models.PositiveSmallIntegerField(default=0)
     transfers_locked_until = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     
     closed_at = models.DateTimeField(null=True, blank=True)
+    
+    face_verified_at = models.DateTimeField(null=True, blank=True)
 
     @property
     def is_closed(self):
@@ -117,9 +118,50 @@ class Account(models.Model):
 
         return False
 
+    @property
+    def tier(self):
+         return self.kyc_tier + 1
+
     def __str__(self):
         return f"{self.user.username} - {self.account_number}"
-        
+  
+
+class AddressProof(models.Model):
+    STATUS_CHOICES = [("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")]
+    DOC_TYPES = [("utility_bill", "Utility bill")]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="address_proofs")
+    line1 = models.CharField(max_length=150)
+    line2 = models.CharField(max_length=150, blank=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country_code = models.CharField(max_length=2, default="NG")
+
+    document_type = models.CharField(max_length=30, choices=DOC_TYPES, default="utility_bill")
+    document = models.FileField(upload_to="address/", storage=PrivateStorage())   # private, never a public URL
+    bill_date = models.DateField()
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    reason = models.CharField(max_length=500, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        permissions = [("review_addressproof", "Can review address proofs")]
+        constraints = [
+            models.UniqueConstraint(fields=["user"], condition=Q(status="pending"),
+                                    name="one_pending_address_per_user"),
+            models.UniqueConstraint(fields=["user"], condition=Q(status="approved"),
+                                    name="one_approved_address_per_user"),
+        ]
+
+    def __str__(self):
+        return f"Address {self.pk} - {self.status}"
+  
+                            
 
 class OneTimeCode(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -155,12 +197,45 @@ class StaffTOTP(models.Model):
         return totp.decrypt(bytes(self.secret_enc))
 
 
-#class IdentityLock(models.Model):
-#    """One ID number can belong to one account. Only a keyed hash is stored."""
-#    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-#    id_hash = models.CharField(max_length=64, unique=True)
-#    id_type = models.CharField(max_length=10)
-#    created_at = models.DateTimeField(auto_now_add=True)
+
+class FaceCheck(models.Model):
+    STATUS = [("capturing", "Capturing"), ("review", "In review"), ("passed", "Passed"),
+              ("failed", "Failed"), ("expired", "Expired")]
+    LABELS = {"smile": "Smile", "blink": "Blink twice", "left": "Slowly turn your head left",
+              "right": "Slowly turn your head right", "up": "Look up", "open": "Open your mouth"}
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="face_checks")
+    status = models.CharField(max_length=10, choices=STATUS, default="capturing")
+    prompts = models.JSONField(default=list)
+    nonce_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    score = models.FloatField(null=True, blank=True)
+    provider_ref = models.CharField(max_length=100, blank=True)
+    reason = models.CharField(max_length=300, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [("review_facecheck", "Can review face checks")]
+
+    def prompt_labels(self):
+        return [self.LABELS.get(p, p) for p in self.prompts]
+
+
+class FaceFrame(models.Model):
+    face_check = models.ForeignKey(FaceCheck, on_delete=models.PROTECT, related_name="frames")
+    step = models.PositiveSmallIntegerField()
+    path = models.CharField(max_length=255, blank=True)        # emptied when the image is purged
+    sha256 = models.CharField(max_length=64, unique=True)      # one photo can never be used twice
+    taken_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["step"]
+        constraints = [models.UniqueConstraint(fields=["face_check", "step"], name="one_frame_per_step")]
+
 
 
 class RecoveryRequest(models.Model):
@@ -401,7 +476,7 @@ class KYCApplication(models.Model):
     date_of_birth = models.DateField()
 
     # Store documents using private storage, not public media URLs.
-    identity_document = models.FileField(upload_to="kyc/", storage=PrivateStorage())
+    identity_document = models.FileField(upload_to="kyc/", storage=PrivateStorage(), blank=True)
     
     identity_digest = models.CharField(
     max_length=64,

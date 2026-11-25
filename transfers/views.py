@@ -17,7 +17,7 @@ from .services import TransferError, pay_money_request, sent_today, send_money
 
 from beneficiary.models import Beneficiary
 
-
+from .card_payments import pay_with_card
 
 
 MAX_PENDING_REQUESTS = 10
@@ -34,6 +34,13 @@ def send_money_view(request):
     used = sent_today(account)
     lim = limits_for(account)
 
+    initial = {}
+    to = request.GET.get("to", "")
+    if to.isdigit():
+        ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
+        if ben:
+            initial["beneficiary"] = ben.pk
+
     if request.method == "POST":
         # one-time token: blocks double taps and refresh re-posts
         if request.POST.get("token") != request.session.get("send_token"):
@@ -41,18 +48,7 @@ def send_money_view(request):
             request.session["send_token"] = uuid.uuid4().hex
             return redirect("transfers:send")
 
-        initial = {}
-        to = request.GET.get("to", "")
-        if to.isdigit():
-            ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
-            if ben:
-                initial["beneficiary"] = ben.pk
-        form = TransferForm(
-    request.POST,
-    account=account,
-    used_today=used,
-    initial=initial,
-)
+        form = TransferForm(request.POST, account=account, used_today=used, initial=initial)
 
         if form.is_valid():
             beneficiary = form.cleaned_data.get("beneficiary")
@@ -60,6 +56,7 @@ def send_money_view(request):
             amount = form.cleaned_data["amount"]
             note = form.cleaned_data.get("description", "")
             pin = form.cleaned_data["pin"]
+            source = form.cleaned_data.get("pay_from") or "balance"   # "balance" or one of your own card ids
 
             # the beneficiary's bank must be Klosa until you connect a payout provider
             if beneficiary and beneficiary.bank_code != settings.KLOSA_BANK_CODE:
@@ -71,13 +68,24 @@ def send_money_view(request):
                 if not receiver:
                     form.add_error(None, "That account is not available.")
                 else:
+                    # the reference is made once per page, so a retry of the same page can't pay twice
+                    ref = request.session.setdefault("send_ref", "KL" + uuid.uuid4().hex[:10].upper())
                     try:
-                        # the reference is made once per page, so a retry of the same page can't pay twice
-                        t = send_money(account, receiver, amount, request.session["send_ref"],
-                                       pin, note=note, beneficiary=beneficiary)
+                        if source == "balance":
+                            t = send_money(account, receiver, amount, ref, pin,
+                                           note=note, beneficiary=beneficiary)
+                        else:
+                            t = pay_with_card(account, receiver, int(source), amount, pin, ref,
+                                              note=note, beneficiary=beneficiary)
                     except TransferError as e:
                         msg = str(e)
-                        field = "pin" if ("PIN" in msg or "locked" in msg) else "amount"
+                        low = msg.lower()
+                        if "PIN" in msg or "locked" in low:
+                            field = "pin"
+                        elif "card" in low or "credit" in low:
+                            field = "pay_from"
+                        else:
+                            field = "amount"
                         form.add_error(field, msg)
                     else:
                         request.session.pop("send_token", None)
@@ -87,18 +95,7 @@ def send_money_view(request):
 
             used = sent_today(account)                      # refresh after a failed try
     else:
-        initial = {}
-        to = request.GET.get("to", "")
-        if to.isdigit():
-            ben = Beneficiary.objects.filter(pk=int(to), owner=request.user, is_active=True).first()
-            if ben:
-                initial["beneficiary"] = ben.pk
-        form = TransferForm(
-    request.POST,
-    account=account,
-    used_today=used,
-    initial=initial,
-)
+        form = TransferForm(account=account, used_today=used, initial=initial)
 
     token = request.session.setdefault("send_token", uuid.uuid4().hex)
     request.session.setdefault("send_ref", "KL" + uuid.uuid4().hex[:10].upper())

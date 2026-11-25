@@ -145,7 +145,7 @@
         <span>Copy</span>
       </button>
     </div>
-    <span class="st-tier">Tier {{ account.kyc_tier }}</span>
+    <span class="st-tier">Tier {{ account.tier }}</span>
   </div>
 
   <div class="st-sec" data-r style="--d:2">
@@ -178,11 +178,11 @@
   <div class="st-sec" data-r style="--d:3">
     <h4>Preferences</h4>
     <div class="st-list">
-      <div class="st-item settings-item" aria-disabled="true">
+      <a href="{% url 'notices:list' %}" class="st-item settings-item" aria-disabled="true">
         <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
         <span class="st-txt"><b>Notifications</b><small>Alerts for money in and out</small></span>
-        <span class="st-chip soon">Soon</span>
-      </div>
+        {% if unread_count %}<span class="db-dot"></span>{% endif %}
+      </a>
       <div class="st-item settings-item" aria-disabled="true">
         <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2.2-.5-1.3.3-2.3 1.7-2.3H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></svg></span>
         <span class="st-txt"><b>Appearance</b><small>Theme and display</small></span>

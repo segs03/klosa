@@ -1,0 +1,63 @@
+<style>
+  .qa-back{position:fixed;inset:0;z-index:1500;background:rgba(2,10,28,.65);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;transition:opacity .25s}
+  .qa-back.on{opacity:1}
+  .qa{position:fixed;left:0;right:0;bottom:0;z-index:1501;max-width:520px;margin:0 auto;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 18px);
+    border-radius:26px 26px 0 0;background:linear-gradient(180deg,#0F3A82,#061B3D);border:1px solid rgba(255,255,255,.12);border-bottom:0;color:#fff;
+    transform:translateY(100%);transition:transform .35s cubic-bezier(.2,.9,.3,1.05)}
+  .qa.on{transform:none}.qa[hidden],.qa-back[hidden]{display:none}
+  .qa-bar{width:42px;height:5px;margin:2px auto 12px;border-radius:99px;background:rgba(255,255,255,.28)}
+  .qa-who{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .qa-who b{display:block;font-size:17px}.qa-who small{color:#9FB6E0;font-size:13px}
+  .qa-av{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;font-size:19px;font-weight:700;color:#061B3D;background:linear-gradient(135deg,#5FF1FF,#00E5FF)}
+  .qa-act{display:flex;align-items:center;gap:14px;width:100%;min-height:54px;margin:0;padding:0 12px;border:0;border-radius:16px;background:none;color:#fff;font:inherit;font-size:16px;font-weight:500;text-decoration:none;cursor:pointer;transition:background .15s}
+  .qa-act:active{background:rgba(255,255,255,.08)}
+  .qa-act i{width:22px;text-align:center;color:#00E5FF}
+  .qa-act.danger,.qa-act.danger i{color:#FF8A8A}.qa-act[hidden]{display:none}
+  .qa-close{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:99px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-weight:700}
+  @media (prefers-reduced-motion:reduce){.qa,.qa-back{transition:none}}
+</style>
+<div class="qa-back" id="qaBack" hidden></div>
+<div class="qa" id="qa" role="dialog" aria-modal="true" aria-labelledby="qaName" hidden>
+  <div class="qa-bar"></div>
+  <div class="qa-who"><span class="qa-av" id="qaInit"></span><div><b id="qaName"></b><small id="qaSub"></small></div></div>
+  <a class="qa-act" id="qaSend" href="#"><i class="fa-solid fa-paper-plane"></i><span>Send money</span></a>
+  <a class="qa-act" id="qaReq" href="#"><i class="fa-solid fa-hand-holding-dollar"></i><span>Request money</span></a>
+  <button class="qa-act" id="qaCopy" type="button"><i class="fa-regular fa-copy"></i><span>Copy account number</span></button>
+  <form method="post" id="qaDelForm">{% csrf_token %}<button class="qa-act danger" type="submit"><i class="fa-solid fa-trash"></i><span>Remove recipient</span></button></form>
+  <button class="qa-close" id="qaClose" type="button">Close</button>
+</div>
+<script>
+(() => {
+  const qa = document.getElementById("qa"), back = document.getElementById("qaBack");
+  const $ = (id) => document.getElementById(id);
+  const open = (b) => {
+    const d = b.dataset;
+    $("qaInit").textContent = (d.name || "?").charAt(0).toUpperCase();
+    $("qaName").textContent = d.name;
+    $("qaSub").textContent = d.bank + " ••••" + d.last4;
+    $("qaSend").href = "{% url 'transfers:send' %}?to=" + d.id;
+    $("qaReq").href = "{% url 'transfers:request_money' %}?to=" + d.id;
+    $("qaReq").hidden = !d.klosa;
+    $("qaDelForm").action = d.del;
+    $("qaCopy").dataset.acct = d.acct;
+    $("qaCopy").querySelector("span").textContent = "Copy account number";
+    qa.hidden = back.hidden = false;
+    requestAnimationFrame(() => { qa.classList.add("on"); back.classList.add("on"); });
+  };
+  const close = () => {
+    qa.classList.remove("on"); back.classList.remove("on");
+    setTimeout(() => { qa.hidden = back.hidden = true; }, 320);
+  };
+  document.querySelectorAll(".rc[data-id]").forEach((b) => b.addEventListener("click", () => open(b)));
+  back.addEventListener("click", close);
+  $("qaClose").addEventListener("click", close);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+  $("qaCopy").addEventListener("click", async (e) => {
+    const t = e.currentTarget, s = t.querySelector("span");
+    try { await navigator.clipboard.writeText(t.dataset.acct); s.textContent = "Copied"; }
+    catch (err) { s.textContent = t.dataset.acct; }
+    setTimeout(close, 900);
+  });
+  $("qaDelForm").addEventListener("submit", (e) => { if (!confirm("Remove this recipient?")) e.preventDefault(); });
+})();
+</script>
