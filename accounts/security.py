@@ -40,11 +40,16 @@ class RealIPMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if getattr(settings, "TRUST_REAL_IP_HEADER", False):
-            try:
+        hops = int(getattr(settings, "TRUSTED_PROXY_HOPS", 0))
+        try:
+            if hops:
+                parts = [p.strip() for p in request.META.get("HTTP_X_FORWARDED_FOR", "").split(",") if p.strip()]
+                if len(parts) >= hops:
+                    request.META["REMOTE_ADDR"] = str(ipaddress.ip_address(parts[-hops]))
+            elif getattr(settings, "TRUST_REAL_IP_HEADER", False):
                 request.META["REMOTE_ADDR"] = str(ipaddress.ip_address(request.META.get("HTTP_X_REAL_IP", "").strip()))
-            except ValueError:
-                pass
+        except ValueError:
+            pass
         return self.get_response(request)
 
 

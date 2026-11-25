@@ -9,6 +9,8 @@ db.sqlite3
 media/
 staticfiles/
 private_media/
+models/
+*.bak
 
 # Environment variables
 .env

@@ -5,7 +5,9 @@ Django settings for Klosa Bank.
 
 import os
 import sys
+import dj_database_url
 from pathlib import Path
+
 
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
@@ -126,6 +128,18 @@ FACE_PROVIDER = "accounts.face.ManualReview"      # a provider class with assess
 # ============================================================
 # 5. DATABASE
 # ============================================================
+
+if env("DATABASE_URL"):
+    DATABASES = {"default": dj_database_url.parse(env("DATABASE_URL"), conn_max_age=60, ssl_require=True)}
+_host = env("RENDER_EXTERNAL_HOSTNAME")
+if _host:
+    ALLOWED_HOSTS.append(_host)
+    CSRF_TRUSTED_ORIGINS.append("https://" + _host)
+    SITE_URL = "https://" + _host
+
+STORAGES = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"}}
+TRUSTED_PROXY_HOPS = int(env("TRUSTED_PROXY_HOPS", "0"))
 
 DATABASES = {
     "default": {
@@ -386,6 +400,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "accounts.security.SecurityHeadersMiddleware",
     "accounts.security.RealIPMiddleware",
 
