@@ -123,7 +123,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-FACE_PROVIDER = "accounts.face.ManualReview"      # a provider class with assess(check) -> (status, score, ref)
 
 FACE_AUTH_KEY = env("FACE_AUTH_KEY")                                   # a Fernet key; empty derives one from SECRET_KEY
 
@@ -305,11 +304,10 @@ MEDIA_ROOT = Path(
 # 11. PROVIDERS AND EXTERNAL SERVICES
 # ============================================================
 
-TERMII_API_KEY = env("TERMII_API_KEY")
-TERMII_BASE_URL = env("TERMII_BASE_URL")
-TERMII_SENDER_ID = env("TERMII_SENDER_ID", "N-Alert")
-TERMII_CHANNEL = env("TERMII_CHANNEL", "dnd")
-TERMII_DAILY_CAP = int(env("TERMII_DAILY_CAP", "500"))
+INFOBIP_API_KEY = env("INFOBIP_API_KEY")
+INFOBIP_BASE_URL = env("INFOBIP_BASE_URL")
+INFOBIP_SENDER = env("INFOBIP_SENDER", "")
+INFOBIP_DAILY_CAP = int(env("INFOBIP_DAILY_CAP", "500"))
 
 SMS_BACKEND = env("SMS_BACKEND", "console")
 
