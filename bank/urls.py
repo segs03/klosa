@@ -39,6 +39,7 @@ path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
     path("treasury/", include("treasury.urls")),
     path("staff/", include("backoffice.urls")),
     path("notifications/", include("notices.urls")),
+    path("face/", include("face_auth.urls")),
     path(settings.ADMIN_URL, admin.site.urls), 
     path("healthz/", healthz),
 ]

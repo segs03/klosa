@@ -7,6 +7,10 @@ pip install -r requirements.txt
 # Klosa's own face-check models. If this fails the site still works: face checks go to staff review.
 python scripts/fetch_face_models.py || echo "WARNING: face models were not downloaded"
 
+mkdir -p models
+[ -f models/yunet.onnx ] || curl -fsSL -o models/yunet.onnx https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
+[ -f models/sface.onnx ] || curl -fsSL -o models/sface.onnx https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx
+
 python manage.py collectstatic --noinput
 python manage.py migrate --noinput
 python manage.py createcachetable          # rate-limit counters shared by all server processes

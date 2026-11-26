@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.credit_services import (_get_credit_policy, assess_credit_application, credit_summary,                                 decide_credit_application, eligibility_problem)
 
-from accounts.models import (Account, CreditAccount, CreditApplication, KYCApplication, VerifiedIdentity, FaceCheck)
+from accounts.models import (Account, CreditAccount, CreditApplication, KYCApplication, VerifiedIdentity)
 
 from accounts.utils import normalize_phone
 from biller.models import BillPayment
@@ -27,6 +27,8 @@ from .audit import log
 from .models import AuditLog
 
 from funding.models import ContributionIntent, CapitalContribution
+
+from face_auth.models import FaceSession
 
 
 
@@ -85,7 +87,7 @@ def home(request):
         tiles.append(("Audit log", None, "backoffice:audit", "fa-clipboard-list"))
     
     if has("accounts.review_facecheck"):
-        tiles.append(("Face checks", FaceCheck.objects.filter(status="review").count(), "accounts:face_queue", "fa-face-smile"))
+        tiles.append(("Face checks", FaceSession.objects.filter(status="review").count(), "face_auth:queue", "fa-face-smile"))
         
     if has("funding.confirm_contributionintent"):
         tiles.append(("Deposit notices", ContributionIntent.objects.filter(status="pending").count(), "funding:intents", "fa-coins"))

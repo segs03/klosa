@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views, passkey, onboarding, recovery
-from . import kyc_views, twofactor, face_view, tier_views, address_views
+from . import kyc_views, twofactor, tier_views, address_views
+
 
 app_name = "accounts"
 
@@ -62,13 +63,6 @@ path("close/", views.close_account_view, name="close_account"),
     
     path("upgrade/", tier_views.upgrade, name="upgrade"),
     path("upgrade/check/", tier_views.recheck, name="recheck"),
-
-    path("face/", face_view.face_start, name="face_start"),
-    path("face/capture/", face_view.face_capture, name="face_capture"),
-    path("face/frame/", face_view.face_frame, name="face_frame"),
-    path("face/staff/", face_view.face_queue, name="face_queue"),
-    path("face/staff/<int:pk>/", face_view.face_review, name="face_review"),
-    path("face/staff/<int:pk>/<int:step>/image/", face_view.face_image, name="face_image"),
     
 path("address/", address_views.address_view, name="address"),
 path("address/staff/", address_views.address_queue, name="address_staff"),

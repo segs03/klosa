@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Face checks{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Face checks" sub=checks|length %}
+  {% for c in checks %}<a class="bl-row" href="{% url 'face_auth:review' c.pk %}"><div class="grow"><b>{{ c.user.get_full_name|default:"Klosa customer" }}</b><small>{{ c.created_at|date:"d M, H:i" }}</small></div><span class="bl-chip-s processing">Review</span></a>
+  {% empty %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endfor %}
+</section>
+{% endblock %}

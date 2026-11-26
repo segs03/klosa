@@ -46,7 +46,7 @@
   {% endif %}
 
 
-    <a href="{% url 'accounts:face_start' %}" class="bl-sum" data-r style="--d:1">Verify your face!
+    <a href="{% url 'face_auth:begin' 'upgrade' %}" class="bl-sum" data-r style="--d:1">Verify your face!
     </a>
 
   {% if can_submit %}

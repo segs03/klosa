@@ -194,7 +194,7 @@ def _welcome(u, old, new, created):
 
 
 def _face(c, old, new, created):
-    link = reverse("accounts:face_start")
+    link = reverse("face_auth:begin", args=["upgrade"])
     if new == "review":
         notify_user(c.user, "Face check received", "We are comparing your photos with your ID.", "info", link)
     elif new == "passed":

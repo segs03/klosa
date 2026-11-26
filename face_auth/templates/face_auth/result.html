@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Face check - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head"><div><h1>Face check</h1></div></header>
+  {% if session.status == "passed" %}
+    <p>Your face check passed.</p>
+    <a class="bl-btn" href="{% url 'accounts:home' %}">Continue</a>
+  {% elif session.status == "review" %}
+    <p>We are reviewing your photos. We will tell you when it is done.</p>
+    <a class="bl-btn" href="{% url 'accounts:home' %}">Back to home</a>
+  {% else %}
+    <p class="bl-err">{{ session.reason|default:"The face check did not pass." }}</p>
+    <a class="bl-btn" href="{% url 'face_auth:begin' %}">Try again</a>
+  {% endif %}
+</section>
+{% endblock %}

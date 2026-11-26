@@ -9,7 +9,11 @@ from accounts.models import Account, AddressProof
 
 from .helpers import PASSWORD, make_account, make_user, make_verified
 
+from django.test import override_settings
 
+
+
+@override_settings(KYC_ADDRESS_REQUIRED=True)
 class UpgradePageTests(TestCase):
     def setUp(self):
         self.user = make_user("ann")
@@ -55,7 +59,7 @@ class UpgradePageTests(TestCase):
         make_verified(self.user, "bvn")
         make_verified(self.user, "drivers_license")
         self.address()
-        self.assertEqual(self.nxt()[1], reverse("accounts:face_start"))
+        self.assertEqual(self.nxt()[1], reverse("face_auth:begin", args=["upgrade"]))
 
     def test_when_everything_is_done_there_is_nothing_left(self):
         make_verified(self.user, "bvn")
@@ -68,7 +72,7 @@ class UpgradePageTests(TestCase):
     def test_the_address_step_is_skipped_when_the_rule_is_off(self):
         make_verified(self.user, "bvn")
         make_verified(self.user, "nin")
-        self.assertEqual(self.nxt()[1], reverse("accounts:face_start"))
+        self.assertEqual(self.nxt()[1], reverse("face_auth:begin", args=["upgrade"]))
 
     def test_the_checklist_shows_each_requirement(self):
         make_verified(self.user, "bvn")

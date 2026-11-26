@@ -1,12 +1,14 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Account, AddressProof, KYCApplication, VerifiedDocument
 from accounts.tiers import refresh_tier
+from django.test import Client, TestCase, override_settings
+
+
 
 User = get_user_model()
 
@@ -24,6 +26,8 @@ def approved_address(user):
                                        bill_date=date.today(), document="address/x.jpg", status="approved")
 
 
+
+@override_settings(KYC_ADDRESS_REQUIRED=True)
 class TierTests(TestCase):
     def setUp(self):
         self.u = User.objects.create_user("ann", password="pass12345")
@@ -97,7 +101,9 @@ class TierTests(TestCase):
         doc(self.u, "nin")
         self.assertIn("BVN", c.get(url).context["nxt"][0])
         doc(self.u, "bvn")
-        self.assertEqual(c.get(url).context["nxt"][1], reverse("accounts:face_start"))
+        self.assertEqual(c.get(url).context["nxt"][1], reverse("accounts:address"))
+        approved_address(self.u)
+        self.assertEqual(c.get(url).context["nxt"][1], reverse("face_auth:begin", args=["upgrade"]))
         Account.objects.filter(pk=self.acc.pk).update(face_verified_at=timezone.now())
         self.assertIsNone(c.get(url).context["nxt"])
 

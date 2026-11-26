@@ -50,6 +50,8 @@ from transactions.summary import summarize
 from django.conf import settings
 from django import forms
 
+from face_auth import service as face
+
 
 
 
@@ -166,31 +168,25 @@ def logout_view(request):
 
 
 def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        
-        ident = normalize_phone(username) or username.lower()
-        
-        key = f"login_fail:{ident}:{request.META.get('REMOTE_ADDR', '')}"
-
-        user = authenticate(
-            request,
-            username=username,
-            password=password
-        )
-
-        if user is not None:
-            login(request, user)
-            if user.is_staff:
-                return redirect( "backoffice:home")
-            return redirect("accounts:home")
-
-        return render(request, "accounts/login.html", {
-            "error": "Invalid username or password."
-        })
-
-    return render(request, "accounts/login.html")
+    if request.method != "POST":
+        return render(request, "accounts/login.html")
+    username = request.POST.get("username", "")
+    ident = normalize_phone(username) or username.lower()
+    if throttled(request, f"login:{ident}", 10):
+        return render(request, "accounts/login.html", {"error": "Too many attempts. Try again later."}, status=429)
+    user = authenticate(request, username=username, password=request.POST.get("password", ""))
+    if user is None:
+        return render(request, "accounts/login.html", {"error": "Invalid username or password."})
+    if user.is_staff:
+        login(request, user)
+        return redirect("backoffice:home")
+    purpose = next((p for p in ("login", "ip_change") if face.required(user, p, request)), None)
+    if purpose:
+        request.session["face_pending"] = {"uid": user.pk, "purpose": purpose, "backend": user.backend,
+                                           "ts": timezone.now().timestamp()}
+        return redirect("face_auth:begin")
+    login(request, user)
+    return redirect("accounts:home")
     
     
  

@@ -27,7 +27,7 @@ def upgrade(request):
     elif not has_address:
         nxt = ("Add your address", reverse("accounts:address"))
     elif not face:
-        nxt = ("Do the face check", reverse("accounts:face_start"))
+        nxt = ("Do the face check", reverse("face_auth:begin", args=["upgrade"]))
     else:
         nxt = None
 

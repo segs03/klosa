@@ -125,6 +125,17 @@ AUTH_PASSWORD_VALIDATORS = [
 
 FACE_PROVIDER = "accounts.face.ManualReview"      # a provider class with assess(check) -> (status, score, ref)
 
+FACE_AUTH_KEY = env("FACE_AUTH_KEY")                                   # a Fernet key; empty derives one from SECRET_KEY
+
+FACE_MODEL_DIR = env("FACE_MODEL_DIR", str(BASE_DIR / "models"))
+
+FACE_AUTO_THRESHOLD = float(env("FACE_AUTO_THRESHOLD", "0.40"))        # stricter than SFace's 0.363; tune with real photos
+
+FACE_DUPLICATE_THRESHOLD = 0.45
+
+FACE_CONSENT_VERSION = 1
+
+FACE_ENFORCE = {p.strip() for p in env("FACE_ENFORCE").split(",") if p.strip()}
 
 # ============================================================
 # 5. DATABASE
@@ -251,8 +262,6 @@ KYC_IDENTITY_HMAC_KEY = env("KYC_IDENTITY_HMAC_KEY")
 # 9. KYC
 # ============================================================
 
-KYC_APPROVALS_REQUIRED = 1
-
 KYC_MAX_UPLOAD = 5 * 1024 * 1024
 
 BVN_API_URL = "https://api.withmono.com/v3/lookup/bvn/initiate"   # from your provider
@@ -262,6 +271,9 @@ BVN_API_KEY = env("BVN_API_KEY")
 FACE_PROVIDER = env("FACE_PROVIDER", "accounts.face.ManualReview")
 
 FACE_MODEL_DIR = env("FACE_MODEL_DIR", str(BASE_DIR / "models"))
+
+KYC_ADDRESS_REQUIRED = flag("KYC_ADDRESS_REQUIRED", False)
+
 
 # ============================================================
 # 10. FILE UPLOADS AND PRIVATE STORAGE
@@ -400,6 +412,7 @@ INSTALLED_APPS = [
     "treasury",
     "backoffice",
     "notices",
+    "face_auth",
 
     "fontawesomefree",
 ]
