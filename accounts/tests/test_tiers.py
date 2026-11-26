@@ -27,7 +27,7 @@ def approved_address(user):
 
 
 
-@override_settings(KYC_ADDRESS_REQUIRED=True)
+@override_settings(KYC_ADDRESS_REQUIRED=True, KYC_EMAIL_REQUIRED=False)
 class TierTests(TestCase):
     def setUp(self):
         self.u = User.objects.create_user("ann", password="pass12345")

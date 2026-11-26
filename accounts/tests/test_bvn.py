@@ -3,7 +3,7 @@ from unittest import mock
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from accounts.bvn_provider import BVNNotFound, ProviderError
@@ -39,6 +39,8 @@ class VerifyBvnTests(TestCase):
         self.assertTrue(self.has_bvn())
         self.assertEqual(KYCApplication.objects.get(user=self.user).status, "verified")
 
+
+    @override_settings(KYC_EMAIL_REQUIRED=False)
     def test_the_account_reaches_tier_two(self):
         verify_bvn(self.user, NUMBER)
         self.acc.refresh_from_db()

@@ -90,7 +90,7 @@ def send_code(user, purpose, minutes=15):
     OneTimeCode.objects.create(
         user=user, purpose=purpose, code_hash=digest(purpose, user.pk, code),
         expires_at=timezone.now() + timedelta(minutes=minutes))
-    notify(user, f"Klosa Bank code: {code}. It works for {minutes} minutes. Never share it.")
+    notify(user, f"Klosa: your verification code is {code}. It expires in {minutes} minutes. Do not share it with anyone.")
 
 
 def check_code(user, purpose, code):

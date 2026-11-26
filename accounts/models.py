@@ -15,6 +15,10 @@ from django.contrib.auth.models import AbstractUser
 from .utils import normalize_email
 from .storage import PrivateStorage
 
+from django.db.models.functions import Lower
+
+
+
 
 
 class User(AbstractUser):
@@ -28,6 +32,12 @@ class User(AbstractUser):
     phone_verified = models.BooleanField(default=False)
 
     must_change_password = models.BooleanField(default=False)
+    
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:   # add to your existing Meta if you have one
+        constraints = [models.UniqueConstraint(
+        Lower("email"), condition=Q(email_verified_at__isnull=False), name="one_verified_email")]
 
     def save(self, *args, **kwargs):
         self.email = (self.email or "").strip() or None          # keep the address as typed

@@ -81,7 +81,9 @@ class ReviewAddressTests(TestCase):
         self.proof.refresh_from_db()
         self.assertEqual((self.proof.status, self.proof.reviewed_by), ("approved", self.staff))
         self.assertIsNotNone(self.proof.reviewed_at)
+        
 
+    @override_settings(KYC_EMAIL_REQUIRED=False)
     def test_approval_raises_the_tier_when_everything_else_is_done(self):
         make_verified(self.user, "bvn")
         make_verified(self.user, "nin")

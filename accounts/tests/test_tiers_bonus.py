@@ -28,7 +28,7 @@ class HasRequiredIdsTests(TestCase):
             self.assertTrue(has_required_ids({"bvn", second}))
 
 
-@override_settings(KYC_ADDRESS_REQUIRED=True)
+@override_settings(KYC_ADDRESS_REQUIRED=True, KYC_EMAIL_REQUIRED=False)
 class TierTests(TestCase):
     def setUp(self):
         self.user = make_user()

@@ -13,7 +13,7 @@ from django.test import override_settings
 
 
 
-@override_settings(KYC_ADDRESS_REQUIRED=True)
+@override_settings(KYC_ADDRESS_REQUIRED=True, KYC_EMAIL_REQUIRED=False)
 class UpgradePageTests(TestCase):
     def setUp(self):
         self.user = make_user("ann")
@@ -78,7 +78,7 @@ class UpgradePageTests(TestCase):
         make_verified(self.user, "bvn")
         make_verified(self.user, "nin")
         checks = dict(self.page().context["checks"])
-        self.assertEqual(checks, {"Phone": True, "BVN": True, "One more ID": True,
+        self.assertEqual(checks, {"Phone": True, "BVN": True, "Email": True, "One more ID": True,
                                   "Address": False, "Face check": False})
 
     def test_the_tier_table_matches_the_new_requirements(self):
@@ -99,6 +99,8 @@ class RecheckTests(TestCase):
         self.client.login(username="ann", password=PASSWORD)
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
+
+    @override_settings(KYC_EMAIL_REQUIRED=False)
     def test_it_raises_the_tier_and_says_so(self):
         make_verified(self.user, "bvn")
         self.client.login(username="ann", password=PASSWORD)

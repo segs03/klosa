@@ -127,13 +127,15 @@ FACE_PROVIDER = "accounts.face.ManualReview"      # a provider class with assess
 
 FACE_AUTH_KEY = env("FACE_AUTH_KEY")                                   # a Fernet key; empty derives one from SECRET_KEY
 
-FACE_MODEL_DIR = env("FACE_MODEL_DIR", str(BASE_DIR / "models"))
-
 FACE_AUTO_THRESHOLD = float(env("FACE_AUTO_THRESHOLD", "0.40"))        # stricter than SFace's 0.363; tune with real photos
 
 FACE_DUPLICATE_THRESHOLD = 0.45
 
 FACE_CONSENT_VERSION = 1
+
+FACE_PROVIDER = env("FACE_PROVIDER", "accounts.face.ManualReview")
+
+FACE_MODEL_DIR = env("FACE_MODEL_DIR", str(BASE_DIR / "models"))
 
 FACE_ENFORCE = {p.strip() for p in env("FACE_ENFORCE").split(",") if p.strip()}
 
@@ -268,12 +270,9 @@ BVN_API_URL = "https://api.withmono.com/v3/lookup/bvn/initiate"   # from your pr
 
 BVN_API_KEY = env("BVN_API_KEY")
 
-FACE_PROVIDER = env("FACE_PROVIDER", "accounts.face.ManualReview")
+KYC_ADDRESS_REQUIRED = flag("KYC_ADDRESS_REQUIRED", True)
 
-FACE_MODEL_DIR = env("FACE_MODEL_DIR", str(BASE_DIR / "models"))
-
-KYC_ADDRESS_REQUIRED = flag("KYC_ADDRESS_REQUIRED", False)
-
+KYC_EMAIL_REQUIRED = flag("KYC_EMAIL_REQUIRED", True)
 
 # ============================================================
 # 10. FILE UPLOADS AND PRIVATE STORAGE
@@ -305,6 +304,12 @@ MEDIA_ROOT = Path(
 # ============================================================
 # 11. PROVIDERS AND EXTERNAL SERVICES
 # ============================================================
+
+TERMII_API_KEY = env("TERMII_API_KEY")
+TERMII_BASE_URL = env("TERMII_BASE_URL")
+TERMII_SENDER_ID = env("TERMII_SENDER_ID", "N-Alert")
+TERMII_CHANNEL = env("TERMII_CHANNEL", "dnd")
+TERMII_DAILY_CAP = int(env("TERMII_DAILY_CAP", "500"))
 
 SMS_BACKEND = env("SMS_BACKEND", "console")
 
@@ -484,11 +489,20 @@ LOGIN_REDIRECT_URL = "/accounts/"
 # 17. EMAIL
 # ============================================================
 
+RESEND_API_KEY = env("RESEND_API_KEY")
+
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG
+    else "accounts.resend_backend.ResendBackend" if RESEND_API_KEY
+    else "django.core.mail.backends.smtp.EmailBackend",
+)
+
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     "Klosa Bank <no-reply@yourdomain.com>",
 )
-
+"""
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
     (
@@ -497,6 +511,7 @@ EMAIL_BACKEND = env(
         else "django.core.mail.backends.smtp.EmailBackend"
     ),
 )
+"""
 
 EMAIL_HOST = env("EMAIL_HOST")
 

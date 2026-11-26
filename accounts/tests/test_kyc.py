@@ -115,6 +115,8 @@ class ReviewTests(Base):
         self.assertTrue(VerifiedIdentity.objects.filter(user=self.user, identity_digest=a.identity_digest).exists())
         self.assertEqual((self.user.first_name, self.user.last_name), ("Ada", "Chinwe Obi"))
 
+
+    @override_settings(KYC_EMAIL_REQUIRED=False)
     def test_a_bvn_approval_raises_the_tier(self):
         app = KYCApplication.objects.create(
             user=self.user, country_code="NG", document_type="bvn", legal_name="Ada Obi",

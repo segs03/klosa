@@ -26,10 +26,16 @@ def address_ok(user):
     return AddressProof.objects.filter(user=user, status="approved").exists()
 
 
+def email_ok(user):
+    if not getattr(settings, "KYC_EMAIL_REQUIRED", True):
+        return True
+    return bool(user.email_verified_at)
+
+
 def earned(user, account):
     types = verified_types(user)
-    if REQUIRED_ID not in types:
-        return 0                                           # no BVN, no upgrade
+    if REQUIRED_ID not in types or not email_ok(user):
+        return 0                                           # no BVN or no email, no upgrade
     if has_required_ids(types) and account.face_verified_at and address_ok(user):
         return 2
     return 1
