@@ -1,70 +1,18 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block title %}Funding Periods | Klosa{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'funding/css/style.css' %}">
-{% endblock %}
-
+{% extends 'base.html' %}
+{% block title %}Funding periods{% endblock %}
 {% block content %}
-<div class="funding-container">
-
-    <div class="funding-header">
-        <div>
-            <h2>Funding periods</h2>
-            <p>Manage monthly accounting periods.</p>
-        </div>
-    </div>
-
-    {% if periods %}
-        <div class="period-list">
-
-            {% for period in periods %}
-                <div class="period-card">
-
-                    <div class="period-info">
-                        <h3>
-                            {{ period.start_date|date:"M d, Y" }}
-                            –
-                            {{ period.end_date|date:"M d, Y" }}
-                        </h3>
-
-                        <span class="period-status status-{{ period.status }}">
-                            {{ period.get_status_display }}
-                        </span>
-
-                        {% if period.closed_at %}
-                            <p>
-                                Closed:
-                                {{ period.closed_at|date:"M d, Y H:i" }}
-                            </p>
-                        {% endif %}
-                    </div>
-
-                    <div class="period-actions">
-                        {% if period.status == "closed" and perms.funding.reopen_fundingperiod %}
-                            <a
-                                href="{% url 'funding:reopen_period' period.pk %}"
-                                class="reopen-button"
-                            >
-                                Reopen period
-                            </a>
-                        {% endif %}
-                    </div>
-
-                </div>
-            {% endfor %}
-
-        </div>
-    {% else %}
-        <div class="empty-periods">
-            <h3>No funding periods yet</h3>
-            <p>Your accounting periods will appear here.</p>
-        </div>
-    {% endif %}
-
-</div>
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Funding periods" sub="Monthly accounting periods" %}
+  {% if perms.funding.add_fundingperiod %}
+  <form method="post" action="{% url 'funding:period_open' %}" class="bl-sum" style="padding:12px 16px;margin-bottom:14px">{% csrf_token %}
+    <label class="bl-lbl">Open a period</label>
+    <input class="bl-in" type="date" name="start_date" value="{{ default_start|date:'Y-m-d' }}" required>
+    <input class="bl-in" type="date" name="end_date" value="{{ default_end|date:'Y-m-d' }}" required style="margin-top:8px">
+    <button class="bl-btn" type="submit">Open period</button></form>{% endif %}
+  {% for p in periods %}<a class="bl-row" href="{% url 'funding:period' p.pk %}">
+    <div class="grow"><b>{{ p.start_date|date:"d M Y" }} to {{ p.end_date|date:"d M Y" }}</b>{% if p.closed_at %}<small>Closed {{ p.closed_at|date:"d M Y" }}</small>{% endif %}</div>
+    <span class="bl-chip-s {% if p.status == 'open' %}completed{% elif p.status == 'review' %}processing{% else %}reversed{% endif %}">{{ p.get_status_display }}</span></a>
+  {% empty %}<p style="color:#9FB6E0">No periods yet. Open one above, because deposits can only be verified inside an open period.</p>{% endfor %}
+</section>
 {% endblock %}
-
-

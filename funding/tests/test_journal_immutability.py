@@ -92,3 +92,4 @@ class JournalImmutabilityTests(TestCase):
                 credit=Decimal("0.00"),
                 description="New line",
             )
+

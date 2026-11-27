@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}New application - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<style>.bl select.bl-in option{color:#000}.bl textarea.bl-in{min-height:90px}</style>
+<section class="bl">
+  <header class="bl-head"><div><h1>New application</h1><p>One asset per application</p></div></header>
+  <p class="bl-hint">The same asset cannot be pledged twice, so use its real serial, deed, assay or contract number. You can ask for up to ₦{{ customer_cap|floatformat:0 }}, and never more than the value you state.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% for e in form.non_field_errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    {% for f in form %}<div class="bl-sec"><label class="bl-lbl" for="{{ f.id_for_label }}">{{ f.label }}</label>
+      {{ f }}{% for e in f.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}</div>{% endfor %}
+    <button class="bl-btn" type="submit">Send application</button>
+  </form>
+</section>
+{% endblock %}

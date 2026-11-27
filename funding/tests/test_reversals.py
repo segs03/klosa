@@ -140,3 +140,4 @@ class JournalReversalTests(TestCase):
                 effective_date=date(2026, 1, 20),
                 reference="REVERSAL-005",
             )
+

@@ -7,7 +7,7 @@ from django.utils import timezone
 from backoffice.audit import log as audit_log
 from .accounting import get_ledger_account, post_journal_entry
 from .models import (CapitalContribution, FundingPeriod, Investor, InvestorCapitalEntry,
-                     JournalEntry, JournalLine)
+                     JournalEntry, JournalLine, LedgerPosting)
 from .security import need
 
 
@@ -43,6 +43,11 @@ def post_verified_investor_contribution(contribution_id, verified_by):
 
     amount = Decimal(contribution.amount).quantize(Decimal("0.01"))
 
+    # The unique (source_type, source_id) marker is the hard stop against double posting.
+    posting, created = LedgerPosting.objects.get_or_create(source_type="contribution", source_id=contribution.pk)
+    if not created:
+        raise ValidationError("This contribution has already been posted.")
+
     journal = JournalEntry.objects.create(
         reference=f"JRN-{contribution.reference}", period=period,
         description="Verified investor capital contribution", status="draft")
@@ -51,6 +56,8 @@ def post_verified_investor_contribution(contribution_id, verified_by):
     JournalLine.objects.create(entry=journal, account=get_ledger_account("investor_capital"),
                                debit=Decimal("0.00"), credit=amount, description=f"Capital: {investor.legal_name}")
     post_journal_entry(journal)
+    posting.entry = journal
+    posting.save(update_fields=["entry"])
 
     entry = InvestorCapitalEntry.objects.create(
         investor=investor, entry_type="contribution", amount=amount, effective_date=day,
@@ -65,3 +72,4 @@ def post_verified_investor_contribution(contribution_id, verified_by):
 
     audit_log(verified_by, "contribution_verified", contribution.reference, str(amount))
     return entry
+

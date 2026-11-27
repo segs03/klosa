@@ -99,3 +99,4 @@ class FundingPeriodReopeningTests(TestCase):
             ).count(),
             1,
         )
+

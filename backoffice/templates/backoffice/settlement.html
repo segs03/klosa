@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Credit settlements{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<style>.bl select.bl-in option{color:#000}</style>
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Credit settlements" sub="Clear used credit with an asset sale" %}
+  {% if can_approve %}{% for s in pending %}<div class="bl-sum" style="margin-bottom:14px">
+    <p><span>Customer</span><b>{{ s.credit_account.account.user.get_full_name|default:"Klosa customer" }}</b></p>
+    <p><span>Amount</span><b style="color:#00E5FF">₦{{ s.amount|floatformat:2 }}</b></p>
+    <p><span>{{ s.get_kind_display }}</span><b>{{ s.asset }}</b></p><p><span>Evidence</span><b>{{ s.evidence_ref }}</b></p>
+    <p><span>Recorded by</span><b>{{ s.proposed_by.get_full_name|default:s.proposed_by.username }}</b></p>
+    <form method="post" style="padding:10px 0">{% csrf_token %}<input type="hidden" name="pk" value="{{ s.pk }}">
+      <input class="bl-in" name="reason" placeholder="Reason (needed to reject)" maxlength="200">
+      <button class="bl-btn" name="action" value="approve" type="submit">Approve</button>
+      <button class="bl-btn ghost" name="action" value="reject" type="submit">Reject</button></form></div>
+  {% empty %}<p style="color:#9FB6E0">Nothing is waiting.</p>{% endfor %}{% endif %}
+  {% if can_propose %}<h2>Customers who owe</h2>
+  {% for c in owing %}<form method="post" class="bl-sum" style="margin-bottom:14px;padding:12px 16px">{% csrf_token %}
+    <input type="hidden" name="action" value="propose"><input type="hidden" name="credit" value="{{ c.pk }}">
+    <p><span>{{ c.account.user.get_full_name|default:"Klosa customer" }}</span><b>owes ₦{{ c.outstanding_balance|floatformat:2 }}</b></p>
+    <select class="bl-in" name="kind">{% for v, l in kinds %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+    <input class="bl-in" name="amount" inputmode="decimal" placeholder="Amount cleared (₦)" required>
+    <input class="bl-in" name="asset" placeholder="What was sold" maxlength="200" required>
+    <input class="bl-in" name="evidence" placeholder="Receipt or contract reference" maxlength="100" required>
+    <button class="bl-btn" type="submit">Record settlement</button></form>
+  {% empty %}<p style="color:#9FB6E0">No customer owes anything.</p>{% endfor %}{% endif %}
+</section>
+{% endblock %}

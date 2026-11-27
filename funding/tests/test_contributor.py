@@ -121,3 +121,4 @@ class PostingTests(FundingBase):
         out = StringIO()
         call_command("ledger_check", "--strict", stdout=out)
         self.assertIn("₦0.00", out.getvalue())
+

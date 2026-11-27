@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Asset funding{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title="Asset funding" sub="Value, approve, release and confirm sales" %}
+  <div class="bl-sum" style="margin-bottom:14px">
+    <p><span>Out or promised</span><b>₦{{ exposure|floatformat:2 }}</b></p>
+    <p><span>Total cap</span><b>{% if cap > 0 %}₦{{ cap|floatformat:0 }}{% else %}Not set. Nothing can be approved.{% endif %}</b></p>
+  </div>
+
+  <h2>To value</h2>
+  {% for a in to_assess %}<a class="bl-row" href="{% url 'assetfund:staff_detail' a.pk %}" style="text-decoration:none;color:inherit"><div class="grow"><b>{{ a.title }}</b><small>{{ a.user.get_username }} · {{ a.get_kind_display }}</small></div><b>₦{{ a.requested_amount|floatformat:2 }}</b></a>
+  {% empty %}<p style="color:#9FB6E0">Nothing here.</p>{% endfor %}
+
+  <h2>To approve</h2>
+  {% for a in to_decide %}<a class="bl-row" href="{% url 'assetfund:staff_detail' a.pk %}" style="text-decoration:none;color:inherit"><div class="grow"><b>{{ a.title }}</b><small>{{ a.user.get_username }} · advance ₦{{ a.advance_amount|floatformat:2 }}</small></div><b>₦{{ a.verified_value|floatformat:2 }}</b></a>
+  {% empty %}<p style="color:#9FB6E0">Nothing here.</p>{% endfor %}
+
+  <h2>Stages to release</h2>
+  {% for s in stages %}<a class="bl-row" href="{% url 'assetfund:staff_detail' s.application.pk %}" style="text-decoration:none;color:inherit"><div class="grow"><b>{{ s.application.title }} · stage {{ s.order }}</b><small>{{ s.application.user.get_username }} · {{ s.title }}</small></div><b>₦{{ s.amount|floatformat:2 }}</b></a>
+  {% empty %}<p style="color:#9FB6E0">Nothing here.</p>{% endfor %}
+
+  <h2>Sales to confirm</h2>
+  {% for s in sales %}<a class="bl-row" href="{% url 'assetfund:staff_detail' s.application.pk %}" style="text-decoration:none;color:inherit"><div class="grow"><b>{{ s.application.title }}</b><small>{{ s.application.user.get_username }} · {{ s.reference }}</small></div><b>₦{{ s.proceeds|floatformat:2 }}</b></a>
+  {% empty %}<p style="color:#9FB6E0">Nothing here.</p>{% endfor %}
+
+  <h2>In progress</h2>
+  {% for a in running %}<a class="bl-row" href="{% url 'assetfund:staff_detail' a.pk %}" style="text-decoration:none;color:inherit"><div class="grow"><b>{{ a.title }}</b><small>{{ a.user.get_username }} · {{ a.get_status_display }} · due {{ a.maturity_date|date:"d M Y" }}</small></div><b>₦{{ a.outstanding|floatformat:2 }}</b></a>
+  {% empty %}<p style="color:#9FB6E0">Nothing here.</p>{% endfor %}
+</section>
+{% endblock %}

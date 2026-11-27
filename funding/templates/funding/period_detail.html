@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Funding period{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% url 'funding:periods' as back %}
+  {% include "backoffice/_head.html" with title=period.start_date|date:"F Y" sub=period.get_status_display back=back %}
+  <div class="bl-sum"><p><span>From</span><b>{{ period.start_date|date:"d M Y" }}</b></p>
+    <p><span>To</span><b>{{ period.end_date|date:"d M Y" }}</b></p><p><span>Status</span><b>{{ period.get_status_display }}</b></p></div>
+
+  {% if period.status == "open" and perms.funding.review_fundingperiod %}
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="review">
+    <button class="bl-btn" type="submit">Start review</button></form>
+  <p class="bl-hint">Reviewing stops new deposits being verified in this period.</p>{% endif %}
+
+  {% if period.status == "review" %}
+    {% if not rows and perms.funding.propose_investorallocation %}
+    <h2>Share the month's result</h2>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="propose">
+      <label class="bl-lbl" for="rs">Result in ₦. Use a minus sign for a loss.</label>
+      <input class="bl-in" id="rs" name="result" inputmode="decimal" placeholder="250000 or -40000" required>
+      <button class="bl-btn" type="submit">Calculate each investor's share</button></form>{% endif %}
+  {% endif %}
+
+  {% if rows %}<h2>Investor shares</h2>{% endif %}
+  {% for r in rows %}<div class="bl-sum" style="margin-bottom:12px">
+    <p><span>Investor</span><b>{{ r.a.investor.legal_name }}</b></p>
+    <p><span>{{ r.a.get_allocation_type_display }}</span><b style="color:#00E5FF">₦{{ r.a.amount|floatformat:2 }}</b></p>
+    <p><span>From capital / agreed</span><b>₦{{ r.a.capital_component|floatformat:2 }} / ₦{{ r.a.agreed_component|floatformat:2 }}</b></p>
+    <p><span>Status</span><b>{% if r.posted %}On the investor ledger{% else %}{{ r.a.get_approval_status_display }}{% endif %}</b></p>
+    {% if r.a.approval_status == "pending" and perms.funding.approve_investorallocation %}
+      <form method="post" style="padding:8px 0">{% csrf_token %}<input type="hidden" name="action" value="approve"><input type="hidden" name="pk" value="{{ r.a.pk }}">
+        <button class="bl-btn" type="submit">Approve</button></form>
+    {% elif r.a.approval_status == "approved" and not r.posted and perms.funding.add_investorcapitalentry %}
+      <form method="post" style="padding:8px 0">{% csrf_token %}<input type="hidden" name="action" value="post"><input type="hidden" name="pk" value="{{ r.a.pk }}">
+        <button class="bl-btn" type="submit">Post to investor ledger</button></form>{% endif %}
+  </div>{% endfor %}
+
+  {% if period.status == "review" and perms.funding.close_fundingperiod %}
+  <form method="post" style="margin-top:14px">{% csrf_token %}<input type="hidden" name="action" value="close">
+    <button class="bl-btn ghost" type="submit">Close period</button></form>
+  <p class="bl-hint">A period cannot close while a share is waiting for approval.</p>{% endif %}
+  {% if period.status == "closed" and perms.funding.reopen_fundingperiod %}
+  <a class="bl-btn ghost" href="{% url 'funding:reopen_period' period.pk %}">Reopen period</a>{% endif %}
+</section>
+{% endblock %}

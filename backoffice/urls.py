@@ -15,5 +15,5 @@ urlpatterns = [
     path("customers/", views.customers, name="customers"),
     path("customers/<int:pk>/", views.customer_detail, name="customer"),
     path("operations/", views.operations, name="ops"),
-    path("audit/", views.audit, name="audit"),
+    path("audit/", views.audit, name="audit"),    path("settlements/", views.settlements, name="settlements"),
 ]

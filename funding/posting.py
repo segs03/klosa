@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -49,15 +50,24 @@ def post_event(kind, source_id, when, amount, debit, credit, text):
             posting.save(update_fields=["entry"])
     except IntegrityError:
         return "done"
+    except ValidationError as error:
+        # e.g. a ledger account is missing. Leave the row unposted so the next run retries it.
+        log.error("Could not post %s %s: %s", kind, source_id, "; ".join(error.messages))
+        return "failed"
     return "posted"
 
 
 def post_pending(limit=500):
     posted = skipped = 0
+    failed = 0
     for kind, rows, when, amount, debit, credit, text in _sources():
         done = LedgerPosting.objects.filter(source_type=kind).values("source_id")
         for row in rows.exclude(pk__in=done).order_by("pk")[:limit]:
             result = post_event(kind, row.pk, when(row) or timezone.now(), amount(row), debit, credit, text)
             posted += result == "posted"
             skipped += result == "no_period"
+            failed += result == "failed"
+    if failed:
+        log.error("%s ledger postings failed; see the errors above.", failed)
     return posted, skipped
+

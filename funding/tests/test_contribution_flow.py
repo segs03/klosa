@@ -257,3 +257,5 @@ class VerifyContributionTests(FlowBase):
         entry = verify_contribution(c.pk, self.verifier)
         self.assertEqual({l.account.code for l in entry.lines.select_related("account")}, {"1000", "2100"})
         self.assertFalse(InvestorCapitalEntry.objects.exists())
+
+

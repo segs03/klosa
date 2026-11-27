@@ -1,0 +1,2994 @@
+=================== assetfund/__init__.py
+
+
+=================== assetfund/admin.py
+from django.contrib import admin
+
+# Register your models here.
+
+=================== assetfund/apps.py
+from django.apps import AppConfig
+
+
+class AssetfundConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "assetfund"
+
+=================== assetfund/models.py
+import re
+from decimal import ROUND_HALF_UP, Decimal
+
+from django.conf import settings
+from django.db import models
+from django.db.models import F, Q
+
+CENT = Decimal("0.01")
+ZERO = Decimal("0.00")
+LIVE = ("pending", "assessed", "approved", "active", "overdue")      # a pledge in any of these blocks the same asset
+
+
+def money(value):
+    return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def norm_ref(text):
+    """'assay 1001-a' and 'ASSAY1001A' are the same asset."""
+    return re.sub(r"[^A-Z0-9]", "", (text or "").upper())
+
+
+class AssetApplication(models.Model):
+    KINDS = [("gold", "Gold or precious metal"), ("jewelry", "Jewellery"), ("property", "Land or property"),
+             ("equipment", "Equipment or machinery"), ("materials", "Materials or stock"),
+             ("skill_contract", "A skill, backed by a signed order"), ("other", "Other")]
+    STATUS = [("pending", "Waiting for review"), ("assessed", "Valued, waiting for approval"),
+              ("approved", "Offer made"), ("active", "Funding in progress"), ("overdue", "Past its term"),
+              ("settled", "Fully recovered"), ("rejected", "Rejected"), ("withdrawn", "Withdrawn"),
+              ("expired", "Offer expired")]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="asset_applications")
+    kind = models.CharField(max_length=16, choices=KINDS)
+    title = models.CharField(max_length=120)
+    description = models.CharField(max_length=1000)
+    asset_ref = models.CharField(max_length=80)                    # serial, title deed, assay or contract number
+    asset_ref_norm = models.CharField(max_length=80, editable=False)
+    declared_value = models.DecimalField(max_digits=15, decimal_places=2)
+    requested_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    purpose = models.CharField(max_length=300)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+
+    # what staff verified and offered
+    verified_value = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    advance_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    advance_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    fee_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    fee_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    share_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)   # Klosa's share of each sale
+    term_days = models.PositiveSmallIntegerField(null=True, blank=True)
+    assessment_note = models.CharField(max_length=500, blank=True)
+    assessed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                    related_name="+")
+    assessed_at = models.DateTimeField(null=True, blank=True)
+
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                    related_name="+")
+    decision_reason = models.CharField(max_length=500, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    offer_expires_at = models.DateTimeField(null=True, blank=True)
+
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    maturity_date = models.DateField(null=True, blank=True)
+
+    released_total = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    recovered_principal = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    recovered_fee = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [
+            ("assess_assetapplication", "Can value assets and prepare an offer"),
+            ("approve_assetapplication", "Can approve or reject an asset offer"),
+            ("release_advancestage", "Can release an advance stage"),
+            ("confirm_assetsale", "Can confirm a reported sale"),
+        ]
+        indexes = [models.Index(fields=["status"]), models.Index(fields=["user", "status"])]
+        constraints = [
+            models.UniqueConstraint(fields=["kind", "asset_ref_norm"], condition=Q(status__in=LIVE),
+                                    name="one_live_pledge_per_asset"),
+            models.CheckConstraint(condition=Q(declared_value__gt=0) & Q(requested_amount__gt=0),
+                                   name="asset_amounts_positive"),
+            models.CheckConstraint(condition=Q(recovered_principal__lte=F("released_total")),
+                                   name="asset_recovered_within_released"),
+            models.CheckConstraint(condition=Q(advance_amount__isnull=True) | Q(released_total__lte=F("advance_amount")),
+                                   name="asset_released_within_advance"),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.asset_ref_norm = norm_ref(self.asset_ref)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+
+    @property
+    def fee_due(self):
+        """The fee grows with each stage released, so a customer who stops early pays less."""
+        if not self.advance_amount or not self.fee_amount:
+            return ZERO
+        return money(self.fee_amount * self.released_total / self.advance_amount)
+
+    @property
+    def principal_outstanding(self):
+        return self.released_total - self.recovered_principal
+
+    @property
+    def fee_outstanding(self):
+        return self.fee_due - self.recovered_fee
+
+    @property
+    def outstanding(self):
+        return self.principal_outstanding + self.fee_outstanding
+
+
+class AdvanceStage(models.Model):
+    STATUS = [("planned", "Planned"), ("requested", "Evidence sent"), ("released", "Released"),
+              ("cancelled", "Cancelled")]
+
+    application = models.ForeignKey(AssetApplication, on_delete=models.PROTECT, related_name="stages")
+    order = models.PositiveSmallIntegerField()
+    title = models.CharField(max_length=120)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS, default="planned")
+    evidence_note = models.CharField(max_length=500, blank=True)
+    requested_at = models.DateTimeField(null=True, blank=True)
+    released_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                    related_name="+")
+    released_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["application", "order"]
+        constraints = [
+            models.UniqueConstraint(fields=["application", "order"], name="one_stage_per_order"),
+            models.CheckConstraint(condition=Q(amount__gt=0), name="stage_amount_positive"),
+        ]
+
+
+class SaleRecord(models.Model):
+    """A sale of the asset (or what was made from it). Klosa's share is taken only after staff confirm it."""
+    STATUS = [("pending", "Waiting for confirmation"), ("confirmed", "Confirmed"), ("rejected", "Rejected")]
+
+    application = models.ForeignKey(AssetApplication, on_delete=models.PROTECT, related_name="sales")
+    reference = models.CharField(max_length=20, unique=True)
+    proceeds = models.DecimalField(max_digits=15, decimal_places=2)
+    note = models.CharField(max_length=300)
+    is_final = models.BooleanField(default=False)                  # the last sale: unreleased stages are cancelled
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    confirmed_proceeds = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    share_due = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    applied_principal = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    applied_fee = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    shortfall = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)   # due but the balance was short
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                   related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    reason = models.CharField(max_length=300, blank=True)
+    reported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-reported_at"]
+        constraints = [models.CheckConstraint(condition=Q(proceeds__gt=0), name="sale_proceeds_positive")]
+
+=================== assetfund/services.py
+"""Asset-backed advances.
+
+Flow: apply -> assess (staff A) -> approve (staff B) -> customer accepts -> staged releases ->
+customer reports sales -> staff confirm -> Klosa takes its share until advance + fee are recovered.
+
+Money rules, all inside one transaction, locking the account first and then the application:
+  * the ledger entry is posted FIRST, so a missing ledger account or closed period changes nothing;
+  * balance changes always come with a Transaction row (asset_advance / asset_repayment);
+  * every movement is journalled once (LedgerPosting is unique per source).
+"""
+import logging
+import uuid
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
+
+from django.conf import settings
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError, transaction
+from django.db.models import Sum
+from django.utils import timezone
+
+from accounts.models import Account
+from backoffice.audit import log as audit_log
+from funding.models import FundingPeriod, JournalEntry, JournalLine, LedgerAccount, LedgerPosting
+from transactions.models import Transaction
+
+from .models import CENT, LIVE, ZERO, AdvanceStage, AssetApplication, SaleRecord, money, norm_ref
+
+log = logging.getLogger(__name__)
+HUNDRED = Decimal("100")
+
+RECEIVABLE, DEPOSITS, FEE_INCOME = "1150", "2300", "4100"          # add 1150 and 4100 to the ledger chart
+RATE_CAPS = {"gold": 60, "jewelry": 55, "property": 50, "equipment": 45, "materials": 45,
+             "skill_contract": 30, "other": 30}                    # the most Klosa advances against verified value, in %
+MAX_STAGES, MIN_EVIDENCE, MAX_PENDING_SALES = 6, 10, 3
+DUPLICATE = "This asset is already pledged or under review."
+
+
+# ------------------------------------------------------------------ settings
+def _cfg(name, default):
+    return getattr(settings, name, default)
+
+
+def total_cap():
+    """Total Klosa may have out at once. 0 means asset funding is switched off."""
+    return Decimal(str(_cfg("ASSETFUND_TOTAL_CAP", "0")))
+
+
+def customer_cap():
+    return Decimal(str(_cfg("ASSETFUND_CUSTOMER_CAP", "2000000")))
+
+
+def min_kyc_tier():
+    return int(_cfg("ASSETFUND_MIN_KYC_TIER", 2))                  # kyc_tier 2 is Tier 3 on the upgrade page
+
+
+def max_fee_pct():
+    return Decimal(str(_cfg("ASSETFUND_MAX_FEE_PCT", "15")))
+
+
+def offer_days():
+    return int(_cfg("ASSETFUND_OFFER_DAYS", 7))
+
+
+# ------------------------------------------------------------------- helpers
+def _need(user, perm):
+    if not (user and user.is_authenticated and user.is_active and user.is_staff and user.has_perm(perm)):
+        raise PermissionDenied("You are not allowed to do this.")
+
+
+def _dec(value, label="The amount"):
+    try:
+        d = Decimal(str(value).strip())
+        ok = d.is_finite() and d == d.quantize(CENT)
+    except (InvalidOperation, ValueError):
+        ok = False
+    if not ok:
+        raise ValidationError(f"{label} must be a number with at most 2 decimal places.")
+    return d.quantize(CENT)
+
+
+def _text(value, label, lo, hi):
+    text = " ".join(str(value or "").split())
+    if not lo <= len(text) <= hi:
+        raise ValidationError(f"{label} must be between {lo} and {hi} characters.")
+    return text
+
+
+def _audit(user, action, app, detail=""):
+    audit_log(user, action, f"asset:{app.pk}", str(detail)[:200])
+
+
+def _lock(app_pk):
+    """The account first, then the application, the same order the rest of Klosa uses."""
+    user_id = AssetApplication.objects.filter(pk=app_pk).values_list("user_id", flat=True).first()
+    if user_id is None:
+        raise ValidationError("Application not found.")
+    acc = Account.objects.select_for_update().get(user_id=user_id)
+    app = AssetApplication.objects.select_for_update().get(pk=app_pk)
+    return acc, app
+
+
+def _open_period():
+    period = FundingPeriod.objects.filter(start_date__lte=timezone.localdate(),
+                                          end_date__gte=timezone.localdate(), status="open").first()
+    if period is None:
+        raise ValidationError("No open funding period covers today. Ask finance to open one.")
+    return period
+
+
+def _post(source_type, source_id, reference, description, lines):
+    """Journal a movement once. lines = [(ledger code, 'debit' | 'credit', amount)]."""
+    period = _open_period()
+    codes = {c for c, _, _ in lines}
+    accounts = {a.code: a for a in LedgerAccount.objects.filter(code__in=codes, is_active=True)}
+    if codes - set(accounts):
+        raise ValidationError(f"Ledger account {', '.join(sorted(codes - set(accounts)))} is not set up. Run seed_ledger.")
+    posting, created = LedgerPosting.objects.get_or_create(source_type=source_type, source_id=source_id)
+    if not created:
+        raise ValidationError("This movement was already posted.")
+    entry = JournalEntry.objects.create(reference=reference, period=period, description=description[:255])
+    debit = credit = ZERO
+    for code, side, amount in lines:
+        if amount <= ZERO:
+            continue
+        JournalLine.objects.create(entry=entry, account=accounts[code], description=reference, **{side: amount})
+        debit, credit = (debit + amount, credit) if side == "debit" else (debit, credit + amount)
+    if debit != credit or debit <= ZERO:
+        raise ValidationError("Journal entry is not balanced.")
+    entry.status, entry.posted_at = "posted", timezone.now()
+    entry.save()
+    posting.entry = entry
+    posting.save()
+    return entry
+
+
+def exposure(exclude_pk=None):
+    """What Klosa has out or has promised: approved offers in full, plus live advances' unrecovered
+    principal and their stages still to come."""
+    rows = AssetApplication.objects.all()
+    if exclude_pk:
+        rows = rows.exclude(pk=exclude_pk)
+    approved = rows.filter(status="approved").aggregate(a=Sum("advance_amount"))["a"] or ZERO
+    live = rows.filter(status__in=("active", "overdue"))
+    out = live.aggregate(r=Sum("released_total"), p=Sum("recovered_principal"))
+    coming = (AdvanceStage.objects.filter(application__in=live, status__in=("planned", "requested"))
+              .aggregate(a=Sum("amount"))["a"] or ZERO)
+    return approved + (out["r"] or ZERO) - (out["p"] or ZERO) + coming
+
+
+def offer_summary(app):
+    """Plain words for the customer, shown before they accept."""
+    total = app.advance_amount + app.fee_amount
+    stages = app.stages.order_by("order")
+    return [
+        f"You receive ₦{app.advance_amount:,.2f}, in {stages.count()} stage(s).",
+        f"The fee is ₦{app.fee_amount:,.2f}. It grows as each stage is released.",
+        f"When you sell, Klosa takes {app.share_pct}% of each sale until ₦{total:,.2f} is recovered. The rest is yours.",
+        f"You have {app.term_days} days. If the sales have not covered it by then, Klosa will review it with you, "
+        "and the pledged asset stays as security until then.",
+    ] + [f"Stage {s.order}: ₦{s.amount:,.2f} for {s.title}." for s in stages]
+
+
+# ----------------------------------------------------------------- customer
+def submit_application(user, *, kind, title, description, asset_ref, declared_value, requested_amount, purpose):
+    if kind not in dict(AssetApplication.KINDS):
+        raise ValidationError("Choose what kind of asset this is.")
+    title = _text(title, "The title", 3, 120)
+    description = _text(description, "The description", 20, 1000)
+    purpose = _text(purpose, "What the money is for", 10, 300)
+    asset_ref = _text(asset_ref, "The asset reference", 3, 80)
+    if len(norm_ref(asset_ref)) < 3:
+        raise ValidationError("The asset reference needs at least 3 letters or numbers.")
+    declared, requested = _dec(declared_value, "The value"), _dec(requested_amount, "The amount")
+    if declared <= ZERO or requested <= ZERO:
+        raise ValidationError("Enter amounts above zero.")
+    if requested > declared:
+        raise ValidationError("You cannot ask for more than the value you declared.")
+    if requested > customer_cap():
+        raise ValidationError(f"The most one customer can ask for is ₦{customer_cap():,.0f}.")
+    with transaction.atomic():
+        acc = Account.objects.select_for_update().filter(user=user).first()
+        if acc is None or acc.closed_at:
+            raise ValidationError("Your account is not open.")
+        if acc.kyc_tier < min_kyc_tier():
+            raise ValidationError(f"Complete your verification to Tier {min_kyc_tier() + 1} first.")
+        if AssetApplication.objects.filter(user=user, status__in=LIVE).exists():
+            raise ValidationError("You already have an application in progress.")
+        if AssetApplication.objects.filter(kind=kind, asset_ref_norm=norm_ref(asset_ref), status__in=LIVE).exists():
+            raise ValidationError(DUPLICATE)
+        try:
+            with transaction.atomic():
+                app = AssetApplication.objects.create(
+                    user=user, kind=kind, title=title, description=description, asset_ref=asset_ref,
+                    declared_value=declared, requested_amount=requested, purpose=purpose)
+        except IntegrityError:                                       # two people pledged it at the same moment
+            raise ValidationError(DUPLICATE)
+    _audit(user, "asset.submitted", app, f"{kind} ₦{requested}")
+    return app
+
+
+def withdraw_application(user, app_pk):
+    with transaction.atomic():
+        app = AssetApplication.objects.select_for_update().get(pk=app_pk)
+        if app.user_id != user.pk:
+            raise PermissionDenied("This is not your application.")
+        if app.status not in ("pending", "assessed", "approved"):
+            raise ValidationError("This application can no longer be withdrawn.")
+        app.status = "withdrawn"
+        app.save(update_fields=["status"])
+    _audit(user, "asset.withdrawn", app)
+    return app
+
+
+def _face_ok(user, app):
+    """Optional face check: only demanded when 'advance' is listed in FACE_ENFORCE."""
+    from face_auth import service as face
+    return not face.required(user, "advance") or face.consume(user, "advance", str(app.pk))
+
+
+def accept_offer(user, app_pk, pin):
+    bad = None
+    with transaction.atomic():
+        acc, app = _lock(app_pk)
+        if app.user_id != user.pk:
+            raise PermissionDenied("This is not your offer.")
+        if app.status != "approved":
+            raise ValidationError("This offer is not open.")
+        if app.offer_expires_at <= timezone.now():
+            raise ValidationError("This offer has expired.")
+        if acc.closed_at:
+            raise ValidationError("Your account is closed.")
+        if acc.is_locked():
+            raise ValidationError("Your account is temporarily locked.")
+        if not acc.pin_hash:
+            raise ValidationError("Please set your transaction PIN first.")
+        if not str(pin or "").strip():
+            raise ValidationError("Enter your transaction PIN.")
+        if not acc.check_pin(str(pin)):                              # saved on the locked row, so the lock counts
+            bad = "Your account is temporarily locked." if acc.is_locked() else "Incorrect transaction PIN."
+        else:
+            if not _face_ok(user, app):
+                raise ValidationError("Complete the face check first.")
+            now = timezone.now()
+            app.status, app.accepted_at = "active", now
+            app.maturity_date = timezone.localdate(now) + timedelta(days=app.term_days)
+            app.save(update_fields=["status", "accepted_at", "maturity_date"])
+    if bad:
+        raise ValidationError(bad)                                   # after the commit, so the attempt is kept
+    _audit(user, "asset.accepted", app)
+    return app
+
+
+def submit_stage_evidence(user, stage_pk, note):
+    note = _text(note, "The progress note", MIN_EVIDENCE, 500)
+    with transaction.atomic():
+        stage = AdvanceStage.objects.select_for_update().select_related("application").get(pk=stage_pk)
+        app = stage.application
+        if app.user_id != user.pk:
+            raise PermissionDenied("This is not your project.")
+        if app.status != "active":
+            raise ValidationError("This project is not in progress.")
+        if stage.order == 1:
+            raise ValidationError("The first stage needs no evidence.")
+        if stage.status != "planned" or stage.order != _next_order(app):
+            raise ValidationError("Finish the earlier stage first.")
+        stage.status, stage.evidence_note, stage.requested_at = "requested", note, timezone.now()
+        stage.save(update_fields=["status", "evidence_note", "requested_at"])
+    _audit(user, "asset.evidence", app, f"stage {stage.order}")
+    return stage
+
+
+def report_sale(user, app_pk, proceeds, note, is_final=False):
+    proceeds = _dec(proceeds, "The sale amount")
+    if proceeds <= ZERO or proceeds > Decimal("100000000"):
+        raise ValidationError("Enter a sale amount above zero.")
+    note = _text(note, "The sale note", 10, 300)
+    with transaction.atomic():
+        app = AssetApplication.objects.select_for_update().get(pk=app_pk)
+        if app.user_id != user.pk:
+            raise PermissionDenied("This is not your project.")
+        if app.status not in ("active", "overdue"):
+            raise ValidationError("This project is not in progress.")
+        if app.sales.filter(status="pending").count() >= MAX_PENDING_SALES:
+            raise ValidationError("Wait for your earlier sales to be confirmed first.")
+        sale = SaleRecord.objects.create(application=app, reference="SL" + uuid.uuid4().hex[:10].upper(),
+                                         proceeds=proceeds, note=note, is_final=bool(is_final))
+    _audit(user, "asset.sale_reported", app, f"₦{proceeds}")
+    return sale
+
+
+# --------------------------------------------------------------------- staff
+def assess_application(app_pk, assessor, *, verified_value, advance_rate, fee_pct, share_pct, term_days, stages, note):
+    _need(assessor, "assetfund.assess_assetapplication")
+    note = _text(note, "The assessment note", 10, 500)
+    verified = _dec(verified_value, "The verified value")
+    rate, fee_rate, share = _dec(advance_rate, "The advance rate"), _dec(fee_pct, "The fee"), _dec(share_pct, "The share")
+    with transaction.atomic():
+        app = AssetApplication.objects.select_for_update().get(pk=app_pk)
+        if app.status != "pending":
+            raise ValidationError("This application is not waiting for review.")
+        if app.user_id == assessor.pk:
+            raise PermissionDenied("You cannot assess your own application.")
+        if verified <= ZERO:
+            raise ValidationError("The verified value must be above zero.")
+        cap = Decimal(RATE_CAPS[app.kind])
+        if not ZERO < rate <= cap:
+            raise ValidationError(f"For this kind of asset the advance rate can be at most {cap}%.")
+        if not ZERO <= fee_rate <= max_fee_pct():
+            raise ValidationError(f"The fee can be at most {max_fee_pct()}%.")
+        if not Decimal("1") <= share <= HUNDRED:
+            raise ValidationError("Klosa's share of each sale must be between 1% and 100%.")
+        if not isinstance(term_days, int) or not 30 <= term_days <= 730:
+            raise ValidationError("The term must be between 30 and 730 days.")
+        advance = money(verified * rate / HUNDRED)
+        if advance <= ZERO:
+            raise ValidationError("The advance would be zero.")
+        if advance > app.requested_amount:
+            raise ValidationError(f"The advance (₦{advance:,.2f}) is more than the customer asked for "
+                                  f"(₦{app.requested_amount:,.2f}). Lower the rate.")
+        if advance > customer_cap():
+            raise ValidationError(f"The most one customer can receive is ₦{customer_cap():,.0f}.")
+        plan = [(_text(t, "A stage title", 3, 120), _dec(a, "A stage amount")) for t, a in (stages or [])]
+        if not 1 <= len(plan) <= MAX_STAGES:
+            raise ValidationError(f"Plan between 1 and {MAX_STAGES} stages.")
+        if any(a <= ZERO for _, a in plan):
+            raise ValidationError("Every stage needs an amount above zero.")
+        planned = sum((a for _, a in plan), ZERO)
+        if planned != advance:
+            raise ValidationError(f"The stages add up to ₦{planned:,.2f} but the advance is ₦{advance:,.2f}.")
+        app.verified_value, app.advance_rate, app.advance_amount = verified, rate, advance
+        app.fee_pct, app.fee_amount, app.share_pct, app.term_days = fee_rate, money(advance * fee_rate / HUNDRED), share, term_days
+        app.assessment_note, app.assessed_by, app.assessed_at, app.status = note, assessor, timezone.now(), "assessed"
+        app.save()
+        for order, (title, amount) in enumerate(plan, start=1):
+            AdvanceStage.objects.create(application=app, order=order, title=title, amount=amount)
+    _audit(assessor, "asset.assessed", app, f"value {verified} advance {advance}")
+    return app
+
+
+def decide_application(app_pk, approver, decision, reason):
+    _need(approver, "assetfund.approve_assetapplication")
+    reason = _text(reason, "The reason", 3, 500)
+    if decision not in ("approved", "rejected"):
+        raise ValidationError("Decision must be approved or rejected.")
+    with transaction.atomic():
+        app = AssetApplication.objects.select_for_update().get(pk=app_pk)
+        if app.status != "assessed":
+            raise ValidationError("This application is not waiting for a decision.")
+        if approver.pk in (app.assessed_by_id, app.user_id):
+            raise PermissionDenied("The person who valued it, or the customer, cannot decide it.")
+        if decision == "approved":
+            cap = total_cap()
+            if cap <= ZERO:
+                raise ValidationError("Asset funding is not open yet: no total cap is set.")
+            # One shared row is locked so two approvals cannot both squeeze under the cap.
+            if LedgerAccount.objects.select_for_update().filter(code=RECEIVABLE).first() is None:
+                raise ValidationError(f"Ledger account {RECEIVABLE} is not set up. Run seed_ledger.")
+            if exposure(exclude_pk=app.pk) + app.advance_amount > cap:
+                raise ValidationError(f"This would take total exposure above the cap of ₦{cap:,.0f}.")
+            app.offer_expires_at = timezone.now() + timedelta(days=offer_days())
+        app.status = decision
+        app.approved_by, app.decision_reason, app.decided_at = approver, reason, timezone.now()
+        app.save()
+    _audit(approver, f"asset.{decision}", app, reason)
+    return app
+
+
+def _next_order(app):
+    stage = app.stages.filter(status__in=("planned", "requested")).order_by("order").first()
+    return stage.order if stage else None
+
+
+def release_stage(stage_pk, staff):
+    _need(staff, "assetfund.release_advancestage")
+    app_pk = AdvanceStage.objects.filter(pk=stage_pk).values_list("application_id", flat=True).first()
+    if app_pk is None:
+        raise ValidationError("Stage not found.")
+    with transaction.atomic():
+        acc, app = _lock(app_pk)
+        stage = AdvanceStage.objects.select_for_update().get(pk=stage_pk)
+        if staff.pk in (app.user_id, app.assessed_by_id):
+            raise PermissionDenied("The customer, or the person who valued the asset, cannot release the money.")
+        if app.status != "active":
+            raise ValidationError("This project is not in progress.")
+        if acc.closed_at:
+            raise ValidationError("The customer's account is closed.")
+        if stage.status == "released":
+            raise ValidationError("This stage was already released.")
+        if stage.status == "cancelled":
+            raise ValidationError("This stage was cancelled.")
+        if stage.order != _next_order(app):
+            raise ValidationError("Release the earlier stage first.")
+        if stage.order > 1 and stage.status != "requested":
+            raise ValidationError("The customer has not sent evidence for this stage yet.")
+        amount = stage.amount
+        if app.released_total + amount > app.advance_amount:
+            raise ValidationError("This would release more than the advance.")
+        _post("asset_stage", stage.pk, f"JE-ASSET-{stage.pk}", f"Asset advance stage {stage.order} · {app.title}",
+              [(RECEIVABLE, "debit", amount), (DEPOSITS, "credit", amount)])
+        acc.balance += amount
+        acc.save(update_fields=["balance"])
+        Transaction.objects.create(account=acc, transaction_type="asset_advance", amount=amount,
+                                   reference=f"ASA{stage.pk}", description=f"Asset advance, stage {stage.order}: {stage.title}"[:255])
+        stage.status, stage.released_by, stage.released_at = "released", staff, timezone.now()
+        stage.save(update_fields=["status", "released_by", "released_at"])
+        app.released_total += amount
+        app.save(update_fields=["released_total"])
+    _audit(staff, "asset.stage_released", app, f"stage {stage.order} ₦{amount}")
+    return stage
+
+
+def confirm_sale(sale_pk, staff, verified_proceeds=None):
+    _need(staff, "assetfund.confirm_assetsale")
+    app_pk = SaleRecord.objects.filter(pk=sale_pk).values_list("application_id", flat=True).first()
+    if app_pk is None:
+        raise ValidationError("Sale not found.")
+    with transaction.atomic():
+        acc, app = _lock(app_pk)
+        sale = SaleRecord.objects.select_for_update().get(pk=sale_pk)
+        if sale.status != "pending":
+            raise ValidationError("This sale was already handled.")
+        if staff.pk == app.user_id:
+            raise PermissionDenied("You cannot confirm your own sale.")
+        if app.status not in ("active", "overdue"):
+            raise ValidationError("This project is not in progress.")
+        proceeds = sale.proceeds if verified_proceeds is None else _dec(verified_proceeds, "The verified sale amount")
+        if proceeds <= ZERO:
+            raise ValidationError("The verified sale amount must be above zero.")
+        owed = app.outstanding
+        share = min(money(proceeds * app.share_pct / HUNDRED), owed)
+        pay = min(share, acc.balance)
+        to_principal = min(pay, app.principal_outstanding)
+        to_fee = pay - to_principal
+        if pay > ZERO:
+            _post("asset_repay", sale.pk, f"JE-ASSETR-{sale.pk}", f"Asset advance repayment · {app.title}",
+                  [(DEPOSITS, "debit", pay), (RECEIVABLE, "credit", to_principal), (FEE_INCOME, "credit", to_fee)])
+            acc.balance -= pay
+            acc.save(update_fields=["balance"])
+            Transaction.objects.create(account=acc, transaction_type="asset_repayment", amount=pay,
+                                       reference=f"ASR{sale.pk}", description=f"Asset advance repayment · {app.title}"[:255])
+            app.recovered_principal += to_principal
+            app.recovered_fee += to_fee
+        sale.status, sale.confirmed_proceeds, sale.share_due = "confirmed", proceeds, share
+        sale.applied_principal, sale.applied_fee, sale.shortfall = to_principal, to_fee, share - pay
+        sale.decided_by, sale.decided_at = staff, timezone.now()
+        sale.save()
+        remaining = owed - pay
+        if sale.is_final:
+            app.stages.filter(status__in=("planned", "requested")).update(status="cancelled")
+            app.status = "settled" if remaining == ZERO else "overdue"
+        elif remaining == ZERO and not app.stages.filter(status__in=("planned", "requested")).exists():
+            app.status = "settled"
+        app.save(update_fields=["recovered_principal", "recovered_fee", "status"])
+    _audit(staff, "asset.sale_confirmed", app, f"₦{proceeds} took ₦{pay}")
+    return sale
+
+
+def reject_sale(sale_pk, staff, reason):
+    _need(staff, "assetfund.confirm_assetsale")
+    reason = _text(reason, "The reason", 3, 300)
+    with transaction.atomic():
+        sale = SaleRecord.objects.select_for_update().select_related("application").get(pk=sale_pk)
+        if sale.status != "pending":
+            raise ValidationError("This sale was already handled.")
+        if staff.pk == sale.application.user_id:
+            raise PermissionDenied("You cannot decide your own sale.")
+        sale.status, sale.reason, sale.decided_by, sale.decided_at = "rejected", reason, staff, timezone.now()
+        sale.save()
+    _audit(staff, "asset.sale_rejected", sale.application, reason)
+    return sale
+
+
+# ---------------------------------------------------------- scheduled jobs
+def expire_offers():
+    return AssetApplication.objects.filter(status="approved", offer_expires_at__lte=timezone.now()).update(status="expired")
+
+
+def mark_overdue():
+    count = 0
+    due = AssetApplication.objects.filter(status="active", maturity_date__lt=timezone.localdate())
+    for app in due:
+        if app.outstanding > ZERO:
+            AssetApplication.objects.filter(pk=app.pk, status="active").update(status="overdue")
+            count += 1
+    return count
+
+=================== assetfund/urls.py
+
+
+=================== assetfund/views.py
+from django.shortcuts import render
+
+# Create your views here.
+
+=================== assetfund/migrations/__init__.py
+
+
+=================== assetfund/tests/__init__.py
+
+
+=================== assetfund/tests/helpers.py
+"""Fixtures for the assetfund tests. Not a test module itself.
+
+Defaults used throughout: gold worth 900,000 verified, 40% advance = 360,000 in three stages
+(100,000 / 160,000 / 100,000), fee 10% = 36,000, Klosa's share 50% of each sale, term 180 days.
+"""
+from datetime import timedelta
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.test import TestCase
+from django.utils import timezone
+
+from accounts.models import Account
+from funding.models import FundingPeriod, JournalLine, LedgerAccount
+from transactions.models import Transaction
+
+from assetfund import services as svc
+
+User = get_user_model()
+D = Decimal
+CFG = dict(ASSETFUND_TOTAL_CAP="10000000", ASSETFUND_CUSTOMER_CAP="2000000", ASSETFUND_MIN_KYC_TIER=2,
+           ASSETFUND_MAX_FEE_PCT="15", ASSETFUND_OFFER_DAYS=7, FACE_ENFORCE=set())
+STAGES = [("Buy moulds and tools", "100000"), ("Labour and casting", "160000"), ("Finishing and polish", "100000")]
+
+
+def make_user(name, perms=(), staff=False):
+# [redacted]
+    for code in perms:
+        user.user_permissions.add(Permission.objects.get(codename=code))
+    return user
+
+
+def make_account(user, balance="0.00", tier=2):
+    acc = Account.objects.create(user=user, account_number=f"{user.pk:010d}", balance=D(balance), kyc_tier=tier)
+    acc.set_pin("1234")
+    acc.save()
+    return acc
+
+
+def seed_ledger():
+    for code, name, kind in [("1000", "Operating cash", "asset"), ("1150", "Asset advances receivable", "asset"),
+                             ("2300", "Customer deposits", "liability"), ("4100", "Asset advance fee income", "income")]:
+        LedgerAccount.objects.get_or_create(code=code, defaults={"name": name, "account_type": kind})
+
+
+def open_period():
+    today = timezone.localdate()
+    return FundingPeriod.objects.create(start_date=today - timedelta(days=5), end_date=today + timedelta(days=25))
+
+
+def journal(reference):
+    """{(ledger code, 'debit' | 'credit'): amount} for one journal entry."""
+    out = {}
+    for line in JournalLine.objects.filter(entry__reference=reference).select_related("account"):
+        side, amount = ("debit", line.debit) if line.debit else ("credit", line.credit)
+        out[(line.account.code, side)] = amount
+    return out
+
+
+class AssetCase(TestCase):
+    def setUp(self):
+        seed_ledger()
+        open_period()
+        self.cust = make_user("ada")
+        self.acc = make_account(self.cust)
+        self.assessor = make_user("assessor", ["assess_assetapplication", "release_advancestage"], staff=True)
+        self.approver = make_user("approver", ["approve_assetapplication"], staff=True)
+        self.teller = make_user("teller", ["release_advancestage", "confirm_assetsale"], staff=True)
+
+    # ---- the steps of the flow
+    def apply(self, user=None, **kw):
+        data = dict(kind="gold", title="Raw gold for jewellery", asset_ref="ASSAY-1001",
+                    description="Twenty four carat gold bars held in the vault",
+                    declared_value="1000000", requested_amount="400000",
+                    purpose="Mould the gold into jewellery for a wedding order")
+        data.update(kw)
+        return svc.submit_application(user or self.cust, **data)
+
+    def assess(self, app, staff=None, **kw):
+        data = dict(verified_value="900000", advance_rate="40", fee_pct="10", share_pct="50", term_days=180,
+                    stages=STAGES, note="Inspected and assayed, 24 carat, 450g")
+        data.update(kw)
+        return svc.assess_application(app.pk, staff or self.assessor, **data)
+
+    def approve(self, app, staff=None):
+        return svc.decide_application(app.pk, staff or self.approver, "approved", "Value confirmed")
+
+    def accept(self, app, pin="1234"):
+        return svc.accept_offer(app.user, app.pk, pin)
+
+    def activate(self):
+        app = self.apply()
+        self.assess(app)
+        self.approve(app)
+        self.accept(app)
+        app.refresh_from_db()
+        return app
+
+    # ---- money helpers
+    def release(self, app, order):
+        stage = app.stages.get(order=order)
+        if order > 1:
+            svc.submit_stage_evidence(app.user, stage.pk, "Earlier stage finished, photos kept")
+        return svc.release_stage(stage.pk, self.teller)
+
+    def fund(self, amount):
+        """Cash the customer received from a sale: a deposit with its Transaction row."""
+        acc = Account.objects.get(pk=self.acc.pk)
+        acc.balance += D(amount)
+        acc.save(update_fields=["balance"])
+        Transaction.objects.create(account=acc, transaction_type="deposit", amount=D(amount),
+                                   reference=f"DEP{Transaction.objects.count()}", description="Sale proceeds")
+
+    def balance(self):
+        return Account.objects.get(pk=self.acc.pk).balance
+
+=================== assetfund/tests/test_apply_and_review.py
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.test import override_settings
+from django.utils import timezone
+
+from accounts.models import Account
+from assetfund import services as svc
+from assetfund.models import AdvanceStage, AssetApplication
+
+from .helpers import CFG, D, STAGES, AssetCase, make_account, make_user
+
+
+@override_settings(**CFG)
+class ApplyTests(AssetCase):
+    def test_a_valid_application_is_saved_as_pending(self):
+        app = self.apply()
+        self.assertEqual((app.status, app.user, app.requested_amount), ("pending", self.cust, D("400000.00")))
+        self.assertEqual(app.asset_ref_norm, "ASSAY1001")
+
+    def test_needs_the_verification_tier(self):
+        Account.objects.filter(pk=self.acc.pk).update(kyc_tier=1)
+        with self.assertRaises(ValidationError):
+            self.apply()
+
+    def test_needs_an_open_account(self):
+        Account.objects.filter(pk=self.acc.pk).update(closed_at=timezone.now())
+        with self.assertRaises(ValidationError):
+            self.apply()
+        with self.assertRaises(ValidationError):
+            self.apply(user=make_user("noaccount"))
+
+    def test_one_application_in_progress_per_customer(self):
+        self.apply()
+        with self.assertRaises(ValidationError):
+            self.apply(asset_ref="ASSAY-2002")
+
+    def test_the_same_asset_cannot_be_pledged_twice(self):
+        self.apply()
+        other = make_user("bola")
+        make_account(other)
+        for ref in ("ASSAY-1001", "assay 1001", "Assay1001"):
+            with self.assertRaises(ValidationError):
+                self.apply(user=other, asset_ref=ref)
+
+    def test_the_same_reference_on_a_different_kind_is_a_different_asset(self):
+        self.apply()
+        other = make_user("bola")
+        make_account(other)
+        self.apply(user=other, kind="equipment")                    # must not raise
+
+    def test_a_rejected_asset_can_be_pledged_again(self):
+        app = self.apply()
+        AssetApplication.objects.filter(pk=app.pk).update(status="rejected")
+        other = make_user("bola")
+        make_account(other)
+        self.apply(user=other)
+
+    def test_you_cannot_ask_for_more_than_you_declared_or_the_cap(self):
+        with self.assertRaises(ValidationError):
+            self.apply(requested_amount="1000001")
+        with override_settings(ASSETFUND_CUSTOMER_CAP="300000"):
+            with self.assertRaises(ValidationError):
+                self.apply()
+
+    def test_bad_text_and_kind(self):
+        for bad in (dict(kind="car"), dict(title="ab"), dict(description="too short"),
+                    dict(purpose="short"), dict(asset_ref="a-"), dict(asset_ref="  ")):
+            with self.assertRaises(ValidationError, msg=str(bad)):
+                self.apply(**bad)
+        self.assertEqual(AssetApplication.objects.count(), 0)
+
+    def test_bad_numbers(self):
+        for bad in ("abc", "-5", "0", "10.555", "nan", "inf", ""):
+            with self.assertRaises(ValidationError, msg=bad):
+                self.apply(requested_amount=bad)
+            with self.assertRaises(ValidationError, msg=bad):
+                self.apply(declared_value=bad)
+
+    def test_withdraw_before_the_money_flows(self):
+        app = self.apply()
+        self.assertEqual(svc.withdraw_application(self.cust, app.pk).status, "withdrawn")
+        self.apply()                                                  # a new one is allowed now
+
+    def test_nobody_else_can_withdraw_and_an_active_project_cannot(self):
+        app = self.apply()
+        with self.assertRaises(PermissionDenied):
+            svc.withdraw_application(make_user("thief"), app.pk)
+        live = self.activate_other()
+        with self.assertRaises(ValidationError):
+            svc.withdraw_application(live.user, live.pk)
+
+    def activate_other(self):
+        AssetApplication.objects.all().delete()
+        return self.activate()
+
+
+@override_settings(**CFG)
+class AssessTests(AssetCase):
+    def test_a_valuation_creates_the_offer_terms_and_stages(self):
+        app = self.assess(self.apply())
+        self.assertEqual((app.status, app.advance_amount, app.fee_amount, app.assessed_by),
+                         ("assessed", D("360000.00"), D("36000.00"), self.assessor))
+        self.assertEqual([(s.order, s.amount) for s in app.stages.all()],
+                         [(1, D("100000.00")), (2, D("160000.00")), (3, D("100000.00"))])
+
+    def test_needs_the_permission_and_not_for_your_own_application(self):
+        app = self.apply()
+        for who in (self.cust, self.approver, make_user("plain", staff=True)):
+            with self.assertRaises(PermissionDenied):
+                self.assess(app, staff=who)
+        boss = make_user("boss", ["assess_assetapplication"], staff=True)
+        make_account(boss)
+        mine = self.apply(user=boss, asset_ref="ASSAY-77")
+        with self.assertRaises(PermissionDenied):
+            self.assess(mine, staff=boss)
+
+    def test_the_rate_cap_depends_on_the_kind_of_asset(self):
+        with self.assertRaises(ValidationError):
+            self.assess(self.apply(), advance_rate="61")             # gold: 60 at most
+        AssetApplication.objects.all().delete()
+        skill = self.apply(kind="skill_contract", asset_ref="ORDER-55")
+        with self.assertRaises(ValidationError):
+            self.assess(skill, advance_rate="31")                    # skills: 30 at most
+
+    def test_the_advance_cannot_exceed_what_was_asked(self):
+        with self.assertRaises(ValidationError):
+            self.assess(self.apply(requested_amount="300000"))       # 360,000 > 300,000
+
+    def test_stages_must_add_up_exactly(self):
+        app = self.apply()
+        for stages in ([("Only one", "359999.99")], [("A", "200000"), ("B", "200000")], [], [("A", "0"), ("B", "360000")]):
+            with self.assertRaises(ValidationError, msg=str(stages)):
+                self.assess(app, stages=stages)
+        self.assertEqual(AdvanceStage.objects.count(), 0)
+        with self.assertRaises(ValidationError):
+            self.assess(app, stages=[(f"Stage {i}", "51428.57") for i in range(7)])    # more than six
+
+    def test_fee_share_term_and_numbers_are_checked(self):
+        app = self.apply()
+        for bad in (dict(fee_pct="16"), dict(fee_pct="-1"), dict(share_pct="0"), dict(share_pct="101"),
+                    dict(term_days=10), dict(term_days=5000), dict(term_days="180"), dict(verified_value="abc"),
+                    dict(verified_value="0"), dict(advance_rate="0"), dict(note="short")):
+            with self.assertRaises(ValidationError, msg=str(bad)):
+                self.assess(app, **bad)
+        self.assertEqual(AssetApplication.objects.get(pk=app.pk).status, "pending")
+
+    def test_only_a_pending_application_can_be_assessed(self):
+        app = self.assess(self.apply())
+        with self.assertRaises(ValidationError):
+            self.assess(app)
+
+
+@override_settings(**CFG)
+class DecideTests(AssetCase):
+    def assessed(self, **kw):
+        return self.assess(self.apply(**kw))
+
+    def test_approval_makes_an_offer_that_expires(self):
+        app = self.approve(self.assessed())
+        self.assertEqual((app.status, app.approved_by), ("approved", self.approver))
+        self.assertGreater(app.offer_expires_at, timezone.now())
+
+    def test_rejection_needs_a_reason_and_ends_it(self):
+        app = self.assessed()
+        with self.assertRaises(ValidationError):
+            svc.decide_application(app.pk, self.approver, "rejected", "  ")
+        self.assertEqual(svc.decide_application(app.pk, self.approver, "rejected", "Not enough proof").status, "rejected")
+
+    def test_four_eyes(self):
+        app = self.assessed()
+        both = make_user("both", ["assess_assetapplication", "approve_assetapplication"], staff=True)
+        app2 = self.assess(self.apply(user=make_user("bola"), asset_ref="X-1"), staff=both) if False else None
+        with self.assertRaises(PermissionDenied):
+            svc.decide_application(app.pk, self.assessor, "approved", "ok")        # the valuer
+        self.assertIsNone(app2)
+        for who in (self.cust, self.teller, make_user("plain", staff=True)):
+            with self.assertRaises(PermissionDenied):
+                svc.decide_application(app.pk, who, "approved", "ok")
+
+    def test_the_customer_cannot_decide_their_own_application(self):
+        boss = make_user("boss", ["approve_assetapplication"], staff=True)
+        make_account(boss)
+        app = self.assess(self.apply(user=boss, asset_ref="ASSAY-77"))
+        with self.assertRaises(PermissionDenied):
+            svc.decide_application(app.pk, boss, "approved", "ok")
+
+    def test_bad_decisions(self):
+        app = self.assessed()
+        with self.assertRaises(ValidationError):
+            svc.decide_application(app.pk, self.approver, "maybe", "ok")
+        self.approve(app)
+        with self.assertRaises(ValidationError):
+            self.approve(app)                                       # already decided
+
+    def test_nothing_is_approved_until_a_total_cap_is_set(self):
+        app = self.assessed()
+        for cap in ("0", ""):
+            with override_settings(ASSETFUND_TOTAL_CAP=cap or "0"):
+                with self.assertRaises(ValidationError):
+                    self.approve(app)
+
+    def test_the_total_cap_counts_every_open_offer(self):
+        first = self.assessed()
+        other = make_user("bola")
+        make_account(other)
+        second = self.assess(self.apply(user=other, asset_ref="ASSAY-2002"))
+        with override_settings(ASSETFUND_TOTAL_CAP="500000"):
+            self.approve(first)                                      # 360,000 fits
+            with self.assertRaises(ValidationError):
+                self.approve(second)                                 # 720,000 would not
+        with override_settings(ASSETFUND_TOTAL_CAP="800000"):
+            self.approve(second)
+
+    def test_the_ledger_must_be_set_up(self):
+        from funding.models import LedgerAccount
+        app = self.assessed()
+        LedgerAccount.objects.filter(code="1150").delete()
+        with self.assertRaises(ValidationError):
+            self.approve(app)
+
+=================== funding/models.py
+from decimal import Decimal
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
+from django.db.models import Q
+from django.core.exceptions import ValidationError
+
+ZERO = Decimal("0.00")
+HUNDRED = Decimal("100.00")
+
+
+
+
+
+class Investor(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="investor_profile",
+    )
+    legal_name = models.CharField(max_length=150)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.legal_name
+
+
+class CapitalContribution(models.Model):
+    SOURCE_CHOICES = [
+        ("company", "Company capital"),
+        ("investor", "Investor capital"),
+    ]
+
+    source_type = models.CharField(max_length=10, choices=SOURCE_CHOICES)
+    investor = models.ForeignKey(
+        Investor,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="contributions",
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    reference = models.CharField(max_length=100, unique=True)
+    received_at = models.DateTimeField()
+    verified = models.BooleanField(default=False)
+    
+    verified_by = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    null=True,
+    blank=True,
+    on_delete=models.PROTECT,
+    related_name="verified_capital_contributions",
+)
+
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="recorded_capital_contributions")
+
+    verified_at = models.DateTimeField(null=True, blank=True)
+    journal_reference = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        permissions = [("verify_capitalcontribution", "Can verify capital contributions")]
+        ordering = ["-received_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(source_type="company", investor__isnull=True)
+                    | Q(source_type="investor", investor__isnull=False)
+                ),
+                name="capital_source_investor_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.source_type}: {self.amount}"
+
+
+class InvestorAgreement(models.Model):
+    """
+    The agreed allocation terms for an investor.
+
+    Capital component:
+      share is calculated from eligible contributed capital.
+
+    Agreed component:
+      share is taken from the agreed percentage fields.
+
+    The percentages are separate for profit and loss.
+    """
+    
+    CAPITAL_BASIS_CHOICES = [
+    ("opening_balance", "Opening balance"),
+    ("time_weighted_average", "Time-weighted average"),
+]
+
+    PROFIT_TREATMENT_CHOICES = [
+    ("payout", "Pay out"),
+    ("reinvest", "Reinvest"),
+    ("retain", "Retain"),
+]
+
+    capital_basis = models.CharField(
+    max_length=30,
+    choices=CAPITAL_BASIS_CHOICES,
+    default="time_weighted_average",
+)
+
+    profit_treatment = models.CharField(
+    max_length=20,
+                                                        choices=PROFIT_TREATMENT_CHOICES,
+    default="retain",
+)
+    
+    investor = models.ForeignKey(
+        Investor,
+        on_delete=models.PROTECT,
+        related_name="agreements",
+    )
+    
+    effective_from = models.DateField()
+    effective_to = models.DateField(null=True, blank=True)
+
+    profit_capital_component = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(HUNDRED)],
+    )
+    profit_agreed_component = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(HUNDRED)],
+    )
+    agreed_profit_share = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(HUNDRED)],
+    )
+
+    loss_capital_component = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(HUNDRED)],
+    )
+    loss_agreed_component = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(HUNDRED)],
+    )
+    agreed_loss_share = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(ZERO), MaxValueValidator(HUNDRED)],
+    )
+
+    signed_document_reference = models.CharField(max_length=255)
+    approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(effective_to__isnull=True) |
+                          Q(effective_to__gte=models.F("effective_from")),
+                name="agreement_dates_valid",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.investor} agreement from {self.effective_from}"
+
+    def clean(self):
+        super().clean()
+
+        pairs = (
+            (self.profit_capital_component, self.profit_agreed_component, "Profit"),
+            (self.loss_capital_component, self.loss_agreed_component, "Loss"),
+        )
+        for capital, agreed, label in pairs:
+            if capital is not None and agreed is not None and capital + agreed != HUNDRED:
+                raise ValidationError(f"{label} allocation components must total 100%.")
+
+        # One investor can only have one agreement in force at any time.
+        if self.investor_id and self.effective_from:
+            clash = InvestorAgreement.objects.filter(investor_id=self.investor_id).exclude(pk=self.pk)
+            clash = clash.filter(models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=self.effective_from))
+            if self.effective_to:
+                clash = clash.filter(effective_from__lte=self.effective_to)
+            if clash.exists():
+                raise ValidationError("This agreement overlaps another agreement for the same investor.")
+
+
+class FundingPeriod(models.Model):
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("review", "Under review"),
+        ("closed", "Closed"),
+    ]
+
+    start_date = models.DateField(unique=True)
+    end_date = models.DateField()
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="open"
+    )
+    closed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        permissions = [
+    (
+        "review_fundingperiod",
+        "Can move funding periods into review",
+    ),
+    (
+        "close_fundingperiod",
+        "Can close funding periods",
+    ),
+    (
+        "reopen_fundingperiod",
+        "Can reopen closed funding periods",
+    ),
+]
+        ordering = ["-start_date"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(end_date__gte=models.F("start_date")),
+                name="funding_period_dates_valid",
+            ),
+        ]
+        
+    def clean(self):
+        super().clean()
+        if self.start_date and self.end_date:
+            clash = FundingPeriod.objects.filter(start_date__lte=self.end_date, end_date__gte=self.start_date).exclude(pk=self.pk)
+            if clash.exists():
+                raise ValidationError("This period overlaps another period.")
+
+    def __str__(self):
+        return f"{self.start_date:%B %Y}"
+
+
+class FundingPeriodReopening(models.Model):
+    period = models.ForeignKey(
+        FundingPeriod,
+        on_delete=models.PROTECT,
+        related_name="reopenings",
+    )
+    reopened_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="reopened_funding_periods",
+    )
+    reason = models.CharField(max_length=255)
+    previous_closed_at = models.DateTimeField()
+    reopened_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.period} reopened by {self.reopened_by}"
+
+
+class InvestorAllocation(models.Model):
+    TYPE_CHOICES = [
+        ("profit", "Profit"),
+        ("loss", "Loss"),
+    ]
+
+    period = models.ForeignKey(
+        FundingPeriod, on_delete=models.PROTECT, related_name="allocations"
+    )
+    investor = models.ForeignKey(
+        Investor, on_delete=models.PROTECT, related_name="allocations"
+    )
+    allocation_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    capital_component = models.DecimalField(
+        max_digits=15, decimal_places=2, default=ZERO
+    )
+    agreed_component = models.DecimalField(
+        max_digits=15, decimal_places=2, default=ZERO
+    )
+    agreement = models.ForeignKey(
+        InvestorAgreement, on_delete=models.PROTECT
+    )
+    
+    approval_status = models.CharField(
+    max_length=10,
+    choices=[
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ],
+    default="pending",
+)
+
+    approved_by = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    null=True,
+    blank=True,
+    on_delete=models.PROTECT,
+    related_name="approved_investor_allocations",
+)
+
+    proposed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="proposed_investor_allocations")
+
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def _check_allocation_editable(self):
+        if not self.pk:
+            return
+
+        old_status = type(self).objects.values_list(
+        "approval_status", flat=True
+    ).get(pk=self.pk)
+
+        if old_status == "approved":
+            raise ValidationError(
+            "Approved allocations cannot be edited."
+        )
+
+        if self.capital_entries.exists():
+            raise ValidationError(
+            "Allocations linked to capital entries cannot be edited."
+        )
+
+
+    def save(self, *args, **kwargs):
+        self._check_allocation_editable()
+        super().save(*args, **kwargs)
+
+
+    def delete(self, *args, **kwargs):
+        self._check_allocation_editable()
+        return super().delete(*args, **kwargs)
+    
+    def clean(self):
+        super().clean()
+
+        if self.approval_status == "approved":
+            if not self.approved_by_id or not self.approved_at:
+                raise ValidationError(
+                "Approved allocations require an approver and approval date."
+            )
+
+        if self.approval_status != "approved":
+            if self.approved_by_id or self.approved_at:
+                raise ValidationError(
+                "Only approved allocations can have approval details."
+            )
+
+        if self.agreement_id and self.investor_id:
+            if self.agreement.investor_id != self.investor_id:
+                raise ValidationError(
+                "The agreement does not belong to this investor."
+            )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["period", "investor", "allocation_type"],
+                name="unique_investor_allocation_per_period_type",
+            ),
+        ]
+        
+        permissions = [
+        (
+            "approve_investorallocation",
+            "Can approve investor allocations",
+        ),
+        ("propose_investorallocation", "Can propose investor allocations"),
+    ]
+
+
+class LedgerAccount(models.Model):
+    """
+    Examples:
+    1000 - Operating cash
+    1100 - Credit principal receivable
+    2000 - Investor capital
+    2100 - Company capital
+    3000 - Retained earnings
+    4000 - Credit income
+    5000 - Operating expenses
+    5100 - Credit loss expense
+    """
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=100)
+    account_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("asset", "Asset"),
+            ("liability", "Liability"),
+            ("equity", "Equity"),
+            ("income", "Income"),
+            ("expense", "Expense"),
+        ],
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class JournalEntry(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("posted", "Posted"),
+        ("reversed", "Reversed"),
+    ]
+
+    reference = models.CharField(max_length=100, unique=True)
+    period = models.ForeignKey(
+        FundingPeriod, on_delete=models.PROTECT, related_name="journal_entries"
+    )
+    description = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="draft"
+    )
+    posted_at = models.DateTimeField(null=True, blank=True)
+    
+    reversal_of = models.OneToOneField(
+    "self",
+    null=True,
+    blank=True,
+    on_delete=models.PROTECT,
+    related_name="reversal_entry",
+)
+
+    reversal_reason = models.CharField(
+    max_length=255,
+    blank=True,
+)
+
+    reversed_by = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    null=True,
+    blank=True,
+    on_delete=models.PROTECT,
+    related_name="reversed_journals",
+)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old = JournalEntry.objects.get(pk=self.pk)
+
+            if old.status in ("posted", "reversed"):
+                allowed_reversal = (
+                old.status == "posted"
+                and self.status == "reversed"
+                and old.reference == self.reference
+                and old.period_id == self.period_id
+                and old.description == self.description
+                and old.posted_at == self.posted_at
+                and old.reversal_of_id == self.reversal_of_id
+                and old.reversal_reason == self.reversal_reason
+                and old.reversed_by_id == self.reversed_by_id
+            )
+
+                if not allowed_reversal:
+                    raise ValidationError(
+                    "Posted or reversed journal entries cannot be edited."
+                )
+
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.status in ("posted", "reversed"):
+            raise ValidationError(
+                "Posted or reversed journal entries cannot be deleted."
+            )
+
+        return super().delete(*args, **kwargs)
+    
+    class Meta:
+        constraints = [
+        models.CheckConstraint(
+            condition=(
+                Q(reversal_of__isnull=True)
+                | (
+                    Q(reversal_reason__gt="")
+                    & Q(reversed_by__isnull=False)
+                )
+            ),
+                    name="journal_reversal_requires_reason_and_user",
+        ),
+    ]
+    
+    def __str__(self):
+        return self.reference
+
+
+class JournalLine(models.Model):
+    entry = models.ForeignKey(
+        JournalEntry, on_delete=models.PROTECT, related_name="lines"
+    )
+    account = models.ForeignKey(
+        LedgerAccount, on_delete=models.PROTECT, related_name="journal_lines"
+    )
+    debit = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    credit = models.DecimalField(max_digits=15, decimal_places=2, default=ZERO)
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(debit__gte=ZERO) & Q(credit__gte=ZERO)
+                    & (
+                        (Q(debit__gt=ZERO) & Q(credit=ZERO))
+                        | (Q(credit__gt=ZERO) & Q(debit=ZERO))
+                    )
+                ),
+                name="journal_line_one_positive_side",
+            ),
+        ]
+        
+    def _check_entry_editable(self):
+        if self.entry_id:
+            status = JournalEntry.objects.values_list(
+                "status", flat=True
+            ).get(pk=self.entry_id)
+
+            if status != "draft":
+                raise ValidationError(
+                    "Journal lines cannot be changed after posting."
+                )
+
+    def save(self, *args, **kwargs):
+        self._check_entry_editable()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self._check_entry_editable()
+        return super().delete(*args, **kwargs)
+        
+        
+        
+
+
+class InvestorCapitalEntry(models.Model):
+    ENTRY_TYPES = [
+        ("contribution", "Capital contribution"),
+        ("withdrawal", "Capital withdrawal"),
+        ("reinvestment", "Profit reinvestment"),
+        ("retained_profit", "Retained profit"),
+        ("payout", "Profit payout"),
+        ("loss", "Allocated investment loss"),
+    ]
+
+    investor = models.ForeignKey(
+        Investor,
+        on_delete=models.PROTECT,
+        related_name="capital_entries",
+    )
+    entry_type = models.CharField(
+        max_length=20,
+        choices=ENTRY_TYPES,
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    effective_date = models.DateField()
+    reference = models.CharField(max_length=100, unique=True)
+    
+    source_contribution = models.OneToOneField(
+    CapitalContribution,
+    null=True,
+    blank=True,
+    on_delete=models.PROTECT,
+    related_name="capital_entry",
+)
+    
+    allocation = models.ForeignKey(
+        InvestorAllocation,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="capital_entries",
+    )
+    journal_entry = models.ForeignKey(
+    JournalEntry,
+    on_delete=models.PROTECT,
+    related_name="capital_entries",
+)
+
+    description = models.CharField(max_length=255, blank=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and InvestorCapitalEntry.objects.filter(
+            pk=self.pk,
+            posted_at__isnull=False,
+        ).exists():
+            raise ValidationError(
+                "Posted capital entries cannot be edited."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.posted_at:
+            raise ValidationError(
+                "Posted capital entries cannot be deleted."
+            )
+        super().delete(*args, **kwargs)
+
+    class Meta:
+        ordering = ["effective_date", "created_at"]
+        constraints = [models.UniqueConstraint(fields=["allocation"], condition=Q(allocation__isnull=False),
+                                               name="unique_capital_entry_per_allocation")]
+        indexes = [models.Index(fields=["investor", "effective_date"], name="investor_capital_date_idx")
+    ]
+
+    def __str__(self):
+        return (
+            f"{self.investor.legal_name} - "
+            f"{self.get_entry_type_display()} - {self.amount}"
+        )
+
+
+class ContributionIntent(models.Model):
+    STATUS = [("pending", "Waiting for funds"), ("received", "Funds received"),
+              ("rejected", "Rejected"), ("expired", "Expired")]
+    METHODS = [("bank_transfer", "Bank transfer"), ("cash", "Cash at a branch")]
+
+    investor = models.ForeignKey(Investor, on_delete=models.PROTECT, related_name="intents")
+    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    method = models.CharField(max_length=15, choices=METHODS)
+    reference = models.CharField(max_length=20, unique=True)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    note = models.CharField(max_length=200, blank=True)
+    contribution = models.OneToOneField(CapitalContribution, null=True, blank=True, on_delete=models.PROTECT,
+                                        related_name="intent")
+    handled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                   related_name="+")
+    handled_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [("confirm_contributionintent", "Can confirm that contributor funds arrived")]
+        constraints = [models.CheckConstraint(condition=Q(amount__gt=0), name="intent_amount_positive")]
+
+
+class LedgerPosting(models.Model):
+    """Which source row became which journal entry, so nothing is posted twice."""
+    source_type = models.CharField(max_length=20)
+    source_id = models.BigIntegerField()
+    entry = models.OneToOneField(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="posting")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["source_type", "source_id"], name="one_posting_per_source")]
+
+
+=================== funding/accounting.py
+from decimal import Decimal, InvalidOperation
+
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
+
+from backoffice.audit import log as audit_log
+from funding.security import need
+
+from .models import (
+    FundingPeriod,
+    Investor,
+    InvestorAllocation,
+    InvestorCapitalEntry,
+    JournalEntry,
+    JournalLine,
+    LedgerAccount,
+)
+
+ZERO = Decimal("0.00")
+
+# Keep these codes aligned with seed_ledger's chart of accounts.
+ACCOUNT_CODES = {
+    "cash": "1000",
+    "investor_capital": "2000",
+    "company_capital": "2100",
+    "retained_allocations": "2200",
+    "customer_deposits": "2300",
+    "retained_earnings": "3000",
+    "loss_clearing": "3100",
+    "bonus_expense": "5200",
+    "interest_expense": "5300",
+}
+
+CAPITAL_INCREASE = {"contribution", "reinvestment"}
+CAPITAL_DECREASE = {"withdrawal", "loss"}
+RETAINED_INCREASE = {"retained_profit"}
+RETAINED_DECREASE = {"payout", "reinvestment"}
+
+# Profit and loss entries come from approved allocations, and allocations are approved while
+# the period is under review, so those entries may be posted in an open OR a review period.
+ALLOCATION_ENTRY_TYPES = {"retained_profit", "loss"}
+
+
+def get_ledger_account(code):
+    try:
+        return LedgerAccount.objects.get(code=ACCOUNT_CODES[code], is_active=True)
+    except LedgerAccount.DoesNotExist:
+        raise ValidationError(f"Required ledger account is missing: {code}")
+
+
+def add_journal_line(entry, account_key, debit, credit, description):
+    return JournalLine.objects.create(
+        entry=entry,
+        account=get_ledger_account(account_key),
+        debit=Decimal(str(debit)),
+        credit=Decimal(str(credit)),
+        description=(description or "")[:255],
+    )
+
+
+def get_open_period(effective_date, statuses=("open",)):
+    """The single period covering the date, locked, in one of the allowed statuses."""
+    periods = list(
+        FundingPeriod.objects.select_for_update().filter(
+            start_date__lte=effective_date,
+            end_date__gte=effective_date,
+            status__in=statuses,
+        )
+    )
+    if len(periods) != 1:
+        if tuple(statuses) == ("open",):
+            raise ValidationError("Exactly one open accounting period must cover this date.")
+        raise ValidationError("Exactly one open or review accounting period must cover this date.")
+    return periods[0]
+
+
+def _clean_amount(value):
+    try:
+        amount = Decimal(str(value)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError):
+        raise ValidationError("Enter a valid amount.")
+    if not amount.is_finite() or amount <= ZERO:
+        raise ValidationError("Amount must be greater than zero.")
+    return amount
+
+
+def _validate_allocation(allocation, investor, period, entry_type, amount):
+    try:
+        allocation = InvestorAllocation.objects.select_for_update().get(pk=allocation.pk)
+    except InvestorAllocation.DoesNotExist:
+        raise ValidationError("The allocation does not exist.")
+
+    if allocation.investor_id != investor.pk:
+        raise ValidationError("The allocation does not belong to this investor.")
+    if allocation.period_id != period.pk:
+        raise ValidationError("The allocation and journal period do not match.")
+
+    if entry_type in ALLOCATION_ENTRY_TYPES:
+        expected = "profit" if entry_type == "retained_profit" else "loss"
+        if allocation.allocation_type != expected:
+            raise ValidationError(f"A {entry_type.replace('_', ' ')} entry requires a {expected} allocation.")
+        if allocation.approval_status != "approved":
+            raise ValidationError("The allocation must be approved before posting.")
+        if allocation.amount != amount:
+            raise ValidationError("The event amount must match the allocation amount.")
+        if InvestorCapitalEntry.objects.filter(allocation=allocation).exists():
+            raise ValidationError("This allocation has already been used.")
+    return allocation
+
+
+@transaction.atomic
+def post_investor_capital_event(
+    *,
+    posted_by,
+    investor_id,
+    entry_type,
+    amount,
+    effective_date,
+    reference,
+    description="",
+    allocation=None,
+    allow_review_period=False,
+):
+    need(posted_by, "funding.add_investorcapitalentry")
+    amount = _clean_amount(amount)
+
+    valid_types = CAPITAL_INCREASE | CAPITAL_DECREASE | RETAINED_INCREASE | RETAINED_DECREASE
+    if entry_type not in valid_types:
+        raise ValidationError("Invalid capital entry type.")
+
+    # Lock the investor while checking balances and creating the entry.
+    try:
+        investor = Investor.objects.select_for_update().get(pk=investor_id)
+    except Investor.DoesNotExist:
+        raise ValidationError("Investor not found.")
+    if not investor.is_active:
+        raise ValidationError("This investor is not active.")
+
+    if InvestorCapitalEntry.objects.filter(reference=reference).exists():
+        raise ValidationError("This reference has already been used.")
+
+    # Allocation entries, and the reinvestment/payout that follow them, may post while the period is in review.
+    allow_review = allow_review_period or entry_type in ALLOCATION_ENTRY_TYPES
+    period = get_open_period(
+        effective_date, ("open", "review") if allow_review else ("open",))
+
+    if entry_type in ALLOCATION_ENTRY_TYPES and allocation is None:
+        raise ValidationError("This capital event requires an allocation.")
+    if allocation is not None:
+        allocation = _validate_allocation(allocation, investor, period, entry_type, amount)
+
+    from .capital import capital_balance, retained_profit_balance  # avoid a circular import
+
+    if entry_type in CAPITAL_DECREASE and capital_balance(investor) < amount:
+        raise ValidationError("Insufficient investment capital.")
+    if entry_type in RETAINED_DECREASE and retained_profit_balance(investor) < amount:
+        raise ValidationError("Insufficient retained profit.")
+
+    journal = JournalEntry.objects.create(
+        reference=f"JRN-{reference}",
+        period=period,
+        description=(description or entry_type)[:255],
+        status="draft",
+    )
+
+    # (debit account, credit account) for every entry type.
+    mapping = {
+        "contribution": ("cash", "investor_capital"),
+        "withdrawal": ("investor_capital", "cash"),
+        "retained_profit": ("retained_earnings", "retained_allocations"),
+        "reinvestment": ("retained_allocations", "investor_capital"),
+        "payout": ("retained_allocations", "cash"),
+        "loss": ("investor_capital", "loss_clearing"),
+    }
+    debit_key, credit_key = mapping[entry_type]
+    add_journal_line(journal, debit_key, amount, 0, description)
+    add_journal_line(journal, credit_key, 0, amount, description)
+
+    journal = post_journal_entry(journal, allow_review=allow_review)
+
+    capital_entry = InvestorCapitalEntry.objects.create(
+        investor=investor,
+        entry_type=entry_type,
+        amount=amount,
+        effective_date=effective_date,
+        reference=reference,
+        description=description,
+        allocation=allocation,
+        journal_entry=journal,
+        posted_at=timezone.now(),
+    )
+
+    audit_log(posted_by, "capital_" + entry_type, reference, str(amount))
+    return capital_entry
+
+
+@transaction.atomic
+def post_journal_entry(entry, allow_review=False):
+    entry = JournalEntry.objects.select_for_update().get(pk=entry.pk)
+
+    if entry.status != "draft":
+        raise ValidationError("Only draft entries can be posted.")
+
+    allowed = ("open", "review") if allow_review else ("open",)
+    if entry.period.status not in allowed:
+        raise ValidationError("Journal entries can only be posted in an open period.")
+
+    lines = list(entry.lines.all())
+    if len(lines) < 2:
+        raise ValidationError("A journal entry needs at least two lines.")
+
+    total_debit = sum((line.debit for line in lines), ZERO)
+    total_credit = sum((line.credit for line in lines), ZERO)
+    if total_debit <= 0 or total_debit != total_credit:
+        raise ValidationError("Journal entry is not balanced.")
+
+    entry.status = "posted"
+    entry.posted_at = timezone.now()
+    entry.save(update_fields=["status", "posted_at"])
+    return entry
+
+=================== funding/security.py
+from django.core.exceptions import PermissionDenied
+
+
+def need(user, perm):
+    if not (user and user.is_authenticated and user.is_active and user.is_staff and user.has_perm(perm)):
+        raise PermissionDenied("You are not allowed to do this.")
+
+
+=================== funding/urls.py
+from django.urls import path
+
+from funding import views, views_contrib
+
+app_name = "funding"
+
+urlpatterns = [
+    path("periods/", views.period_list_view, name="periods"),
+    path("periods/open/", views.period_open_view, name="period_open"),
+     path("periods/<int:period_id>/", views.period_detail_view, name="period"),
+    path("periods/<int:period_id>/review/", views.period_review_view, name="review_period"),
+    path("periods/<int:period_id>/close/", views.period_close_view, name="close_period"),
+    path("periods/<int:period_id>/reopen/", views.reopen_period_view, name="reopen_period"),
+    path("periods/<int:period_id>/allocations/", views.period_allocations_view, name="allocations"),
+
+    path("my-deposits/", views_contrib.my_deposits, name="my_deposits"),
+    path("intents/", views_contrib.intents_queue, name="intents"),
+    path("contributions/", views_contrib.contributions_queue, name="contributions"),
+]
+
+
+
+=================== funding/admin.py
+from django.contrib import admin
+
+from funding.models import (
+    CapitalContribution,
+    ContributionIntent,
+    FundingPeriod,
+    FundingPeriodReopening,
+    Investor,
+    InvestorAgreement,
+    InvestorAllocation,
+    InvestorCapitalEntry,
+    JournalEntry,
+    JournalLine,
+    LedgerAccount,
+)
+
+from django.contrib import admin, messages
+
+from backoffice.audit import log as audit_log
+
+
+
+
+@admin.register(Investor)
+class InvestorAdmin(admin.ModelAdmin):
+    list_display = ("legal_name", "user", "is_active", "created_at")
+    search_fields = ("legal_name", "user__username", "user__phone_number")
+    raw_id_fields = ("user",)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(InvestorAgreement)
+class InvestorAgreementAdmin(admin.ModelAdmin):
+    list_display = ("investor", "effective_from", "effective_to", "approved")
+    raw_id_fields = ("investor",)
+    actions = ["approve_agreements"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.approved:
+            return tuple(f.name for f in self.model._meta.fields)     # an approved agreement never changes
+        return ("approved",)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.action(description="Approve selected agreements (superuser only)")
+    def approve_agreements(self, request, qs):
+        if not request.user.is_superuser:
+            self.message_user(request, "Only a superuser can approve agreements.", level=messages.ERROR)
+            return
+        n = 0
+        for a in qs.filter(approved=False):
+            a.full_clean()
+            InvestorAgreement.objects.filter(pk=a.pk).update(approved=True)
+            audit_log(request.user, "agreement_approved", f"agreement:{a.pk}", a.investor.legal_name)
+            n += 1
+        self.message_user(request, f"{n} agreement(s) approved.")
+
+
+
+
+class ReadOnlyAdmin(admin.ModelAdmin):
+    """Records the system writes itself: visible to staff, never edited by hand."""
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(f.name for f in self.model._meta.concrete_fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(FundingPeriod)
+class FundingPeriodAdmin(admin.ModelAdmin):
+    list_display = ("start_date", "end_date", "status", "closed_at")
+    list_filter = ("status",)
+    ordering = ("-start_date",)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj is None:
+            # New periods can be created, but always start open.
+            return ("status", "closed_at", "created_at")
+        # Existing periods are moved through review/close/reopen, not edited here.
+        return tuple(field.name for field in self.model._meta.concrete_fields)
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.status = "open"
+            obj.closed_at = None
+        super().save_model(request, obj, form, change)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(FundingPeriodReopening)
+class FundingPeriodReopeningAdmin(ReadOnlyAdmin):
+    list_display = ("period", "reopened_by", "reason", "previous_closed_at", "reopened_at")
+    list_filter = ("reopened_at",)
+    search_fields = ("reason", "reopened_by__username")
+
+
+
+@admin.register(LedgerAccount)
+class LedgerAccountAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "account_type", "is_active")
+    list_filter = ("account_type", "is_active")
+    search_fields = ("code", "name")
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CapitalContribution)
+class CapitalContributionAdmin(admin.ModelAdmin):
+    """Staff record a contribution here. A different person verifies it on the Verify page."""
+
+    list_display = ("reference", "source_type", "investor", "amount", "received_at", "verified")
+    list_filter = ("source_type", "verified")
+    search_fields = ("reference", "investor__legal_name")
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj is not None:
+            return tuple(f.name for f in self.model._meta.concrete_fields)
+        return ("verified", "verified_by", "verified_at", "journal_reference", "recorded_by", "created_at")
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.recorded_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def has_change_permission(self, request, obj=None):
+        return obj is None and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ContributionIntent)
+class ContributionIntentAdmin(ReadOnlyAdmin):
+    list_display = ("reference", "investor", "amount", "method", "status", "created_at")
+    list_filter = ("status", "method")
+    search_fields = ("reference", "investor__legal_name")
+
+
+@admin.register(InvestorAllocation)
+class InvestorAllocationAdmin(ReadOnlyAdmin):
+    list_display = ("period", "investor", "allocation_type", "amount", "approval_status")
+    list_filter = ("allocation_type", "approval_status")
+
+
+@admin.register(InvestorCapitalEntry)
+class InvestorCapitalEntryAdmin(ReadOnlyAdmin):
+    list_display = ("investor", "entry_type", "amount", "effective_date", "reference")
+    list_filter = ("entry_type",)
+    search_fields = ("reference", "investor__legal_name")
+
+
+class JournalLineInline(admin.TabularInline):
+    model = JournalLine
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(JournalEntry)
+class JournalEntryAdmin(ReadOnlyAdmin):
+    list_display = ("reference", "period", "status", "posted_at")
+    list_filter = ("status", "period")
+    search_fields = ("reference", "description")
+    inlines = [JournalLineInline]
+
+=================== funding/forms.py
+from django import forms
+
+
+class PeriodReopeningForm(forms.Form):
+    reason = forms.CharField(
+        max_length=255,
+        min_length=5,
+        widget=forms.Textarea(attrs={
+            "rows": 4,
+            "placeholder": "Explain why this funding period must be reopened.",
+        }),
+    )
+
+
+class AllocationProposalForm(forms.Form):
+    result = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        label="Approved result for the period (₦)",
+        help_text="Positive for a profit to share, negative for a loss to share.",
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "autocomplete": "off", "placeholder": "e.g. 250000.00 or -40000.00"}),
+    )
+
+=================== funding/tests/helpers.py
+import calendar
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+from django.core.management import call_command
+from django.test import TestCase
+from django.utils import timezone
+
+from funding.allocation import approve_investor_allocation
+from funding.models import FundingPeriod, Investor, InvestorAgreement, InvestorAllocation
+
+User = get_user_model()
+
+
+def staff_with(username, *codes, active=True):
+# [redacted]
+    if codes:
+        user.user_permissions.add(*Permission.objects.filter(codename__in=codes))
+    return User.objects.get(pk=user.pk)
+
+
+class FundingBase(TestCase):
+    """Two different staff members, as the real rules require: one proposes and records, another approves and posts."""
+
+    def setUp(self):
+        call_command("seed_ledger")
+        self.today = timezone.localdate()
+        self.proposer = staff_with("fund_proposer", "propose_investorallocation", "add_capitalcontribution",
+                                   "add_investorcapitalentry")
+        self.admin_user = staff_with("fund_approver", "approve_investorallocation", "verify_capitalcontribution",
+                                     "add_investorcapitalentry")
+# [redacted]
+        self.investor = Investor.objects.create(user=self.investor_user, legal_name="Test Investor")
+
+        first = self.today.replace(day=1)
+        last = self.today.replace(day=calendar.monthrange(self.today.year, self.today.month)[1])
+        self.period = FundingPeriod.objects.create(start_date=first, end_date=last, status="open")
+        self.agreement = self.make_agreement(self.investor, first)
+
+    @staticmethod
+    def make_agreement(investor, start):
+        return InvestorAgreement.objects.create(
+            investor=investor, capital_basis="time_weighted_average", profit_treatment="retain",
+            effective_from=start, profit_capital_component=Decimal("50.00"), profit_agreed_component=Decimal("50.00"),
+            agreed_profit_share=Decimal("100.00"), loss_capital_component=Decimal("50.00"),
+            loss_agreed_component=Decimal("50.00"), agreed_loss_share=Decimal("100.00"),
+            signed_document_reference="test-doc", approved=True)
+
+    def set_period(self, status):
+        FundingPeriod.objects.filter(pk=self.period.pk).update(status=status)
+
+    def create_allocation(self, allocation_type="profit", amount="2000.00", investor=None, agreement=None):
+        amount = Decimal(str(amount))
+        return InvestorAllocation.objects.create(
+            period=self.period, investor=investor or self.investor, allocation_type=allocation_type, amount=amount,
+            capital_component=amount / 2, agreed_component=amount / 2, agreement=agreement or self.agreement,
+            proposed_by=self.proposer)
+
+    def approve(self, allocation, approver=None):
+        """Allocations are approved while the period is in review. Capital entries need it open, so reopen it after."""
+        self.set_period("review")
+        try:
+            return approve_investor_allocation(allocation_id=allocation.pk, approved_by=approver or self.admin_user)
+        finally:
+            self.set_period("open")
+
+
+=================== funding/management/commands/seed_ledger.py
+from django.core.management.base import BaseCommand
+
+from funding.models import LedgerAccount
+
+CHART = [("1000", "Operating cash", "asset"), ("2000", "Investor capital", "liability"),
+         ("2100", "Company capital", "equity"), ("2200", "Investor retained allocations", "liability"),
+         ("3000", "Retained earnings", "equity"), ("3100", "Loss allocation clearing", "equity"),
+                  ("2300", "Customer deposits", "liability"), ("5200", "Welcome bonus expense", "expense"),
+         ("5300", "Savings interest expense", "expense")
+         ]
+
+
+class Command(BaseCommand):
+    help = "Create the ledger accounts the funding code posts to"
+
+    def handle(self, *args, **opts):
+        for code, name, kind in CHART:
+            LedgerAccount.objects.get_or_create(code=code, defaults={"name": name, "account_type": kind})
+        self.stdout.write(f"{len(CHART)} ledger accounts are in place.")
+
+
+=================== funding/management/commands/ledger_check.py
+from decimal import Decimal
+
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Sum
+
+from accounts.models import Account
+from funding.models import JournalLine
+from savings.models import SavingsPlan
+from treasury.models import CashOut
+
+
+def _sum(qs, field):
+    return qs.aggregate(t=Sum(field))["t"] or Decimal("0")
+
+
+class Command(BaseCommand):
+    help = "Compare what Klosa owes customers with the ledger"
+
+    def add_arguments(self, parser):
+        parser.add_argument("--strict", action="store_true")
+
+    def handle(self, *args, strict=False, **opts):
+        owed = (_sum(Account.objects.all(), "balance") + _sum(SavingsPlan.objects.filter(status="active"), "balance")
+                + _sum(CashOut.objects.filter(status="held"), "amount"))
+        lines = JournalLine.objects.filter(account__code="2300", entry__status="posted")
+        ledger = _sum(lines, "credit") - _sum(lines, "debit")
+        diff = owed - ledger
+        self.stdout.write(f"Klosa owes customers ₦{owed:,.2f}\nLedger 2300 shows    ₦{ledger:,.2f}\nDifference           ₦{diff:,.2f}")
+        if strict and diff != 0:
+            raise CommandError("The ledger and the customer balances do not agree.")
+
+
+=================== accounts/models.py
+
+from django.db import models
+from datetime import timedelta
+# [redacted]
+from django.utils import timezone
+
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+
+from django.contrib.auth.models import AbstractUser
+from .utils import normalize_email
+# [redacted]
+
+from django.db.models.functions import Lower
+
+
+
+
+
+class User(AbstractUser):
+    # Customers sign up with a phone number and may have no email. Staff must have one.
+    email = models.EmailField(max_length=254, null=True, blank=True)
+    email_normalized = models.CharField(unique=True, max_length=254, null=True, blank=True, editable=False)
+    email_verified = models.BooleanField(default=False)
+
+    # Phone is the customer's login, so it must be unique (added in stage 2).
+    phone_number = models.CharField(unique=True, max_length=15, null=True, blank=True)
+    phone_verified = models.BooleanField(default=False)
+
+# [redacted]
+    
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:   # add to your existing Meta if you have one
+        constraints = [models.UniqueConstraint(
+        Lower("email"), condition=Q(email_verified_at__isnull=False), name="one_verified_email")]
+
+    def save(self, *args, **kwargs):
+        self.email = (self.email or "").strip() or None          # keep the address as typed
+        self.email_normalized = normalize_email(self.email) if self.email else None
+        self.phone_number = self.phone_number or None            # blank must be NULL for "unique"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.username
+        
+        
+
+class Account(models.Model):
+    
+    user = models.OneToOneField(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE
+)
+
+    account_number = models.CharField(
+        max_length=10,
+        unique=True
+    )
+
+    balance = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0
+    )
+
+    currency = models.CharField(
+        max_length=3,
+        default="NGN"
+    )
+
+    pin_hash = models.CharField(max_length=128, blank=True)
+    pin_attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    
+    kyc_tier = models.PositiveSmallIntegerField(default=0)
+    transfers_locked_until = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    closed_at = models.DateTimeField(null=True, blank=True)
+    
+    face_verified_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_closed(self):
+        return self.closed_at is not None
+
+    def set_pin(self, raw):
+# [redacted]
+        self.pin_attempts = 0
+        self.locked_until = None
+        self.save(update_fields=[
+            "pin_hash", "pin_attempts", "locked_until"
+        ])
+
+    def is_locked(self):
+        return bool(
+            self.locked_until and
+            self.locked_until > timezone.now()
+        )
+
+    def check_pin(self, raw):
+        if self.is_locked() or not self.pin_hash:
+            return False
+
+# [redacted]
+            if self.pin_attempts:
+                self.pin_attempts = 0
+                self.save(update_fields=["pin_attempts"])
+            return True
+
+        self.pin_attempts += 1
+
+        if self.pin_attempts >= 3:
+            self.locked_until = (
+                timezone.now() + timedelta(minutes=15)
+            )
+            self.pin_attempts = 0
+
+        self.save(update_fields=[
+            "pin_attempts", "locked_until"
+        ])
+
+        return False
+
+    @property
+    def tier(self):
+         return self.kyc_tier + 1
+
+    def __str__(self):
+        return f"{self.user.username} - {self.account_number}"
+  
+
+class AddressProof(models.Model):
+    STATUS_CHOICES = [("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")]
+    DOC_TYPES = [("utility_bill", "Utility bill")]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="address_proofs")
+    line1 = models.CharField(max_length=150)
+    line2 = models.CharField(max_length=150, blank=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country_code = models.CharField(max_length=2, default="NG")
+
+    document_type = models.CharField(max_length=30, choices=DOC_TYPES, default="utility_bill")
+# [redacted]
+    bill_date = models.DateField()
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    reason = models.CharField(max_length=500, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        permissions = [("review_addressproof", "Can review address proofs")]
+        constraints = [
+            models.UniqueConstraint(fields=["user"], condition=Q(status="pending"),
+                                    name="one_pending_address_per_user"),
+            models.UniqueConstraint(fields=["user"], condition=Q(status="approved"),
+                                    name="one_approved_address_per_user"),
+        ]
+
+    def __str__(self):
+        return f"Address {self.pk} - {self.status}"
+  
+                            
+
+class OneTimeCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    purpose = models.CharField(max_length=20)
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BackupCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name="backup_codes")
+    code_hash = models.CharField(max_length=64, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+
+class StaffTOTP(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="totp")
+# [redacted]
+    confirmed = models.BooleanField(default=False)
+    last_step = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def create_for(cls, user):
+        from . import totp
+# [redacted]
+
+# [redacted]
+        from . import totp
+# [redacted]
+
+
+
+class FaceCheck(models.Model):
+    STATUS = [("capturing", "Capturing"), ("review", "In review"), ("passed", "Passed"),
+              ("failed", "Failed"), ("expired", "Expired")]
+    LABELS = {"smile": "Smile", "blink": "Blink twice", "left": "Slowly turn your head left",
+              "right": "Slowly turn your head right", "up": "Look up", "open": "Open your mouth"}
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="face_checks")
+    status = models.CharField(max_length=10, choices=STATUS, default="capturing")
+    prompts = models.JSONField(default=list)
+    nonce_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    score = models.FloatField(null=True, blank=True)
+    provider_ref = models.CharField(max_length=100, blank=True)
+    reason = models.CharField(max_length=300, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [("review_facecheck", "Can review face checks")]
+
+    def prompt_labels(self):
+        return [self.LABELS.get(p, p) for p in self.prompts]
+
+
+class FaceFrame(models.Model):
+    face_check = models.ForeignKey(FaceCheck, on_delete=models.PROTECT, related_name="frames")
+    step = models.PositiveSmallIntegerField()
+    path = models.CharField(max_length=255, blank=True)        # emptied when the image is purged
+    sha256 = models.CharField(max_length=64, unique=True)      # one photo can never be used twice
+    taken_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["step"]
+        constraints = [models.UniqueConstraint(fields=["face_check", "step"], name="one_frame_per_step")]
+
+
+
+class RecoveryRequest(models.Model):
+    STATUS = [("pending", "Pending"), ("approved", "Approved"),
+              ("rejected", "Rejected"), ("done", "Done")]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.SET_NULL, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True) 
+               
+                        
+      
+class CreditAccount(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("active", "Active"),
+        ("suspended", "Suspended"),
+        ("closed", "Closed"),
+    ]
+
+    account = models.OneToOneField(
+        Account,
+        on_delete=models.CASCADE,
+        related_name="credit_facility"
+    )
+
+    credit_limit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    outstanding_balance = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    credit_score = models.PositiveSmallIntegerField(
+        default=650,
+        validators=[
+            MinValueValidator(300),
+            MaxValueValidator(850)
+        ]
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending"
+    )
+
+    auto_repayment = models.BooleanField(default=False)
+
+    repayment_due_date = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def available_credit(self):
+        return max(
+            self.credit_limit - self.outstanding_balance,
+            Decimal("0.00")
+        )
+
+    def __str__(self):
+        return f"{self.account.user.username} Credit Facility"
+
+
+
+
+class CreditPolicy(models.Model):
+    ACCOUNT_LEVELS = [
+        ("basic", "Basic"),
+        ("verified", "KYC Verified"),
+    ]
+
+    account_level = models.CharField(
+        max_length=20,
+        choices=ACCOUNT_LEVELS,
+    )
+
+    currency = models.CharField(
+        max_length=3,
+        default="NGN",
+    )
+
+    minimum_limit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    maximum_limit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account_level", "currency"],
+                name="unique_credit_policy_level_currency",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.minimum_limit < 0:
+            raise ValidationError(
+                "Minimum credit limit cannot be negative."
+            )
+
+        if self.maximum_limit <= 0:
+            raise ValidationError(
+                "Maximum credit limit must be greater than zero."
+            )
+
+        if self.minimum_limit > self.maximum_limit:
+            raise ValidationError(
+                "Minimum credit limit cannot exceed maximum limit."
+            )
+
+    def __str__(self):
+        return f"{self.get_account_level_display()} - {self.currency}"
+
+
+
+class CreditApplication(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("assessed", "Assessed"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="credit_applications",
+    )
+
+    requested_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    assessed_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+
+    assessment_reason = models.CharField(
+        max_length=500,
+        blank=True,
+    )
+
+    decision_reason = models.CharField(
+        max_length=500,
+        blank=True,
+    )
+
+    assessed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="credit_assessments",
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="credit_approvals",
+    )
+
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    assessed_at = models.DateTimeField(null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        permissions = [
+            ("assess_creditapplication", "Can assess credit applications"),
+            ("approve_creditapplication", "Can approve credit applications"),
+        ]
+
+    def __str__(self):
+        return f"Credit application {self.pk} - {self.status}"
+        
+        
+     
+class CreditSettlement(models.Model):
+    KINDS = [("asset_trade", "Asset sale"), ("external", "Payment received outside Klosa")]
+    STATUS = [("pending", "Waiting for approval"), ("approved", "Approved"), ("rejected", "Rejected")]
+
+    credit_account = models.ForeignKey("CreditAccount", on_delete=models.PROTECT, related_name="settlements")
+    kind = models.CharField(max_length=12, choices=KINDS)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    asset = models.CharField(max_length=200)                   # what was sold, in plain words
+    evidence_ref = models.CharField(max_length=100)            # a sale receipt, contract or bank reference
+    reference = models.CharField(max_length=20, unique=True)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    proposed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [("propose_creditsettlement", "Can record a credit settlement"),
+                       ("approve_creditsettlement", "Can approve a credit settlement")]
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name="settlement_amount_positive")]
+
+
+
+class KYCApplication(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("under_review", "Under Review"),
+        ("additional_info", "Additional Information Required"),
+        ("verified", "Verified"),
+        ("rejected", "Rejected"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="kyc_applications",
+    )
+
+    country_code = models.CharField(max_length=2)
+    document_type = models.CharField(max_length=50)
+
+    legal_name = models.CharField(max_length=150)
+    date_of_birth = models.DateField()
+
+# [redacted]
+# [redacted]
+    
+    identity_digest = models.CharField(
+    max_length=64,
+    blank=True,
+    default="",
+)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+          
+        permissions = [
+        (
+            "review_kycapplication",
+            "Can review KYC applications",
+        ),
+    ]
+        ordering = ["-submitted_at"]
+
+
+    def __str__(self):
+        return f"KYC {self.user_id} - {self.status}"
+
+
+class KYCReview(models.Model):
+    DECISION_CHOICES = [
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+        ("additional_info", "Additional Information Required"),
+    ]
+
+    application = models.ForeignKey(
+        KYCApplication,
+        on_delete=models.PROTECT,
+        related_name="reviews",
+    )
+
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="kyc_reviews",
+    )
+
+    decision = models.CharField(
+        max_length=20,
+        choices=DECISION_CHOICES,
+    )
+
+    reason = models.CharField(max_length=500)
+
+    reviewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["reviewed_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["application", "reviewer"],
+                name="unique_kyc_review_per_staff",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.application_id and self.reviewer_id:
+            if self.application.user_id == self.reviewer_id:
+                raise ValidationError(
+                    "Users cannot review their own KYC applications."
+                )
+
+    def __str__(self):
+        return f"KYC review {self.application_id} - {self.decision}"
+
+
+class VerifiedIdentity(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="verified_identity",
+    )
+
+    country_code = models.CharField(max_length=2)
+    document_type = models.CharField(max_length=50)
+
+    # HMAC digest of the normalized identity reference.
+    # Never store the raw identity number here.
+    identity_digest = models.CharField(
+        max_length=64,
+        unique=True,
+    )
+
+    verified_at = models.DateTimeField()
+
+    source_application = models.OneToOneField(
+        KYCApplication,
+        on_delete=models.PROTECT,
+        related_name="verified_identity",
+    )
+
+    def __str__(self):
+        return f"Verified identity - User {self.user_id}"
+
+
+
+
+class Passkey(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="passkeys")
+    credential_id = models.CharField(max_length=512, unique=True)
+    public_key = models.BinaryField()
+    sign_count = models.PositiveIntegerField(default=0)
+    name = models.CharField(max_length=60, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.name or 'passkey'}"
+
+
+
+class VerifiedDocument(models.Model):
+    """One row per verified ID, so a person can hold a NIN and a BVN. Each ID belongs to one account."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="verified_documents")
+    document_type = models.CharField(max_length=50)
+    identity_digest = models.CharField(max_length=64, unique=True)
+    verified_at = models.DateTimeField()
+    source_application = models.OneToOneField(KYCApplication, on_delete=models.PROTECT, related_name="verified_document")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "document_type"], name="one_verified_document_per_type")]
+
+
+class WelcomeBonus(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="welcome_bonus")
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    reference = models.CharField(max_length=20, unique=True)
+    granted_at = models.DateTimeField(auto_now_add=True)
+
+=================== backoffice/audit.py
+from .models import AuditLog
+
+
+def log(staff, action, target="", detail=""):
+    AuditLog.objects.create(staff=staff, action=action[:40], target=str(target)[:60], detail=(detail or "")[:300])
+
+=================== ./bank/settings.py (selected lines only)
+MEDIA_ROOT = Path(
+COMPANY_BANK = {"bank": env("COMPANY_BANK_NAME"), "name": env("COMPANY_ACCOUNT_NAME"), "number": env("COMPANY_ACCOUNT_NUMBER")}
+INSTALLED_APPS = [
+ROOT_URLCONF = "bank.urls"
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/accounts/"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+MEDIA_URL = "/media/"
+
+=================== ./bank/urls.py
+"""
+URL configuration for bank project.
+
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/6.1/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+from django.contrib import admin
+from django.urls import path, include
+
+from django.views.generic import RedirectView
+
+from django.conf import settings
+from accounts.security import healthz
+
+    
+
+
+urlpatterns = [
+path("", RedirectView.as_view(pattern_name="accounts:home", permanent=False)),
+    path('accounts/', include('accounts.urls')),
+    path('transfers/', include('transfers.urls')),
+    path('beneficiary/', include('beneficiary.urls')),
+    path("transactions/", include("transactions.urls")),
+    path("funding/", include("funding.urls")),
+    path("cards/", include("cards.urls")),
+    path("savings/", include("savings.urls")),
+    path("bills/", include("biller.urls")),
+    path("cash/", include("cashier.urls")),
+    path("treasury/", include("treasury.urls")),
+    path("staff/", include("backoffice.urls")),
+    path("notifications/", include("notices.urls")),
+    path("face/", include("face_auth.urls")),
+    path(settings.ADMIN_URL, admin.site.urls), 
+    path("healthz/", healthz),
+]
+
+

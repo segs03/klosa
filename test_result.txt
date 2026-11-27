@@ -1,0 +1,80 @@
+    )
+django.contrib.auth.models.Permission.DoesNotExist: Permission matching query does not exist.
+
+----------------------------------------------------------------------
+Ran 144 tests in 31.207s
+
+FAILED (errors=27)
+Destroying test database for alias 'default'...
+Found 144 test(s).
+System check identified no issues (0 silenced).
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+posted: 1, waiting for an open period: 0
+posted: 0, waiting for an open period: 0
+9 ledger accounts are in place.
+posted: 0, waiting for an open period: 1
+posted: 1, waiting for an open period: 0
+9 ledger accounts are in place.
+posted: 2, waiting for an open period: 0
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.
+9 ledger accounts are in place.

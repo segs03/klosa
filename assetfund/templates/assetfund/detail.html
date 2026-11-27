@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}{{ app.title }} - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head"><div><h1>{{ app.title }}</h1><p>{{ app.get_kind_display }} · {{ app.get_status_display }}</p></div></header>
+
+  <div class="bl-sum" style="margin-bottom:14px">
+    <p><span>You asked for</span><b>₦{{ app.requested_amount|floatformat:2 }}</b></p>
+    <p><span>You said it is worth</span><b>₦{{ app.declared_value|floatformat:2 }}</b></p>
+    {% if app.verified_value %}<p><span>We verified</span><b>₦{{ app.verified_value|floatformat:2 }}</b></p>{% endif %}
+    {% if app.advance_amount %}<p><span>We can advance</span><b style="color:#00E5FF">₦{{ app.advance_amount|floatformat:2 }}</b></p>{% endif %}
+    {% if app.status == 'active' or app.status == 'overdue' %}
+    <p><span>Received so far</span><b>₦{{ app.released_total|floatformat:2 }}</b></p>
+    <p><span>Still owed</span><b>₦{{ app.outstanding|floatformat:2 }}</b></p>
+    <p><span>Term ends</span><b>{{ app.maturity_date|date:"d M Y" }}</b></p>{% endif %}
+    {% if app.status == 'approved' %}<p><span>Offer valid until</span><b>{{ app.offer_expires_at|date:"d M Y H:i" }}</b></p>{% endif %}
+    {% if app.decision_reason and app.status == 'rejected' %}<p><span>Reason</span><b>{{ app.decision_reason }}</b></p>{% endif %}
+  </div>
+
+  {% if summary %}<h2>The offer in plain words</h2>
+  {% for line in summary %}<p class="bl-hint" style="margin:6px 0">{{ line }}</p>{% endfor %}{% endif %}
+
+  {% if app.status == 'approved' %}
+  <form method="post" novalidate style="padding:8px 0">{% csrf_token %}<input type="hidden" name="action" value="accept">
+    <div class="bl-sec"><label class="bl-lbl" for="pin">Transaction PIN</label>
+      <input class="bl-in" id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="6"></div>
+    <button class="bl-btn" type="submit">Accept offer</button></form>
+  {% endif %}
+  {% if app.status == 'pending' or app.status == 'assessed' or app.status == 'approved' %}
+  <form method="post">{% csrf_token %}<button class="bl-btn ghost" name="action" value="withdraw" type="submit">Withdraw application</button></form>
+  {% endif %}
+
+  {% if stages %}<h2>Stages</h2>
+  {% for s in stages %}<div class="bl-row"><div class="grow"><b>Stage {{ s.order }}: {{ s.title }}</b>
+    <small>{{ s.get_status_display }}{% if s.evidence_note %} · {{ s.evidence_note }}{% endif %}</small></div><b>₦{{ s.amount|floatformat:2 }}</b></div>
+  {% endfor %}{% endif %}
+
+  {% if evidence_stage %}
+  <h2>Ready for stage {{ evidence_stage.order }}?</h2>
+  <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="action" value="evidence"><input type="hidden" name="stage" value="{{ evidence_stage.pk }}">
+    <div class="bl-sec"><label class="bl-lbl" for="note">What has been done so far? (at least 10 characters)</label>
+      <textarea class="bl-in" id="note" name="note" maxlength="500" rows="3"></textarea></div>
+    <button class="bl-btn" type="submit">Send progress</button></form>
+  {% endif %}
+
+  {% if can_report %}
+  <h2>Report a sale</h2>
+  <p class="bl-hint">Put the money from the sale into your Klosa account, then report it here. Klosa takes its agreed share after staff confirm the sale.</p>
+  <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="action" value="sale">
+    <div class="bl-sec"><label class="bl-lbl" for="pr">Sale amount (₦)</label><input class="bl-in" id="pr" name="proceeds" inputmode="decimal" autocomplete="off"></div>
+    <div class="bl-sec"><label class="bl-lbl" for="sn">What was sold, and to whom? (at least 10 characters)</label><input class="bl-in" id="sn" name="note" maxlength="300"></div>
+    <div class="bl-sec"><label><input type="checkbox" name="is_final"> This is the last sale</label></div>
+    <button class="bl-btn" type="submit">Report sale</button></form>
+  {% endif %}
+
+  {% if sales %}<h2>Sales</h2>
+  {% for s in sales %}<div class="bl-row"><div class="grow"><b>{{ s.reference }}</b><small>{{ s.get_status_display }} · {{ s.reported_at|date:"d M Y" }}{% if s.status == 'confirmed' %} · Klosa took ₦{{ s.share_due|floatformat:2 }} due, of which ₦{{ s.shortfall|floatformat:2 }} was short{% endif %}{% if s.reason %} · {{ s.reason }}{% endif %}</small></div><b>₦{{ s.proceeds|floatformat:2 }}</b></div>
+  {% endfor %}{% endif %}
+  <p><a href="{% url 'assetfund:home' %}">← All applications</a></p>
+</section>
+{% endblock %}

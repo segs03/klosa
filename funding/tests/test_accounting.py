@@ -109,3 +109,4 @@ class JournalPostingTests(TestCase):
 
         journal.refresh_from_db()
         self.assertEqual(journal.status, "draft")
+

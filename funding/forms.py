@@ -10,3 +10,13 @@ class PeriodReopeningForm(forms.Form):
             "placeholder": "Explain why this funding period must be reopened.",
         }),
     )
+
+
+class AllocationProposalForm(forms.Form):
+    result = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        label="Approved result for the period (₦)",
+        help_text="Positive for a profit to share, negative for a loss to share.",
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "autocomplete": "off", "placeholder": "e.g. 250000.00 or -40000.00"}),
+    )

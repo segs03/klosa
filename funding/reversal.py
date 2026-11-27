@@ -3,7 +3,8 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.db import transaction
 
-from funding.models import JournalEntry, JournalLine
+from backoffice.audit import log as audit_log
+from funding.models import InvestorCapitalEntry, JournalEntry, JournalLine
 from funding.accounting import post_journal_entry, get_open_period
 
 
@@ -27,7 +28,7 @@ def reverse_journal_entry(
             "Only an active staff member can reverse journal entries."
         )
 
-    reason = reason.strip()
+    reason = (reason or "").strip()
 
     if not reason:
         raise ValidationError("A reversal reason is required.")
@@ -43,6 +44,14 @@ def reverse_journal_entry(
     if original.status != "posted":
         raise ValidationError(
             "Only posted journal entries can be reversed."
+        )
+
+    # Reversing the journal alone would leave the investor's capital balance unchanged,
+    # so the books and the investor ledger would disagree.
+    if InvestorCapitalEntry.objects.filter(journal_entry=original).exists():
+        raise ValidationError(
+            "This journal backs an investor capital entry and cannot be reversed here. "
+            "Post a compensating capital event instead."
         )
 
     if JournalEntry.objects.filter(reversal_of=original).exists():
@@ -108,4 +117,6 @@ def reverse_journal_entry(
     original.status = "reversed"
     original.save(update_fields=["status"])
 
+    audit_log(reversed_by, "journal_reversed", original.reference, reason)
     return reversal
+

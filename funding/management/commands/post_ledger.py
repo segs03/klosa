@@ -9,3 +9,4 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         posted, skipped = post_pending()
         self.stdout.write(f"posted: {posted}, waiting for an open period: {skipped}")
+

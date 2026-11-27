@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Fund my project - Klosa Bank{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  <header class="bl-head"><div><h1>Fund my project</h1><p>Get money in stages against something you own</p></div></header>
+  <p class="bl-hint">Tell us about gold, property, equipment, materials, or a skill backed by a signed order. We inspect it and offer a share of the value <b>we verify</b>. The money is released in stages as your project moves. When you sell, Klosa takes a share of each sale until the advance and fee are recovered. The rest is yours.</p>
+  <p class="bl-hint">You can ask for up to ₦{{ customer_cap|floatformat:0 }}.</p>
+  {% if not open %}<p class="bl-err">Asset funding is not open yet.</p>{% endif %}
+  <a class="bl-btn" href="{% url 'assetfund:apply' %}">Start an application</a>
+  <h2>Your applications</h2>
+  {% for a in apps %}
+  <a class="bl-row" href="{% url 'assetfund:detail' a.pk %}" style="text-decoration:none;color:inherit">
+    <div class="grow"><b>{{ a.title }}</b><small>{{ a.get_kind_display }} · {{ a.created_at|date:"d M Y" }}</small></div>
+    <div style="text-align:right"><b>₦{{ a.requested_amount|floatformat:2 }}</b><br>
+      <span class="bl-chip-s {% if a.status == 'active' or a.status == 'settled' %}completed{% elif a.status == 'rejected' or a.status == 'overdue' or a.status == 'expired' or a.status == 'withdrawn' %}reversed{% else %}processing{% endif %}">{{ a.get_status_display }}</span></div>
+  </a>
+  {% empty %}<p style="color:#9FB6E0">No applications yet.</p>{% endfor %}
+</section>
+{% endblock %}

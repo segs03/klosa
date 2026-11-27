@@ -143,3 +143,4 @@ class InvestorCapitalTests(FundingBase):
             with self.assertRaises((ValidationError, ArithmeticError)):
                 self.post("contribution", amount, f"BAD-{amount}")
         self.assertFalse(InvestorCapitalEntry.objects.exists())
+

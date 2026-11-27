@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.kyc_services import DOC_TYPES, verified_types
-from accounts.models import Account, CreditAccount, CreditApplication, KYCApplication, FaceCheck
+from accounts.models import Account, CreditAccount, CreditApplication, KYCApplication, CreditSettlement
+from face_auth.models import FaceSession
 from biller.models import BillPayment
 from cards.models import BankCard, CardOrder
 from cashier.models import Deposit, Withdrawal
@@ -216,11 +217,16 @@ def _intent(i, old, new, created):
         notify_user(i.investor.user, "Deposit not accepted", i.note or "Open the page for details.", "warning", link)
 
 
+def _settle(s, old, new, created):
+    if new == "approved":
+        notify_user(s.credit_account.account.user, "Credit cleared", f"{naira(s.amount)} of your credit was cleared. Your available credit is restored.", "success", reverse("accounts:credit"))
 
 
+
+watch(CreditSettlement, "status", _settle)
 watch(ContributionIntent, "status", _intent)
 watch(Account, "kyc_tier", _tier)
-watch(FaceCheck, "status", _face)
+watch(FaceSession, "status", _face)
 watch(KYCApplication, "status", _kyc)
 watch(CreditApplication, "status", _credit_app)
 watch(CardOrder, "status", _card_order)

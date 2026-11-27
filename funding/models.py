@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -166,18 +165,28 @@ class InvestorAgreement(models.Model):
             ),
         ]
 
+    def __str__(self):
+        return f"{self.investor} agreement from {self.effective_from}"
+
     def clean(self):
-        from django.core.exceptions import ValidationError
+        super().clean()
 
-        if self.profit_capital_component + self.profit_agreed_component != HUNDRED:
-            raise ValidationError(
-                "Profit allocation components must total 100%."
-            )
+        pairs = (
+            (self.profit_capital_component, self.profit_agreed_component, "Profit"),
+            (self.loss_capital_component, self.loss_agreed_component, "Loss"),
+        )
+        for capital, agreed, label in pairs:
+            if capital is not None and agreed is not None and capital + agreed != HUNDRED:
+                raise ValidationError(f"{label} allocation components must total 100%.")
 
-        if self.loss_capital_component + self.loss_agreed_component != HUNDRED:
-            raise ValidationError(
-                "Loss allocation components must total 100%."
-            )
+        # One investor can only have one agreement in force at any time.
+        if self.investor_id and self.effective_from:
+            clash = InvestorAgreement.objects.filter(investor_id=self.investor_id).exclude(pk=self.pk)
+            clash = clash.filter(models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=self.effective_from))
+            if self.effective_to:
+                clash = clash.filter(effective_from__lte=self.effective_to)
+            if clash.exists():
+                raise ValidationError("This agreement overlaps another agreement for the same investor.")
 
 
 class FundingPeriod(models.Model):
@@ -648,3 +657,4 @@ class LedgerPosting(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["source_type", "source_id"], name="one_posting_per_source")]
+

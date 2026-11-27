@@ -1,14 +1,15 @@
-
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from .models import Investor, InvestorCapitalEntry, FundingPeriod, JournalEntry
-
-from funding.allocation import InvestorAllocation
-
+from .models import (
+    Investor,
+    InvestorAllocation,
+    InvestorCapitalEntry,
+    JournalEntry,
+)
 
 
 ZERO = Decimal("0.00")
@@ -96,20 +97,23 @@ def post_capital_entry(
                 "Insufficient retained profit to reinvest."
             )
 
-    if journal_entry and journal_entry.status != "posted":
-        raise ValidationError(
-            "The linked journal entry must already be posted."
-        )
-        
+    if journal_entry is None:
+        raise ValidationError("A posted journal entry is required.")
+
     # Fetch the latest journal record
     journal = JournalEntry.objects.select_for_update().get(
-    pk=journal_entry.pk
-)
-
-    if journal.period.status != "open":
-        raise ValidationError(
-        "Capital entries can only be posted in an open period."
+        pk=journal_entry.pk
     )
+
+    allowed_statuses = (
+        ("open", "review")
+        if entry_type in {"retained_profit", "loss"}
+        else ("open",)
+    )
+    if journal.period.status not in allowed_statuses:
+        raise ValidationError(
+            "Capital entries can only be posted in an open period."
+        )
 
     if journal.status != "posted":
         raise ValidationError("The journal entry must be posted.")
@@ -198,7 +202,7 @@ def post_capital_entry(
         reference=reference,
         description=description,
         allocation=allocation,
-        journal_entry=journal_entry,
+        journal_entry=journal,
         posted_at=timezone.now(),
     )
 
@@ -263,3 +267,5 @@ def capital_balance_before(investor, start_date):
         investor, CAPITAL_DECREASE_TYPES, before=start_date
     )
     return increased - decreased
+
+

@@ -205,6 +205,19 @@
         <svg class="st-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </button>
     </div>
+    
+    
+    {% if request.user.investor_profile %}
+    <div class="st-sec" data-r style="--d:4">
+    <a class="..." href="{% url 'funding:my_deposits' %}">My investment</a>
+    <div class="st-list">
+      <div class="st-item settings-item" aria-disabled="true">
+        <span class="st-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.6 2.4c-.7.4-1.1.9-1.1 1.8"/><path d="M12 17h.01"/></svg></span>
+        <span class="st-txt"><b>Help and support</b><small>We are here to help</small></span>
+      </div>
+    </div>
+    {% endif %}
+    
   </div>
   
   <div class="st-sec" data-r style="--d:6">

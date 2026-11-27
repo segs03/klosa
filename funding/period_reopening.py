@@ -28,3 +28,4 @@ def reopen_funding_period(*, period_id, reopened_by, reason):
     period.save(update_fields=["status", "closed_at"])
     audit_log(reopened_by, "period_reopened", f"period:{period.pk}", reason)
     return period
+

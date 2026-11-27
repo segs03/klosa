@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.credit_services import (_get_credit_policy, assess_credit_application, credit_summary,                                 decide_credit_application, eligibility_problem)
 
-from accounts.models import (Account, CreditAccount, CreditApplication, KYCApplication, VerifiedIdentity)
+from accounts.models import (Account, CreditAccount, CreditApplication, KYCApplication, VerifiedIdentity, CreditSettlement)
 
 from accounts.utils import normalize_phone
 from biller.models import BillPayment
@@ -29,6 +29,8 @@ from .models import AuditLog
 from funding.models import ContributionIntent, CapitalContribution
 
 from face_auth.models import FaceSession
+
+from accounts.credit_settlement import decide as settle_decide, propose as settle_propose
 
 
 
@@ -94,6 +96,9 @@ def home(request):
         
     if has("funding.verify_capitalcontribution"):
         tiles.append(("Verify contributions", CapitalContribution.objects.filter(source_type="investor", verified=False).count(), "funding:contributions", "fa-scale-balanced"))
+    
+    if has("funding.view_fundingperiod"):
+        tiles.append(("Funding periods", None, "funding:periods", "fa-calendar-days"))
     
     return render(request, "backoffice/home.html", {"tiles": tiles})
 
@@ -289,3 +294,27 @@ def operations(request):
 def audit(request):
     need(request.user, "backoffice.view_audit")
     return render(request, "backoffice/audit.html", {"entries": AuditLog.objects.select_related("staff")[:200]})
+  
+
+
+@login_required
+def settlements(request):
+    need(request.user, "accounts.propose_creditsettlement", "accounts.approve_creditsettlement")
+    u = request.user
+    if request.method == "POST":
+        try:
+            if request.POST.get("action") == "propose":
+                settle_propose(u, int(request.POST.get("credit", "")), request.POST.get("kind", ""), request.POST.get("amount", ""),
+                               request.POST.get("asset", ""), request.POST.get("evidence", ""))
+            else:
+                settle_decide(u, int(request.POST.get("pk", "")), request.POST.get("action") == "approve", request.POST.get("reason", ""))
+        except (ValidationError, PermissionDenied, ValueError) as e:
+            messages.error(request, _problem(e))
+        else:
+            messages.success(request, "Saved.")
+        return redirect("backoffice:settlements")
+    return render(request, "backoffice/settlements.html", {
+        "owing": CreditAccount.objects.filter(outstanding_balance__gt=0).select_related("account__user")[:100],
+        "pending": CreditSettlement.objects.filter(status="pending").select_related("credit_account__account__user", "proposed_by"),
+        "kinds": CreditSettlement.KINDS, "can_propose": u.has_perm("accounts.propose_creditsettlement"),
+        "can_approve": u.has_perm("accounts.approve_creditsettlement")})

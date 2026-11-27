@@ -461,6 +461,31 @@ class CreditApplication(models.Model):
 
     def __str__(self):
         return f"Credit application {self.pk} - {self.status}"
+        
+        
+     
+class CreditSettlement(models.Model):
+    KINDS = [("asset_trade", "Asset sale"), ("external", "Payment received outside Klosa")]
+    STATUS = [("pending", "Waiting for approval"), ("approved", "Approved"), ("rejected", "Rejected")]
+
+    credit_account = models.ForeignKey("CreditAccount", on_delete=models.PROTECT, related_name="settlements")
+    kind = models.CharField(max_length=12, choices=KINDS)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    asset = models.CharField(max_length=200)                   # what was sold, in plain words
+    evidence_ref = models.CharField(max_length=100)            # a sale receipt, contract or bank reference
+    reference = models.CharField(max_length=20, unique=True)
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    proposed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [("propose_creditsettlement", "Can record a credit settlement"),
+                       ("approve_creditsettlement", "Can approve a credit settlement")]
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name="settlement_amount_positive")]
 
 
 

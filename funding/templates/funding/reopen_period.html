@@ -1,20 +1,14 @@
-<h2>Reopen funding period</h2>
-
-<p>
-    Period:
-    {{ period.start_date }} – {{ period.end_date }}
-</p>
-
-<p>
-    Current status: {{ period.status }}
-</p>
-
-<form method="POST">
-    {% csrf_token %}
-
-    {{ form.as_p }}
-
-    <button type="submit">
-        Reopen period
-    </button>
-</form>
+{% extends 'base.html' %}
+{% block title %}Reopen period{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% url 'funding:period' period.pk as back %}
+  {% include "backoffice/_head.html" with title="Reopen period" sub=period.start_date|date:"F Y" back=back %}
+  <form method="post">{% csrf_token %}
+    <label class="bl-lbl" for="id_reason">Why must it be reopened?</label>
+    <textarea class="bl-in" id="id_reason" name="reason" rows="4" maxlength="255" style="height:auto;padding:12px" required>{{ form.reason.value|default:'' }}</textarea>
+    {% for e in form.reason.errors %}<p class="bl-err">{{ e }}</p>{% endfor %}
+    <button class="bl-btn" type="submit">Reopen period</button></form>
+</section>
+{% endblock %}

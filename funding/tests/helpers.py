@@ -64,3 +64,4 @@ class FundingBase(TestCase):
             return approve_investor_allocation(allocation_id=allocation.pk, approved_by=approver or self.admin_user)
         finally:
             self.set_period("open")
+

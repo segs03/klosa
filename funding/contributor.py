@@ -161,3 +161,5 @@ def _post_contribution(c, staff):
     c.journal_reference = entry.reference
     c.save()
     return entry
+
+

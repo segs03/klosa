@@ -72,3 +72,4 @@ class InvestorContributionTests(FundingBase):
         self.assertIsNone(c.verified_at)
         self.assertEqual((JournalEntry.objects.count(), InvestorCapitalEntry.objects.count()), (journals, entries))
         mock_post.assert_called_once()
+

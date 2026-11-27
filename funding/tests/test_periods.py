@@ -106,3 +106,4 @@ class FundingPeriodTests(TestCase):
                 period_id=self.period.pk,
                 performed_by=user,
             )
+

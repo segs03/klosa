@@ -77,3 +77,4 @@ class InvestorAllocationApprovalTests(FundingBase):
                 posted_by=self.admin_user, investor_id=self.investor.pk, entry_type="retained_profit",
                 amount=Decimal("2000.00"), effective_date=self.today, reference="UNAPPROVED-PROFIT-001",
                 allocation=allocation)
+

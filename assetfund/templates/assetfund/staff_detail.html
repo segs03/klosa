@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}{{ app.title }}{% endblock %}
+{% block content %}
+{% include "biller/_style.html" %}
+<section class="bl">
+  {% include "backoffice/_head.html" with title=app.title sub=app.get_status_display %}
+  <div class="bl-sum" style="margin-bottom:14px">
+    <p><span>Customer</span><b>{{ app.user.get_username }}</b></p>
+    <p><span>Asset</span><b>{{ app.get_kind_display }} · ref {{ app.asset_ref }}</b></p>
+    <p><span>Declared / asked</span><b>₦{{ app.declared_value|floatformat:2 }} / ₦{{ app.requested_amount|floatformat:2 }}</b></p>
+    {% if app.verified_value %}<p><span>Verified / rate</span><b>₦{{ app.verified_value|floatformat:2 }} / {{ app.advance_rate }}%</b></p>
+    <p><span>Advance / fee / share</span><b>₦{{ app.advance_amount|floatformat:2 }} / ₦{{ app.fee_amount|floatformat:2 }} / {{ app.share_pct }}%</b></p>{% endif %}
+    {% if app.released_total %}<p><span>Released / owed</span><b>₦{{ app.released_total|floatformat:2 }} / ₦{{ app.outstanding|floatformat:2 }}</b></p>{% endif %}
+  </div>
+  <p class="bl-hint">{{ app.description }}</p>
+  <p class="bl-hint"><b>Purpose:</b> {{ app.purpose }}</p>
+  {% if app.assessment_note %}<p class="bl-hint"><b>Valuation note:</b> {{ app.assessment_note }}</p>{% endif %}
+
+  {% if app.status == 'pending' and perms.assetfund.assess_assetapplication %}
+  <h2>Value it</h2>
+  <p class="bl-hint">For this kind of asset the advance rate can be at most {{ cap }}%. The stages must add up exactly to the advance (verified value × rate). Leave unused stage rows empty.</p>
+  <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="action" value="assess">
+    <div class="bl-sec"><label class="bl-lbl">Verified value (₦)</label><input class="bl-in" name="verified_value" inputmode="decimal"></div>
+    <div class="bl-sec"><label class="bl-lbl">Advance rate (%)</label><input class="bl-in" name="advance_rate" inputmode="decimal"></div>
+    <div class="bl-sec"><label class="bl-lbl">Fee (% of the advance)</label><input class="bl-in" name="fee_pct" inputmode="decimal"></div>
+    <div class="bl-sec"><label class="bl-lbl">Klosa's share of each sale (%)</label><input class="bl-in" name="share_pct" inputmode="decimal"></div>
+    <div class="bl-sec"><label class="bl-lbl">Term (30 to 730 days)</label><input class="bl-in" name="term_days" inputmode="numeric" value="180"></div>
+    {% for i in rows %}<div class="bl-sec"><label class="bl-lbl">Stage {{ i }}</label>
+      <input class="bl-in" name="stage_title_{{ i }}" maxlength="120" placeholder="What this stage pays for">
+      <input class="bl-in" name="stage_amount_{{ i }}" inputmode="decimal" placeholder="Amount (₦)"></div>{% endfor %}
+    <div class="bl-sec"><label class="bl-lbl">How you checked it (at least 10 characters)</label><textarea class="bl-in" name="note" maxlength="500" rows="3"></textarea></div>
+    <button class="bl-btn" type="submit">Save valuation</button></form>
+  {% endif %}
+
+  {% if app.status == 'assessed' and perms.assetfund.approve_assetapplication %}
+  <h2>Decide</h2>
+  <form method="post" novalidate>{% csrf_token %}
+    <div class="bl-sec"><label class="bl-lbl">Reason</label><input class="bl-in" name="reason" maxlength="500"></div>
+    <button class="bl-btn" name="action" value="approved" type="submit">Approve and make the offer</button>
+    <button class="bl-btn ghost" name="action" value="rejected" type="submit">Reject</button></form>
+  {% endif %}
+
+  {% if stages %}<h2>Stages</h2>
+  {% for s in stages %}<div class="bl-row"><div class="grow"><b>Stage {{ s.order }}: {{ s.title }}</b><small>{{ s.get_status_display }}{% if s.evidence_note %} · {{ s.evidence_note }}{% endif %}</small></div>
+    <div style="text-align:right"><b>₦{{ s.amount|floatformat:2 }}</b>
+    {% if app.status == 'active' and s.order == next_order and perms.assetfund.release_advancestage %}{% if s.order == 1 or s.status == 'requested' %}
+      <form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="stage" value="{{ s.pk }}"><button class="bl-btn" name="action" value="release" type="submit">Release</button></form>
+    {% endif %}{% endif %}</div></div>
+  {% endfor %}{% endif %}
+
+  {% if sales %}<h2>Sales</h2>
+  {% for s in sales %}<div class="bl-row"><div class="grow"><b>{{ s.reference }} · ₦{{ s.proceeds|floatformat:2 }}</b><small>{{ s.get_status_display }}{% if s.is_final %} · final sale{% endif %} · {{ s.note }}</small>
+    {% if s.status == 'pending' and perms.assetfund.confirm_assetsale %}
+    <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="sale" value="{{ s.pk }}">
+      <input class="bl-in" name="verified" inputmode="decimal" placeholder="Verified amount (leave empty if it matches)">
+      <input class="bl-in" name="reason" maxlength="300" placeholder="Reason (needed to reject)">
+      <button class="bl-btn" name="action" value="confirm" type="submit">Confirm</button>
+      <button class="bl-btn ghost" name="action" value="reject_sale" type="submit">Reject</button></form>{% endif %}</div></div>
+  {% endfor %}{% endif %}
+  <p><a href="{% url 'assetfund:staff' %}">← Queue</a></p>
+</section>
+{% endblock %}

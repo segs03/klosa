@@ -17,3 +17,4 @@ class Command(BaseCommand):
         for code, name, kind in CHART:
             LedgerAccount.objects.get_or_create(code=code, defaults={"name": name, "account_type": kind})
         self.stdout.write(f"{len(CHART)} ledger accounts are in place.")
+

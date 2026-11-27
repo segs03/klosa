@@ -28,3 +28,4 @@ class Command(BaseCommand):
         self.stdout.write(f"Klosa owes customers ₦{owed:,.2f}\nLedger 2300 shows    ₦{ledger:,.2f}\nDifference           ₦{diff:,.2f}")
         if strict and diff != 0:
             raise CommandError("The ledger and the customer balances do not agree.")
+

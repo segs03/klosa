@@ -386,8 +386,10 @@ WELCOME_BONUS_AMOUNT = Decimal(
 )
 
 WELCOME_BONUS_BUDGET = Decimal(
-    env("WELCOME_BONUS_BUDGET", "20000000")
+    env("WELCOME_BONUS_BUDGET", "2000000000")
 )
+
+ASSETFUND_TOTAL_CAP = "1000000000"
 
 
 # ============================================================
@@ -416,6 +418,7 @@ INSTALLED_APPS = [
     "backoffice",
     "notices",
     "face_auth",
+    'assetfund',
 
     "fontawesomefree",
 ]

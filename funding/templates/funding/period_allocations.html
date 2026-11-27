@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Allocations | Klosa{% endblock %}
+{% block content %}
+<div class="funding-container">
+  <h2>Investor allocations</h2>
+  <p>{{ period.start_date|date:"M d, Y" }} – {{ period.end_date|date:"M d, Y" }} · {{ period.get_status_display }}</p>
+  <p><a href="{% url 'funding:periods' %}">← All periods</a></p>
+
+  {% if period.status == "review" and perms.funding.propose_investorallocation %}
+  <h3>Propose allocations</h3>
+  <p>This replaces any proposals that are still pending or rejected. Approved allocations are never changed.</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="propose">
+    {{ form.as_p }}
+    <button type="submit">Propose</button>
+  </form>
+  {% elif period.status != "review" %}
+  <p>Allocations are proposed and approved while the period is under review.</p>
+  {% endif %}
+
+  <h3>Allocations</h3>
+  {% for row in rows %}
+  {% with a=row.a %}
+  <div class="period-card">
+    <div class="period-info">
+      <h3>{{ a.investor.legal_name }}</h3>
+      <p>{{ a.get_allocation_type_display }}: <b>₦{{ a.amount|floatformat:2 }}</b>
+         (capital ₦{{ a.capital_component|floatformat:2 }} + agreed ₦{{ a.agreed_component|floatformat:2 }})</p>
+      <p>Proposed by {{ a.proposed_by.get_username|default:"unknown" }}
+         {% if a.approved_by %}· approved by {{ a.approved_by.get_username }}{% endif %}</p>
+      <span class="period-status status-{{ a.approval_status }}">{{ a.get_approval_status_display }}</span>
+      {% if row.posted %}<span class="period-status status-closed">Posted to investor ledger</span>{% endif %}
+    </div>
+    <div class="period-actions">
+      {% if a.approval_status == "pending" and period.status == "review" and perms.funding.approve_investorallocation %}
+        <form method="post" style="display:inline">{% csrf_token %}
+          <input type="hidden" name="allocation" value="{{ a.pk }}">
+          <button class="reopen-button" name="action" value="approve" type="submit">Approve</button>
+          <button class="reopen-button" name="action" value="reject" type="submit">Reject</button>
+        </form>
+      {% endif %}
+      {% if a.approval_status == "approved" and not row.posted and period.status != "closed" and perms.funding.add_investorcapitalentry %}
+        <form method="post" style="display:inline">{% csrf_token %}
+          <input type="hidden" name="allocation" value="{{ a.pk }}">
+          <button class="reopen-button" name="action" value="post" type="submit">Post to investor ledger</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endwith %}
+  {% empty %}
+  <p>No allocations for this period yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

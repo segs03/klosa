@@ -7,9 +7,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .capital import capital_balance, retained_profit_balance
 from .contributions import post_verified_investor_contribution
-from .contributor import  create_intent, reject_intent
+from .contributor import confirm_received, create_intent, reject_intent, verify_contribution
 from .models import CapitalContribution, ContributionIntent, Investor, InvestorCapitalEntry
 from .security import need
+from django.http import Http404
 
 
 def _problem(e):
@@ -25,7 +26,12 @@ class IntentForm(forms.Form):
 
 @login_required
 def my_deposits(request):
-    investor = get_object_or_404(Investor, user=request.user, is_active=True)
+    investor = Investor.objects.filter(user=request.user, is_active=True).first()
+    if investor is None:
+        if request.user.is_staff:
+            messages.info(request, "Deposit notices are for investors. Use the Verify page instead.")
+            return redirect(getattr(settings, "LOGIN_REDIRECT_URL", "/"))
+        raise Http404
     form = IntentForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -66,12 +72,19 @@ def contributions_queue(request):
     need(request.user, "funding.verify_capitalcontribution")
     if request.method == "POST":
         try:
-            post_verified_investor_contribution(int(request.POST.get("pk", "")), request.user)
+            pk = int(request.POST.get("pk", ""))
+            source = (CapitalContribution.objects.filter(pk=pk).values_list("source_type", flat=True).first())
+            if source == "investor":
+                post_verified_investor_contribution(pk, request.user)
+            elif source == "company":
+                verify_contribution(pk, request.user)
+            else:
+                raise ValidationError("Contribution not found.")
         except (ValidationError, PermissionDenied, ValueError) as e:
             messages.error(request, _problem(e))
         else:
             messages.success(request, "Verified and posted to the ledger.")
         return redirect("funding:contributions")
     return render(request, "funding/contributions.html", {
-        "items": CapitalContribution.objects.filter(source_type="investor", verified=False)
+        "items": CapitalContribution.objects.filter(verified=False)
                  .select_related("investor", "recorded_by")[:100]})
